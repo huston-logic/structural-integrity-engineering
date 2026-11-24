@@ -3,8 +3,8 @@ import { Button } from "@/components/hl/Button";
 import { PageHero } from "@/components/hl/PageHero";
 import { TextLink } from "@/components/hl/TextLink";
 import { SiteChrome } from "@/components/layout/SiteChrome";
-import { bookCallHref } from "@/components/ui/BookCallButton";
 import { notFound } from "@/content/contact";
+import { requestQuote } from "@/content/nav";
 
 export const metadata: Metadata = {
   title: { absolute: notFound.title },
@@ -13,14 +13,13 @@ export const metadata: Metadata = {
 
 /** The 404 renders in the root layout, outside the (site) group, so it adds the header and footer itself. */
 export default function NotFound() {
-  const book = bookCallHref();
   return (
     <SiteChrome>
       <div className="relative overflow-x-clip">
         <PageHero title={notFound.heading} intro={notFound.body}>
           <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
             <Button href="/">{notFound.homeLabel}</Button>
-            {book ? <TextLink href={book}>{notFound.callLabel}</TextLink> : null}
+            <TextLink href={requestQuote.href}>{requestQuote.label}</TextLink>
           </div>
         </PageHero>
       </div>

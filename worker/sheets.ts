@@ -87,6 +87,11 @@ export function safeCell(value: string): string {
   return /^[=+\-@\t\r]/.test(value) ? `'${value}` : value;
 }
 
+/** 1 is "A", 8 is "H" (up to 26 columns, far more than the form has). */
+function columnLetter(count: number): string {
+  return String.fromCharCode(64 + Math.min(Math.max(count, 1), 26));
+}
+
 /** Appends `row` to the given tab. Retries once on a rate limit, server error, expired token or network failure. */
 export async function appendRow(keyJson: string | undefined, sheetId: string | undefined, tab: string, row: string[]): Promise<boolean> {
   const account = keyJson ? parseServiceAccount(keyJson) : null;
@@ -94,7 +99,7 @@ export async function appendRow(keyJson: string | undefined, sheetId: string | u
     log("sheet_config_missing");
     return false;
   }
-  const range = encodeURIComponent(`${tab}!A:K`);
+  const range = encodeURIComponent(`${tab}!A:${columnLetter(row.length)}`);
   const url = `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(sheetId)}/values/${range}:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`;
   const body = JSON.stringify({ values: [row.map(safeCell)] });
   for (let attempt = 1; attempt <= 2; attempt++) {

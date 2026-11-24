@@ -1,7 +1,7 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page, type Route } from "@playwright/test";
 import { noteForm, thanks } from "../../src/content/contact";
-import { needOptions } from "../../src/content/contact-fields";
+import { contactFields } from "../../src/content/contact-fields";
 
 // The contact form against the static preview. The Worker isn't running here, so /api/contact is answered by
 // page.route, and the Turnstile script is replaced by a stub that hands back a token (and, like the real widget, a
@@ -35,13 +35,17 @@ async function setUp(page: Page, answer: Answer) {
   return sent;
 }
 
+const ANSWERS = {
+  firstName: "Ada",
+  lastName: "Lovelace",
+  email: "ada@example.org",
+  phone: "(907) 555-0100",
+  location: "Anchorage, AK",
+  scope: "Two-story addition with a new foundation.",
+} as const;
+
 async function fillValid(page: Page) {
-  const website = needOptions.find((option) => option.value === "website");
-  if (!website) throw new Error("contact-fields.ts has no website option");
-  await page.getByText(website.label, { exact: true }).click();
-  await page.getByLabel(noteForm.name.label).fill("Ada Lovelace");
-  await page.getByLabel(noteForm.email.label).fill("ada@example.org");
-  await page.getByLabel(noteForm.message.label).fill("Inquiries get lost between three inboxes.");
+  for (const field of contactFields) await page.getByLabel(field.label, { exact: true }).fill(ANSWERS[field.key]);
 }
 
 async function expectNoViolations(page: Page, label: string) {
@@ -49,36 +53,28 @@ async function expectNoViolations(page: Page, label: string) {
   expect(results.violations, `Accessibility violations on ${label}`).toEqual([]);
 }
 
-test("a valid note goes to /contact-us/thanks with the first name, and nothing personal in the URL", async ({ page }) => {
+test("a valid note goes to /contact-us/thanks, and nothing personal is in the URL or the page", async ({ page }) => {
   const sent = await setUp(page, { status: 200, body: { ok: true, autoReply: true } });
   await fillValid(page);
   await page.getByRole("button", { name: noteForm.submitLabel }).click();
 
   await expect(page).toHaveURL(/\/contact-us\/thanks$/);
-  await expect(page.getByRole("heading", { level: 1 })).toHaveText(thanks.headingWithName.replace("{firstName}", "Ada"));
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText(thanks.heading);
   await expect(page.getByText(thanks.body)).toBeVisible();
-  expect(page.url()).not.toMatch(/Ada|example\.org/);
+  expect(page.url()).not.toMatch(/Ada|example\.org|907/);
 
   expect(sent).toHaveLength(1);
-  expect(sent[0]).toMatchObject({ need: "website", name: "Ada Lovelace", email: "ada@example.org", company_fax: "", turnstileToken: "test-token-1" });
-  await expectNoViolations(page, "/contact-us/thanks (with a name)");
-});
-
-test("if the automatic reply failed, the thanks page says so", async ({ page }) => {
-  await setUp(page, { status: 200, body: { ok: true, autoReply: false } });
-  await fillValid(page);
-  await page.getByRole("button", { name: noteForm.submitLabel }).click();
-  await expect(page).toHaveURL(/\/contact-us\/thanks$/);
-  await expect(page.getByText(thanks.bodyAutoReplyFailed)).toBeVisible();
+  expect(sent[0]).toMatchObject({ ...ANSWERS, company_fax: "", turnstileToken: "test-token-1" });
+  await expectNoViolations(page, "/contact-us/thanks");
 });
 
 test("a failed send keeps the answers and shows the error", async ({ page }) => {
   await setUp(page, { status: 502, body: { ok: false, error: "failed" } });
   await fillValid(page);
   await page.getByRole("button", { name: noteForm.submitLabel }).click();
-  await expect(page.getByRole("status").getByText(noteForm.sendErrors.failed)).toBeVisible();
+  await expect(page.getByRole("status").getByText(/^That didn't go through\. Please email .+ or call /)).toBeVisible();
   await expect(page).toHaveURL(/\/contact-us$/);
-  await expect(page.getByLabel(noteForm.name.label)).toHaveValue("Ada Lovelace");
+  await expect(page.getByLabel("First name", { exact: true })).toHaveValue("Ada");
   await expectNoViolations(page, "/contact-us (send failed)");
 });
 
