@@ -23,3 +23,18 @@ All photos are free to use under the Unsplash or Pexels license (no Unsplash+ pa
 ## Open question for Grant
 
 - `storefront-dusk.jpg` is a computer rendering that shows third-party retail brand logos. Crop it to remove the logos, or replace it, before launch. It is not swapped or cropped yet.
+
+## Sized copies for the service pages
+
+Same photos and credits as the originals above; only the pixel size differs.
+
+| File | Where it goes | Copy of |
+| --- | --- | --- |
+| framing-wood-900.jpg, framing-wood-800.jpg | Residential hero (desktop, phones) | framing-wood.jpg |
+| commercial-crane-900.jpg, commercial-crane-800.jpg | Commercial hero (desktop, phones) | commercial-crane.jpg |
+| curtain-wall-900.jpg, curtain-wall-800.jpg | Glazing hero (desktop, phones) | curtain-wall.jpg |
+| remodel-framing-640.jpg | Residential, Remodels and additions | remodel-framing.jpg |
+| rebar-800.jpg | Residential, Foundations | rebar.jpg |
+| steel-frame-800.jpg | Commercial, PEMB foundations | steel-frame.jpg |
+| storefront-dusk-800.jpg | Glazing, Storefront systems (same logo question as above) | storefront-dusk.jpg |
+| louvers-560.jpg | Glazing, Sunshades | louvers.jpg |
