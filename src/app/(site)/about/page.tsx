@@ -12,6 +12,7 @@ export const metadata: Metadata = pageMetadata({ ...aboutMeta, path: "/about" })
 
 /** About: the hero, the story and the closing call to action. */
 export default function AboutPage() {
+  const book = bookCallHref();
   return (
     <div className="relative overflow-x-clip">
       <PageHero eyebrow={aboutHero.eyebrow} title={aboutHero.title} intro={aboutHero.intro} />
@@ -30,7 +31,7 @@ export default function AboutPage() {
         </Container>
       </section>
       <ClosingCta heading={aboutCta.heading} body={aboutCta.body}>
-        <Button href={bookCallHref()}>{aboutCta.cta}</Button>
+        {book ? <Button href={book}>{aboutCta.cta}</Button> : null}
       </ClosingCta>
     </div>
   );

@@ -1,4 +1,5 @@
 import { siteConfig } from "../../site.config.ts";
+import { NONE } from "../lib/optional-setting.ts";
 
 /**
  * The automatic reply the contact Worker sends (docs/website-plan.md B7b), as HTML and plain text with the same words.
@@ -12,7 +13,8 @@ export interface AutoReplyConfig {
   business: { name: string; tagline: string };
   owner: { name: string; role: string };
   domain: { url: string };
-  contact: { siteEmail: string | null };
+  /** `schedulerUrl` is a URL, "none" (no booking link: the reply leaves the booking parts out) or null (not set yet). */
+  contact: { siteEmail: string | null; schedulerUrl: string | null };
   theme: { colors: { green: string; ink: string; ink2: string; rust: string; line: string } };
 }
 
@@ -31,6 +33,7 @@ export function buildAutoReply(config: AutoReplyConfig) {
   const c = theme.colors;
   const email = contact.siteEmail;
   const host = displayHost(domain.url);
+  const hasBooking = contact.schedulerUrl !== NONE;
   const role = `${owner.role}, ${business.name}`;
   const link = `color:${escapeHtml(c.green)};text-decoration:none;`;
   const contactLinks = [
@@ -47,11 +50,13 @@ export function buildAutoReply(config: AutoReplyConfig) {
       "The next reply is from me. I read every message myself and write back within one business day.",
     ],
     /** "{before}{linkText}{after}": the link text is the booking link in HTML; in plain text the URL follows on its own line. */
-    booking: {
-      before: "If you'd rather talk, ",
-      linkText: "pick a time for a free 20-minute call",
-      after: ".",
-    },
+    booking: hasBooking
+      ? {
+          before: "If you'd rather talk, ",
+          linkText: "pick a time for a free 20-minute call",
+          after: ".",
+        }
+      : null,
     paragraphsAfter: [
       "[[A short paragraph about how you work, for the automatic reply]]",
       "If there's more you want me to know, reply to this email. It comes straight to me. Please leave out passwords and client details. Anything sensitive gets handled the right way, later.",
@@ -66,7 +71,9 @@ export function buildAutoReply(config: AutoReplyConfig) {
       `<div style="font-size:13px;line-height:18px;color:${escapeHtml(c.ink2)};">${escapeHtml(role)}</div>` +
       `<div style="font-family:Georgia,'Times New Roman',serif;font-style:italic;font-size:14px;line-height:20px;color:${escapeHtml(c.rust)};padding-top:4px;">${escapeHtml(business.tagline)}</div>` +
       `<div style="font-size:13px;line-height:18px;padding-top:6px;">${contactLinks}</div>` +
-      `<div style="font-size:13px;line-height:18px;padding-top:2px;"><a href="{bookingUrl}" style="${link}font-weight:bold;">Book a free 20-minute call &rarr;</a></div>` +
+      (hasBooking
+        ? `<div style="font-size:13px;line-height:18px;padding-top:2px;"><a href="{bookingUrl}" style="${link}font-weight:bold;">Book a free 20-minute call &rarr;</a></div>`
+        : "") +
       `<div style="font-size:12px;line-height:17px;color:${escapeHtml(c.ink2)};padding-top:10px;">Changed your mind? Reply &ldquo;no thanks&rdquo; and I won&rsquo;t write again.</div>` +
       "</td></tr></table>",
     signatureText: [
@@ -74,7 +81,7 @@ export function buildAutoReply(config: AutoReplyConfig) {
       role,
       business.tagline,
       email ? `${email} | ${host}` : host,
-      "Book a free 20-minute call: {bookingUrl}",
+      ...(hasBooking ? ["Book a free 20-minute call: {bookingUrl}"] : []),
       "",
       'Changed your mind? Reply "no thanks" and I won\'t write again.',
     ],

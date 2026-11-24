@@ -14,6 +14,7 @@ export const metadata: Metadata = pageMetadata({ ...servicesMeta, path: "/servic
 
 /** Services: the hero, the list of services, an FAQ and the closing call to action. */
 export default function ServicesPage() {
+  const book = bookCallHref();
   return (
     <div className="relative overflow-x-clip">
       <PageHero eyebrow={servicesHero.eyebrow} title={servicesHero.title} intro={servicesHero.intro} />
@@ -29,7 +30,7 @@ export default function ServicesPage() {
         </Container>
       </section>
       <ClosingCta heading={servicesCta.heading} body={servicesCta.body}>
-        <Button href={bookCallHref()}>{servicesCta.cta}</Button>
+        {book ? <Button href={book}>{servicesCta.cta}</Button> : null}
       </ClosingCta>
     </div>
   );

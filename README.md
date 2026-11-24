@@ -117,7 +117,7 @@ Animation is CSS only (no library), in `src/app/hl.css`, following `docs/STYLE-G
 
 ## Placeholders and launch gate
 
-Anything only Dylan can supply is written as `[[double brackets]]` in `src/content/*` and renders as a highlighted marker on the page. Provider-dependent values (`email`, `schedulerUrl`, `linkedInUrl`, `turnstileSiteKey`) stay `null` in `site.config.ts` until set.
+Anything only Dylan can supply is written as `[[double brackets]]` in `src/content/*` and renders as a highlighted marker on the page. Provider-dependent values (`email`, `schedulerUrl`, `linkedInUrl`, `turnstileSiteKey`) stay `null` in `site.config.ts` until set. `schedulerUrl` and `linkedInUrl` may also be `"none"` (the owner has no booking link or LinkedIn page): pages leave the links out and the launch check passes.
 
 ```bash
 npm run check:placeholders   # lists every unresolved item, exits 1 while any remain
@@ -149,7 +149,7 @@ Each URL prints `PASS` or `FAIL` with the reason. A URL passes only when the fir
 
 ### Scheduler and analytics are still placeholders
 
-The contact page shows a disabled "Pick a time" button, clearly marked, and every "Book a free call" button points at `/contact#book` until `contact.schedulerUrl` is set in `site.config.ts`. If the scheduler is embedded in an iframe, add its origin to `frame-src` in `public/_headers`. Analytics is Cloudflare Web Analytics, which is cookieless: its two origins are in the CSP and the privacy page says so. Turn it on in the Cloudflare dashboard (nothing is added to the site's code).
+The contact page shows a disabled "Pick a time" button, clearly marked, and every "Book a free call" button points at `/contact#book` until `contact.schedulerUrl` is set in `site.config.ts`. With `contact.schedulerUrl: "none"` there is no scheduler column, no book-a-call button anywhere and no booking line in the automatic reply. If the scheduler is embedded in an iframe, add its origin to `frame-src` in `public/_headers`. Analytics is Cloudflare Web Analytics, which is cookieless: its two origins are in the CSP and the privacy page says so. Turn it on in the Cloudflare dashboard (nothing is added to the site's code).
 
 ## Contact form
 
@@ -157,7 +157,7 @@ The form on `/contact` (`src/components/hl/ContactForm.tsx`) posts JSON to `POST
 
 **What one submission does**, in order: same-origin check, JSON only, at most 16 KB; rate limit (5 per minute per IP, the `CONTACT_RATE_LIMIT` binding); spam-trap field (`company_fax`, refused with an honest error); the same validation as the form (`src/lib/contact-validation.ts`); Cloudflare Turnstile verified server-side (hostname and `action: "contact"` must match). Then it appends a row to Dylan's Google Sheet, emails the submission to dylan@structural-integrity-engineering.com (Reply-To = the visitor) with a line saying whether the Sheet row was saved, and sends the visitor the B7b automatic reply. The notification is **plain text only**, through Resend, from `<contact.fromName> <contact.siteEmail>`. The automatic reply is multipart (HTML + plain text, same words) from `<contact.replyFromName> <contact.siteEmail>`, with `Auto-Submitted: auto-replied` and `X-Auto-Response-Suppress: All` headers. Cells starting with `= + - @` (or a tab or carriage return) get a leading `'` before they are written, with either Sheet writer.
 
-**Where the Worker gets its values.** Every client-specific value comes from `site.config.ts` through `worker/config.ts`: `business.name`, `owner.name` and `owner.role`, `domain.url`, `domain.workerName` and `domain.previewHostSuffix` (to tell the production host from branch previews), `contact.siteEmail`, `fromName`, `replyFromName`, `schedulerUrl` (the booking link in the automatic reply), `sheetTabs`, `sheetWriter`, and the colors and tagline in the reply's signature. The rate limit (`contact.rateLimit`) is generated into `wrangler.jsonc` as the `CONTACT_RATE_LIMIT` binding. While `siteEmail` or `schedulerUrl` is `null` (the starter template), the Worker answers 502 (logged as `config_incomplete`) before it writes a row or sends any mail. The tests build the Worker from a fixture config of obviously fake values (`createWorker` in `worker/contact.ts`), never the real one.
+**Where the Worker gets its values.** Every client-specific value comes from `site.config.ts` through `worker/config.ts`: `business.name`, `owner.name` and `owner.role`, `domain.url`, `domain.workerName` and `domain.previewHostSuffix` (to tell the production host from branch previews), `contact.siteEmail`, `fromName`, `replyFromName`, `schedulerUrl` (the booking link in the automatic reply), `sheetTabs`, `sheetWriter`, and the colors and tagline in the reply's signature. The rate limit (`contact.rateLimit`) is generated into `wrangler.jsonc` as the `CONTACT_RATE_LIMIT` binding. While `siteEmail` or `schedulerUrl` is `null` (the starter template; `"none"` is a decision, not a gap, so the reply just leaves its booking paragraph and signature line out), the Worker answers 502 (logged as `config_incomplete`) before it writes a row or sends any mail. The tests build the Worker from a fixture config of obviously fake values (`createWorker` in `worker/contact.ts`), never the real one.
 
 **Sheet writers** (`contact.sheetWriter` in `site.config.ts`):
 
@@ -301,7 +301,7 @@ If a production build itself fails, nothing is deployed and the old version stay
 ## Launch checklist
 
 - [ ] Domain, DNS and business email working; `NEXT_PUBLIC_SITE_URL` set to the final domain
-- [ ] `email`, `schedulerUrl`, `linkedInUrl`, `turnstileSiteKey` set in `site.config.ts`
+- [ ] `email`, `schedulerUrl`, `linkedInUrl`, `turnstileSiteKey` set in `site.config.ts` (`schedulerUrl` and `linkedInUrl` may be `"none"`)
 - [ ] `npm run check:placeholders` passes (photos, screenshots, titles, location, background wording, musician line, certifications, privacy date)
 - [ ] Contact form tested end to end on desktop and phone on the live domain: the notification email to the site address, the automatic reply (SPF, DKIM and DMARC all PASS in "Show original"), the Sheet row; then delete the test row
 - [ ] Scheduler wired and its CSP origin added

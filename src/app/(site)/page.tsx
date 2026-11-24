@@ -14,15 +14,16 @@ export const metadata: Metadata = pageMetadata({ ...homeMeta, path: "/" });
 /** Home: one H1 (the hero), then a highlights list and the closing call to action. */
 export default function HomePage() {
   const organization = organizationJsonLd();
+  const book = bookCallHref();
   return (
     <div className="relative overflow-x-clip">
       {organization ? <JsonLd data={organization} /> : null}
       <PageHero eyebrow={hero.eyebrow} title={hero.title} intro={hero.intro}>
-        <Button href={bookCallHref()}>{hero.cta}</Button>
+        {book ? <Button href={book}>{hero.cta}</Button> : null}
       </PageHero>
       <ReasonList id="highlights" heading={highlights.heading} items={highlights.items} />
       <ClosingCta heading={closingCta.heading} body={closingCta.body} note={closingCta.note}>
-        <Button href={bookCallHref()}>{closingCta.cta}</Button>
+        {book ? <Button href={book}>{closingCta.cta}</Button> : null}
       </ClosingCta>
     </div>
   );
