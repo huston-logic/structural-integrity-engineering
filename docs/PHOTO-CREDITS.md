@@ -19,3 +19,7 @@ All photos are free to use under the Unsplash or Pexels license (no Unsplash+ pa
 | alaska-chugach.jpg | About, Alaska | Paxson Woelber, Unsplash | https://unsplash.com/photos/mountain-cover-with-snow-nssLllpgDIA |
 | colorado-pikes-peak.jpg | About, Colorado | Nathan Andress, Unsplash | https://unsplash.com/photos/a-wooden-fence-surrounded-by-snow-covered-trees-1QnJf5QQfkc |
 | dylan-portrait.jpg | About, principal engineer | Original file from Dylan's Wix site (not stock; ask Dylan for a sharper original if he has one) | https://static.wixstatic.com/media/527478_5a14addcd98c4d80bcd563a913266e2b~mv2.jpg |
+
+## Open question for Grant
+
+- `storefront-dusk.jpg` is a computer rendering that shows third-party retail brand logos. Crop it to remove the logos, or replace it, before launch. It is not swapped or cropped yet.

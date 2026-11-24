@@ -13,13 +13,13 @@ export const photos = {
     src: "/images/dusk-home.jpg",
     width: 2000,
     height: 2499,
-    alt: "A modern two-storey house with a white upper floor, wood soffits and glass walls, lit from inside at dusk above a snowy slope.",
+    alt: "A modern two-story house with a white upper floor, wood soffits and glass walls, lit from inside at dusk above a snowy slope.",
   },
   duskHomeWide: {
     src: "/images/dusk-home-wide.jpg",
     width: 2000,
     height: 1250,
-    alt: "A modern two-storey house with glass walls and wood soffits, lit from inside at dusk, with snow in the foreground.",
+    alt: "A modern two-story house with glass walls and wood soffits, lit from inside at dusk, with snow in the foreground.",
   },
   chaletSnow: {
     src: "/images/chalet-snow.jpg",
@@ -37,7 +37,7 @@ export const photos = {
     src: "/images/commercial-crane.jpg",
     width: 2071,
     height: 1381,
-    alt: "A multi-storey wood-framed building under construction, wrapped in house wrap, with a yellow tower crane above it.",
+    alt: "A multi-story wood-framed building under construction, wrapped in house wrap, with a yellow tower crane above it.",
   },
   curtainWall: {
     src: "/images/curtain-wall.jpg",
@@ -73,7 +73,7 @@ export const photos = {
     src: "/images/storefront-dusk.jpg",
     width: 1200,
     height: 675,
-    alt: "A computer rendering of a tall mixed-use building with a glass base and lit ground-floor storefronts at dusk.",
+    alt: "A computer rendering of a tall building with a glass base and lit ground-floor storefronts at dusk.",
   },
   louvers: {
     src: "/images/louvers.jpg",
