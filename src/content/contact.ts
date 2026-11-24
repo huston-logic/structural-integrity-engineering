@@ -34,7 +34,7 @@ export const noteForm = {
   } satisfies Record<ContactKey, string>,
   sendErrors: {
     notVerified: "That didn't go through. Please try again.",
-    rateLimited: "Too many tries in a row. Wait a minute and try again.",
+    rateLimited: "Too many tries in a row. Please try again shortly.",
     /** `{email}` and `{phone}` are the direct contact details from site.config.ts. */
     failed: "That didn't go through. Please email {email} or call {phone}.",
   },

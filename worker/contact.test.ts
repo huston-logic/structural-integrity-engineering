@@ -313,14 +313,14 @@ describe("a good submission in production", () => {
       const r = await reply();
       const text = String(r.text);
       const html = String(r.html);
-      const stripped = html.replace(/<[^>]+>/g, " ").replace(/&nbsp;/g, " ").replace(/\s+/g, " ");
+      const stripped = html.replace(/[<>]/g, " ").replace(/&nbsp;/g, " ").replace(/\s+/g, " ");
       for (const phrase of [`${confirmation.heading} ${confirmation.body}`, "Founder, Example Co"]) {
         assert.ok(text.includes(phrase), `text has: ${phrase}`);
         assert.ok(stripped.includes(phrase), `html has: ${phrase}`);
       }
       assert.ok(html.startsWith("<div"));
       assert.ok(!/<img|<script|<button|pixel|utm_/i.test(html), "no images, scripts, buttons or tracking");
-      assert.ok(!/book|pick a time|\{|\[\[/i.test(text + html.replace(/<[^>]+>/g, "")), "no booking wording, tokens or placeholders");
+      assert.ok(!/book|pick a time|\{|\[\[/i.test(text + stripped), "no booking wording, tokens or placeholders");
     });
 
     test("the same in preview, with the recipient named in the subject", async () => {
