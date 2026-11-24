@@ -15,6 +15,13 @@ export const photos = {
     height: 2499,
     alt: "A modern two-story house with a white upper floor, wood soffits and glass walls, lit from inside at dusk above a snowy slope.",
   },
+  /** dusk-home.jpg at 1200px for phones (the hero's srcset). Same aspect ratio, so the line drawing stays aligned. */
+  duskHome1200: {
+    src: "/images/dusk-home-1200.jpg",
+    width: 1200,
+    height: 1499,
+    alt: "A modern two-story house with a white upper floor, wood soffits and glass walls, lit from inside at dusk above a snowy slope.",
+  },
   duskHomeWide: {
     src: "/images/dusk-home-wide.jpg",
     width: 2000,
@@ -26,6 +33,43 @@ export const photos = {
     width: 987,
     height: 1480,
     alt: "A stone and log house with a car parked at the end of a deep snow drift in the driveway.",
+  },
+  // The home page's service cards: 4:5 crops (the option G reference's framing), each also at 660px for phones.
+  chaletSnowCard: {
+    src: "/images/chalet-snow-card.jpg",
+    width: 987,
+    height: 1234,
+    alt: "A stone and log house with a car parked at the end of a deep snow drift in the driveway.",
+  },
+  chaletSnowCard660: {
+    src: "/images/chalet-snow-card-660.jpg",
+    width: 660,
+    height: 825,
+    alt: "A stone and log house with a car parked at the end of a deep snow drift in the driveway.",
+  },
+  commercialCraneCard: {
+    src: "/images/commercial-crane-card.jpg",
+    width: 1100,
+    height: 1374,
+    alt: "A multi-story wood-framed building under construction, wrapped in house wrap, with a yellow tower crane above it.",
+  },
+  commercialCraneCard660: {
+    src: "/images/commercial-crane-card-660.jpg",
+    width: 660,
+    height: 825,
+    alt: "A multi-story wood-framed building under construction, wrapped in house wrap, with a yellow tower crane above it.",
+  },
+  curtainWallCard: {
+    src: "/images/curtain-wall-card.jpg",
+    width: 1100,
+    height: 1375,
+    alt: "Looking up at the glass curtain wall of a tall building, with the sky and clouds reflected in the panels.",
+  },
+  curtainWallCard660: {
+    src: "/images/curtain-wall-card-660.jpg",
+    width: 660,
+    height: 825,
+    alt: "Looking up at the glass curtain wall of a tall building, with the sky and clouds reflected in the panels.",
   },
   framingWood: {
     src: "/images/framing-wood.jpg",
