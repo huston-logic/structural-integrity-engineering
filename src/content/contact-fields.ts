@@ -12,7 +12,7 @@ export const needOptions: readonly { value: Need; label: string }[] = [
   { value: "unsure", label: "Not sure" },
 ];
 
-/** Values of the hidden `topic` field, read from `/contact?topic=`. */
+/** Values of the hidden `topic` field, read from `/contact-us?topic=`. */
 export const urlTopics = ["website", "workflow", "partner"] as const;
 export type UrlTopic = (typeof urlTopics)[number];
 

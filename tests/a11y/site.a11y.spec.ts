@@ -11,7 +11,7 @@ const TAGS = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa", "best-prac
 
 const NOT_FOUND_PATH = "/this-page-does-not-exist";
 // Rendered differently in the browser (PartnerAwareHeading), so it is scanned as its own page.
-const PARTNER_VARIANT = "/contact?topic=partner";
+const PARTNER_VARIANT = "/contact-us?topic=partner";
 
 const pages = [...indexableRoutes, ...noindexRoutes, PARTNER_VARIANT, NOT_FOUND_PATH];
 

@@ -55,7 +55,7 @@ function asUrlTopic(value: string | null): UrlTopic | "" {
 /**
  * The contact form (docs/website-plan.md B7). It validates with the same rules as the Worker
  * (`src/lib/contact-validation.ts`), gets a Turnstile token, and posts JSON to `/api/contact` (worker/contact.ts).
- * Only a real success moves on to /contact/thanks, with the first name passed through sessionStorage, never the URL.
+ * Only a real success moves on to /contact-us/thanks, with the first name passed through sessionStorage, never the URL.
  * Every failure keeps the visitor's answers. No `action`, and `method="post"`, so without JavaScript nothing is sent
  * and nothing lands in the URL.
  */
@@ -155,7 +155,7 @@ function Form({ urlTopic }: { urlTopic: string | null }) {
 
     if (response.ok && body?.ok === true) {
       saveHandoff(firstName(result.value.name), body.autoReply !== false);
-      router.push("/contact/thanks");
+      router.push("/contact-us/thanks");
       return;
     }
     if (response.status === 400 && body?.error === "invalid" && Array.isArray(body.fields)) {

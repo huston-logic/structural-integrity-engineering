@@ -204,7 +204,7 @@ plan and is **UNVERIFIED (dashboard)**.
 
 PR 53 also recorded why no code change was needed: the Worker has no hard-coded hostname allowlist
 (the origin check uses the request's own origin and Turnstile is checked against the request
-hostname), nothing noindexes the real domain (`robots.txt` allows all; only `/contact/thanks` and the
+hostname), nothing noindexes the real domain (`robots.txt` allows all; only `/contact-us/thanks` and the
 404 carry a page-level noindex), and production mode applies to every host except `*.workers.dev`
 hosts other than `<worker-name>.*`.
 

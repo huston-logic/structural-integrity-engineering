@@ -10,7 +10,7 @@ import { siteConfig } from "@/content/site";
 import { pageMetadata } from "@/lib/metadata";
 import { NONE } from "@/lib/optional-setting";
 
-export const metadata: Metadata = pageMetadata({ ...contactMeta, path: "/contact" });
+export const metadata: Metadata = pageMetadata({ ...contactMeta, path: "/contact-us" });
 
 const h2 = "text-[28px] font-semibold leading-tight tracking-[-0.02em]";
 

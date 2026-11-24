@@ -11,7 +11,7 @@ import { pageMetadata } from "@/lib/metadata";
 export const metadata: Metadata = pageMetadata({
   title: thanks.title,
   description: thanks.description,
-  path: "/contact/thanks",
+  path: "/contact-us/thanks",
   noindex: true,
 });
 

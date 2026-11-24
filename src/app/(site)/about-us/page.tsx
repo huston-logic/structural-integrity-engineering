@@ -6,7 +6,7 @@ import { Text } from "@/components/ui/Text";
 import { aboutBody, aboutHero, aboutMeta } from "@/content/about";
 import { pageMetadata } from "@/lib/metadata";
 
-export const metadata: Metadata = pageMetadata({ ...aboutMeta, path: "/about" });
+export const metadata: Metadata = pageMetadata({ ...aboutMeta, path: "/about-us" });
 
 /** About (template content until task 9): the hero, the story and the contact band. */
 export default function AboutPage() {

@@ -10,9 +10,12 @@ Permanent architecture, security and content rules are in [`AGENTS.md`](./AGENTS
 |---|---|
 | `/` | Home |
 | `/services` | Services and FAQ |
-| `/about` | About |
-| `/contact` | Scheduler placeholder and the contact form (`?topic=partner` shows the partner variant) |
-| `/contact/thanks` | Form confirmation, reached only after a real send (noindex) |
+| `/services/residential-structural-design` | Residential service page |
+| `/services/low-rise-commercial-structural-design` | Low-rise commercial service page |
+| `/services/glazing-and-mullion-engineering` | Glazing and mullion service page |
+| `/about-us` | About |
+| `/contact-us` | Scheduler placeholder and the contact form (`?topic=partner` shows the partner variant) |
+| `/contact-us/thanks` | Form confirmation, reached only after a real send (noindex) |
 | `POST /api/contact` | The contact form Worker (`worker/contact.ts`), not a page |
 | `/privacy` | Privacy policy (draft, needs review) |
 | `404` | Not found |
@@ -133,7 +136,7 @@ Normal builds (and CI) allow placeholders so the site can be previewed. **Use `n
 `public/_redirects` is the place for old-site URLs that should send visitors (and search engines) to the new pages. It holds only a comment header today, so nothing redirects yet. At launch, add one rule per line, with the old path first, the new path second and the status 301 (permanent):
 
 ```
-/old-about /about 301
+/old-about /about-us 301
 /blog/* /insights/:splat 301
 ```
 
@@ -149,11 +152,11 @@ Each URL prints `PASS` or `FAIL` with the reason. A URL passes only when the fir
 
 ### Scheduler and analytics are still placeholders
 
-The contact page shows a disabled "Pick a time" button, clearly marked, and every "Book a free call" button points at `/contact#book` until `contact.schedulerUrl` is set in `site.config.ts`. With `contact.schedulerUrl: "none"` there is no scheduler column, no book-a-call button anywhere and no booking line in the automatic reply. If the scheduler is embedded in an iframe, add its origin to `frame-src` in `public/_headers`. Analytics is Cloudflare Web Analytics, which is cookieless: its two origins are in the CSP and the privacy page says so. Turn it on in the Cloudflare dashboard (nothing is added to the site's code).
+The contact page shows a disabled "Pick a time" button, clearly marked, and every "Book a free call" button points at `/contact-us#book` until `contact.schedulerUrl` is set in `site.config.ts`. With `contact.schedulerUrl: "none"` there is no scheduler column, no book-a-call button anywhere and no booking line in the automatic reply. If the scheduler is embedded in an iframe, add its origin to `frame-src` in `public/_headers`. Analytics is Cloudflare Web Analytics, which is cookieless: its two origins are in the CSP and the privacy page says so. Turn it on in the Cloudflare dashboard (nothing is added to the site's code).
 
 ## Contact form
 
-The form on `/contact` (`src/components/hl/ContactForm.tsx`) posts JSON to `POST /api/contact`, handled by a small Worker script, `worker/contact.ts`. `wrangler.jsonc` runs the Worker **only for `/api/*`** (`run_worker_first`); every page and file is still the static export in `./out`.
+The form on `/contact-us` (`src/components/hl/ContactForm.tsx`) posts JSON to `POST /api/contact`, handled by a small Worker script, `worker/contact.ts`. `wrangler.jsonc` runs the Worker **only for `/api/*`** (`run_worker_first`); every page and file is still the static export in `./out`.
 
 **What one submission does**, in order: same-origin check, JSON only, at most 16 KB; rate limit (5 per minute per IP, the `CONTACT_RATE_LIMIT` binding); spam-trap field (`company_fax`, refused with an honest error); the same validation as the form (`src/lib/contact-validation.ts`); Cloudflare Turnstile verified server-side (hostname and `action: "contact"` must match). Then it appends a row to Dylan's Google Sheet, emails the submission to dylan@structural-integrity-engineering.com (Reply-To = the visitor) with a line saying whether the Sheet row was saved, and sends the visitor the B7b automatic reply. The notification is **plain text only**, through Resend, from `<contact.fromName> <contact.siteEmail>`. The automatic reply is multipart (HTML + plain text, same words) from `<contact.replyFromName> <contact.siteEmail>`, with `Auto-Submitted: auto-replied` and `X-Auto-Response-Suppress: All` headers. Cells starting with `= + - @` (or a tab or carriage return) get a leading `'` before they are written, with either Sheet writer.
 
@@ -168,7 +171,7 @@ The form on `/contact` (`src/components/hl/ContactForm.tsx`) posts JSON to `POST
 
 Both give up after 8 seconds and retry once on a rate limit, server error or network failure. Change the writer, then run `npm run sync:config` so `wrangler.jsonc` lists the right secret names.
 
-**What the visitor sees.** Success only when the note reached Dylan (the Sheet row or the email). Then the form saves the first name and whether the automatic reply went out in `sessionStorage` (never the URL) and moves to `/contact/thanks`, which says "Got it, thanks {name}." If the automatic reply failed, the thanks page says so. Every failure keeps the visitor's answers and shows one of the three B7 send errors. Without JavaScript nothing is sent.
+**What the visitor sees.** Success only when the note reached Dylan (the Sheet row or the email). Then the form saves the first name and whether the automatic reply went out in `sessionStorage` (never the URL) and moves to `/contact-us/thanks`, which says "Got it, thanks {name}." If the automatic reply failed, the thanks page says so. Every failure keeps the visitor's answers and shows one of the three B7 send errors. Without JavaScript nothing is sent.
 
 | Sheet | Email to Dylan | Result |
 |---|---|---|

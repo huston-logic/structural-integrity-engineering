@@ -26,7 +26,7 @@ const root = new URL("..", import.meta.url).pathname;
 
 // ---- which pages does a change touch? (pure) --------------------------------------------------------------------
 
-/** "src/app/(site)/about/page.tsx" becomes "/about"; the home page is "/"; anything else is null. */
+/** "src/app/(site)/about-us/page.tsx" becomes "/about-us"; the home page is "/"; anything else is null. */
 export function routeForPageFile(path) {
   const match = /^src\/app\/\(site\)\/(?:(.+)\/)?page\.tsx$/.exec(path);
   return match ? (match[1] ? `/${match[1]}` : "/") : null;

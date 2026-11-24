@@ -209,7 +209,7 @@ Full commands in [contact-form.md](./contact-form.md#secrets-by-name).
 
 - [ ] Google Search Console: verify the property, submit `https://<apex>/sitemap.xml`.
 - [ ] Confirm `robots.txt` allows all and nothing noindexes the apex (only `*.workers.dev` and
-      `*.pages.dev` hosts carry `X-Robots-Tag: noindex` from `_headers`; only `/contact/thanks` and the
+      `*.pages.dev` hosts carry `X-Robots-Tag: noindex` from `_headers`; only `/contact-us/thanks` and the
       404 are page-level noindex).
 
 ## 12. Handoff to the client

@@ -21,4 +21,4 @@ export const siteConfig = {
   turnstileSiteKey: providers.turnstileSiteKey,
 } as const;
 
-export const SCHEDULER_FALLBACK_HREF = "/contact#book";
+export const SCHEDULER_FALLBACK_HREF = "/contact-us#book";

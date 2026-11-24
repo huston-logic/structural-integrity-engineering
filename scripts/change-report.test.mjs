@@ -7,22 +7,22 @@ import { rules } from "./change-scope-rules.mjs";
 import { evaluateChange, formatReport } from "./check-change-scope.mjs";
 import { affectedPages, buildReportMarkdown, extractOptions, findImporters, routeForPageFile, slugForRoute } from "./change-report.mjs";
 
-const allRoutes = ["/", "/services", "/about", "/contact", "/privacy", "/contact/thanks"];
+const allRoutes = ["/", "/services", "/about-us", "/contact-us", "/privacy", "/contact-us/thanks"];
 const pageRoutes = {
   "src/app/(site)/page.tsx": "/",
   "src/app/(site)/services/page.tsx": "/services",
-  "src/app/(site)/about/page.tsx": "/about",
-  "src/app/(site)/contact/page.tsx": "/contact",
+  "src/app/(site)/about-us/page.tsx": "/about-us",
+  "src/app/(site)/contact-us/page.tsx": "/contact-us",
   "src/app/(site)/privacy/page.tsx": "/privacy",
-  "src/app/(site)/contact/thanks/page.tsx": "/contact/thanks",
+  "src/app/(site)/contact-us/thanks/page.tsx": "/contact-us/thanks",
 };
 const sources = {
   "src/app/(site)/page.tsx": 'import { homeHero } from "@/content/home";\nimport { Hero } from "@/components/hl/Hero";',
-  "src/app/(site)/about/page.tsx": "import { aboutBody } from '@/content/about';\nimport { Button } from \"@/components/hl/Button\";",
+  "src/app/(site)/about-us/page.tsx": "import { aboutBody } from '@/content/about';\nimport { Button } from \"@/components/hl/Button\";",
   "src/app/(site)/services/page.tsx": 'import { servicesHero } from "@/content/services";\nimport { Button } from "@/components/hl/Button";',
-  "src/app/(site)/contact/page.tsx": 'import { contactHero } from "@/content/contact";',
+  "src/app/(site)/contact-us/page.tsx": 'import { contactHero } from "@/content/contact";',
   "src/app/(site)/privacy/page.tsx": 'import { privacy } from "@/content/privacy";',
-  "src/app/(site)/contact/thanks/page.tsx": 'import { thanks } from "@/content/contact";',
+  "src/app/(site)/contact-us/thanks/page.tsx": 'import { thanks } from "@/content/contact";',
   "src/app/(site)/layout.tsx": 'import { SiteChrome } from "@/components/layout/SiteChrome";',
   "src/components/layout/SiteChrome.tsx": 'import { nav } from "@/content/nav";',
   "src/components/hl/Button.tsx": "export function Button() {}",
@@ -41,16 +41,16 @@ const routes = (files) => pages(files).map((p) => p.route);
 test("routeForPageFile and slugForRoute", () => {
   assert.equal(routeForPageFile("src/app/(site)/page.tsx"), "/");
   assert.equal(routeForPageFile("src/app/(site)/faq/page.tsx"), "/faq");
-  assert.equal(routeForPageFile("src/app/(site)/contact/thanks/page.tsx"), "/contact/thanks");
+  assert.equal(routeForPageFile("src/app/(site)/contact-us/thanks/page.tsx"), "/contact-us/thanks");
   assert.equal(routeForPageFile("src/app/(site)/layout.tsx"), null);
   assert.equal(routeForPageFile("src/app/not-found.tsx"), null);
   assert.equal(slugForRoute("/"), "home");
-  assert.equal(slugForRoute("/contact/thanks"), "contact-thanks");
-  assert.equal(slugForRoute("/about"), "about");
+  assert.equal(slugForRoute("/contact-us/thanks"), "contact-us-thanks");
+  assert.equal(slugForRoute("/about-us"), "about-us");
 });
 
 test("findImporters finds alias, relative and image-path references", () => {
-  assert.deepEqual(findImporters("src/content/about.ts", sources), ["src/app/(site)/about/page.tsx"]);
+  assert.deepEqual(findImporters("src/content/about.ts", sources), ["src/app/(site)/about-us/page.tsx"]);
   assert.deepEqual(findImporters("src/content/home.ts", sources).sort(), ["src/app/(site)/page.tsx", "src/content/home-art.ts"].sort());
   assert.deepEqual(findImporters("public/images/about/portrait.webp", sources), ["src/content/about.ts"]);
   assert.deepEqual(findImporters("public/images/unused.jpg", sources), []);
@@ -58,7 +58,7 @@ test("findImporters finds alias, relative and image-path references", () => {
 });
 
 test("a content change touches only the pages that use it", () => {
-  assert.deepEqual(routes(change(["M", "src/content/about.ts"])), ["/about"]);
+  assert.deepEqual(routes(change(["M", "src/content/about.ts"])), ["/about-us"]);
   assert.deepEqual(routes(change(["M", "src/content/services.ts"])), ["/services"]);
 });
 
@@ -66,7 +66,7 @@ test("content used through other modules reaches the pages that import those", (
   // home.ts is imported by the home page and by home-art.ts, which the Hero component imports; the home page imports Hero.
   assert.deepEqual(routes(change(["M", "src/content/home.ts"])), ["/"]);
   // contact.ts is imported by the contact and thanks pages directly.
-  assert.deepEqual(routes(change(["M", "src/content/contact.ts"])), ["/contact", "/contact/thanks"]);
+  assert.deepEqual(routes(change(["M", "src/content/contact.ts"])), ["/contact-us", "/contact-us/thanks"]);
 });
 
 test("a change that reaches the shared layout touches every page", () => {
@@ -74,8 +74,8 @@ test("a change that reaches the shared layout touches every page", () => {
 });
 
 test("a photo is traced to the pages that show it; an unreferenced one touches every page", () => {
-  assert.deepEqual(routes(change(["A", "public/images/about/portrait.webp"])), ["/about"]);
-  assert.deepEqual(routes(change(["M", "public/images/about/portrait.webp"])), ["/about"]);
+  assert.deepEqual(routes(change(["A", "public/images/about/portrait.webp"])), ["/about-us"]);
+  assert.deepEqual(routes(change(["M", "public/images/about/portrait.webp"])), ["/about-us"]);
   assert.deepEqual(routes(change(["A", "public/images/unused.jpg"])), [...allRoutes].sort());
 });
 
@@ -94,7 +94,7 @@ test("a new page has an after only, a deleted page a before only", () => {
 
 test("every page carries its slug and the reason it was picked", () => {
   const [about] = pages(change(["M", "src/content/about.ts"]));
-  assert.equal(about.slug, "about");
+  assert.equal(about.slug, "about-us");
   assert.match(about.reason, /src\/content\/about\.ts/);
 });
 
@@ -113,16 +113,16 @@ test("the markdown report lists the scope result and a before and after for each
     base: "origin/main",
     head: "HEAD",
     pages: [
-      { route: "/about", slug: "about", before: true, after: true, reason: "src/content/about.ts changed" },
+      { route: "/about-us", slug: "about-us", before: true, after: true, reason: "src/content/about.ts changed" },
       { route: "/faq", slug: "faq", before: false, after: true, reason: "new page" },
     ],
     viewports: [{ name: "phone", width: 390, height: 844 }, { name: "desktop", width: 1440, height: 900 }],
   });
   assert.match(md, /^# Change report/);
   assert.match(md, /Tier 1: this change only touches content/);
-  assert.match(md, /### \/about/);
-  assert.match(md, /!\[before, phone\]\(about\/before-phone\.png\)/);
-  assert.match(md, /!\[after, desktop\]\(about\/after-desktop\.png\)/);
+  assert.match(md, /### \/about-us/);
+  assert.match(md, /!\[before, phone\]\(about-us\/before-phone\.png\)/);
+  assert.match(md, /!\[after, desktop\]\(about-us\/after-desktop\.png\)/);
   assert.match(md, /### \/faq/);
   assert.doesNotMatch(md, /faq\/before-/);
   assert.match(md, /new page, no before/i);
