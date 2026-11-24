@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { seo } from "@/content/seo";
 import { siteConfig } from "@/content/site";
 import { fontVariables } from "@/lib/fonts";
 import { OG_IMAGE_ALT, OG_IMAGE_PATH } from "@/lib/metadata";
@@ -8,9 +9,10 @@ import "./globals.css";
 export const metadata: Metadata = {
   metadataBase: new URL(siteConfig.url),
   title: {
-    default: "[[Default site title]]",
+    default: seo.home.title,
     template: `%s | ${siteConfig.name}`,
   },
+  description: seo.home.description,
   applicationName: siteConfig.name,
   authors: [{ name: siteConfig.founder }],
   openGraph: {

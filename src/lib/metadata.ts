@@ -4,7 +4,8 @@ import { siteConfig } from "@/content/site";
 type PageMetaInput = {
   /** Full `<title>` text, exactly as specified in the content docs. */
   title: string;
-  description: string;
+  /** null leaves the description out (the privacy page has no deck text to build one from). */
+  description: string | null;
   /** Route path starting with "/". Used for the canonical URL. */
   path: string;
   noindex?: boolean;
@@ -19,7 +20,8 @@ export function absoluteUrl(path: string): string {
   return `${siteConfig.url}${path}`;
 }
 
-export function pageMetadata({ title, description, path, noindex = false }: PageMetaInput): Metadata {
+export function pageMetadata({ title, description: rawDescription, path, noindex = false }: PageMetaInput): Metadata {
+  const description = rawDescription ?? undefined;
   return {
     title: { absolute: title },
     description,
