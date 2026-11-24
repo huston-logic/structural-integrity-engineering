@@ -1,10 +1,15 @@
-// Tiny static server for the exported site in ./out (mimics Cloudflare Pages clean URLs + 404.html).
+// Tiny static server for the exported site in ./out (mimics Cloudflare clean URLs, 404.html and text compression).
 // Run directly (`npm run preview`) it serves ./out. scripts/change-report.mjs imports startPreviewServer to serve a
 // before and an after build side by side.
 import { createServer } from "node:http";
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { extname, join, normalize } from "node:path";
 import { pathToFileURL } from "node:url";
+import { gzipSync } from "node:zlib";
+
+// Cloudflare (like `next start`) compresses text responses. Without this, Lighthouse in CI measures about 3x the bytes
+// real visitors download, and photo-LCP pages fail the performance threshold for that reason alone.
+const compressible = new Set([".html", ".css", ".js", ".json", ".txt", ".xml", ".svg"]);
 
 const defaultOutDir = new URL("../out", import.meta.url).pathname;
 const defaultPort = Number(process.env.PORT ?? 4822);
@@ -67,12 +72,14 @@ export function startPreviewServer({ outDir = defaultOutDir, port = defaultPort 
       res.writeHead(500).end("Run `npm run build` first.");
       return;
     }
+    const gzip = compressible.has(extname(target)) && /\bgzip\b/.test(req.headers["accept-encoding"] ?? "");
     res.writeHead(status, {
       ...headerBlocks["/*"],
       "content-type": types[extname(target)] ?? "application/octet-stream",
+      ...(gzip ? { "content-encoding": "gzip", vary: "Accept-Encoding" } : undefined),
       ...(file ? headerBlocks[pathname] : undefined),
     });
-    res.end(readFileSync(target));
+    res.end(gzip ? gzipSync(readFileSync(target)) : readFileSync(target));
   });
   return new Promise((resolve, reject) => {
     server.once("error", reject);
