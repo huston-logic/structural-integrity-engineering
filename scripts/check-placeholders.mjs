@@ -65,6 +65,14 @@ for (const key of requiredKeys) {
   else if (typeof value === "string" && value.trim() === "") problems.push(`site.config.ts  ${key} is empty`);
 }
 
+// "none" is a deliberate answer for the two optional links; null (not decided) still fails above.
+for (const key of ["contact.schedulerUrl", "contact.linkedInUrl"]) {
+  const value = key.split(".").reduce((obj, part) => obj?.[part], config);
+  if (typeof value === "string" && value !== "none" && !/^https?:\/\/\S+$/.test(value)) {
+    problems.push(`site.config.ts  ${key} must be "none" or an http(s) URL, not ${JSON.stringify(value)}`);
+  }
+}
+
 if (!["apps-script", "service-account"].includes(config.contact.sheetWriter)) {
   problems.push(`site.config.ts  contact.sheetWriter must be "apps-script" or "service-account", not ${JSON.stringify(config.contact.sheetWriter)}`);
 }

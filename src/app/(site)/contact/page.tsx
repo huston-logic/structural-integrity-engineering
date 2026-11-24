@@ -8,6 +8,7 @@ import { Text } from "@/components/ui/Text";
 import { contactHero, contactMeta, scheduler, whatHappensNext } from "@/content/contact";
 import { siteConfig } from "@/content/site";
 import { pageMetadata } from "@/lib/metadata";
+import { NONE } from "@/lib/optional-setting";
 
 export const metadata: Metadata = pageMetadata({ ...contactMeta, path: "/contact" });
 
@@ -15,12 +16,16 @@ const h2 = "font-ui text-[28px] font-bold leading-tight tracking-[-0.03em]";
 
 /** Contact: the scheduler column, the note form, then what happens next. */
 export default function ContactPage() {
+  const noScheduler = siteConfig.schedulerUrl === NONE;
   return (
     <div className="relative overflow-x-clip">
       <PageHero eyebrow={contactHero.eyebrow} title={contactHero.title} intro={contactHero.intro} />
 
       <section className="pb-12 md:pb-16">
-        <Container className="grid items-start gap-12 min-[900px]:grid-cols-[5fr_7fr] min-[900px]:gap-12">
+        <Container
+          className={`grid items-start gap-12 min-[900px]:gap-12 ${noScheduler ? "" : "min-[900px]:grid-cols-[5fr_7fr]"}`}
+        >
+          {noScheduler ? null : (
           <div id="book" className="scroll-mt-24">
             <h2 className={h2}>
               <Text>{scheduler.heading}</Text>
@@ -49,6 +54,7 @@ export default function ContactPage() {
               )}
             </div>
           </div>
+          )}
           <ContactForm />
         </Container>
       </section>

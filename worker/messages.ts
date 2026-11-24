@@ -42,31 +42,36 @@ export function notificationEmail(config: WorkerConfig, s: ContactSubmission, mo
 }
 
 /** The B7b automatic reply. In preview it goes to the site owner instead, and the subject says who it would have gone to. */
-export function autoReplyEmail(config: WorkerConfig, s: ContactSubmission, mode: Mode, bookingUrl: string) {
+export function autoReplyEmail(config: WorkerConfig, s: ContactSubmission, mode: Mode, bookingUrl: string | null) {
   const { autoReply } = config;
   const name = autoReplyFirstName(s.name);
-  const { booking } = autoReply;
   const greeting = name ? autoReply.greeting.replace("{firstName}", name) : autoReply.greetingNoName;
+  // With no booking link ("none" in site.config.ts) the reply has no booking paragraph and no signature line for it.
+  const { booking } = autoReply;
+  const url = booking ? bookingUrl : null;
   const text = [
     greeting,
     ...autoReply.paragraphs,
-    `${booking.before}${booking.linkText}${booking.after}\n${bookingUrl}`,
+    ...(booking && url ? [`${booking.before}${booking.linkText}${booking.after}\n${url}`] : []),
     ...autoReply.paragraphsAfter,
     autoReply.talkSoon,
-    autoReply.signatureText.join("\n").replace("{bookingUrl}", bookingUrl),
+    autoReply.signatureText.join("\n").replace("{bookingUrl}", url ?? ""),
   ].join("\n\n");
 
   const { ink, link: linkColor } = autoReply.colors;
   const p = (inner: string) => `<p style="margin:0 0 16px;">${inner}</p>`;
-  const link = `<a href="${escapeHtml(bookingUrl)}" style="color:${escapeHtml(linkColor)};">${escapeHtml(booking.linkText)}</a>`;
+  const bookingParagraph =
+    booking && url
+      ? [p(`${escapeHtml(booking.before)}<a href="${escapeHtml(url)}" style="color:${escapeHtml(linkColor)};">${escapeHtml(booking.linkText)}</a>${escapeHtml(booking.after)}`)]
+      : [];
   const html = [
     `<div style="max-width:560px;margin:0;text-align:left;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:16px;line-height:1.5;color:${escapeHtml(ink)};">`,
     p(escapeHtml(greeting)),
     ...autoReply.paragraphs.map((t) => p(escapeHtml(t))),
-    p(`${escapeHtml(booking.before)}${link}${escapeHtml(booking.after)}`),
+    ...bookingParagraph,
     ...autoReply.paragraphsAfter.map((t) => p(escapeHtml(t))),
     p(escapeHtml(autoReply.talkSoon)),
-    autoReply.signatureHtml.replace("{bookingUrl}", escapeHtml(bookingUrl)),
+    autoReply.signatureHtml.replace("{bookingUrl}", escapeHtml(url ?? "")),
     "</div>",
   ].join("\n");
 

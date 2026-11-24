@@ -13,13 +13,14 @@ export const metadata: Metadata = {
 
 /** The 404 renders in the root layout, outside the (site) group, so it adds the header and footer itself. */
 export default function NotFound() {
+  const book = bookCallHref();
   return (
     <SiteChrome>
       <div className="relative overflow-x-clip">
         <PageHero title={notFound.heading} intro={notFound.body}>
           <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
             <Button href="/">{notFound.homeLabel}</Button>
-            <TextLink href={bookCallHref()}>{notFound.callLabel}</TextLink>
+            {book ? <TextLink href={book}>{notFound.callLabel}</TextLink> : null}
           </div>
         </PageHero>
       </div>

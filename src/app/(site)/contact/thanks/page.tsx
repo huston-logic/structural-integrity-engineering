@@ -17,12 +17,15 @@ export const metadata: Metadata = pageMetadata({
 
 /** Thanks (docs/website-plan.md B7b). The heading and intro read the contact form's sessionStorage hand-off. The "Or read:" article line waits for the first published article. */
 export default function ThanksPage() {
+  const book = bookCallHref();
   return (
     <div className="relative overflow-x-clip">
       <PageHero title={<ThanksText part="heading" />} intro={<ThanksText part="body" />}>
-        <Button href={bookCallHref()} fullWidthOnMobile>
-          {thanks.pickTimeLabel}
-        </Button>
+        {book ? (
+          <Button href={book} fullWidthOnMobile>
+            {thanks.pickTimeLabel}
+          </Button>
+        ) : null}
       </PageHero>
       <section className="pb-16 md:pb-24">
         <Container>

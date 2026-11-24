@@ -5,12 +5,14 @@ import { HlLink } from "@/components/hl/HlLink";
 import { Text } from "@/components/ui/Text";
 import { footerLinks, privacyLink } from "@/content/nav";
 import { siteConfig } from "@/content/site";
+import { settingUrl } from "@/lib/optional-setting";
 import { Logo } from "./Logo";
 
 const linkClass = "inline-flex min-h-11 items-center font-ui text-[16px] font-medium text-ink";
 
 /** Site footer (docs/STYLE-GUIDE.md §7.26, Rev 7.1 B10): fades in from the page, no hard edge. */
 export function Footer() {
+  const linkedIn = settingUrl(siteConfig.linkedInUrl);
   return (
     <footer className="hl-footer relative overflow-hidden pb-12 pt-24">
       <Container className="relative">
@@ -45,9 +47,9 @@ export function Footer() {
                 </HlLink>
               </li>
             ) : null}
-            {siteConfig.linkedInUrl ? (
+            {linkedIn ? (
               <li>
-                <HlLink href={siteConfig.linkedInUrl} className={linkClass}>
+                <HlLink href={linkedIn} className={linkClass}>
                   <ArrowLabel>LinkedIn</ArrowLabel>
                 </HlLink>
               </li>

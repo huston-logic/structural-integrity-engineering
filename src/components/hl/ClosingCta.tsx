@@ -8,7 +8,7 @@ type ClosingCtaProps = {
   heading: string;
   body?: string;
   /** The action (a Button, optionally followed by a TextLink). */
-  children: ReactNode;
+  children?: ReactNode;
   /** The microcopy line under the action. */
   note?: string;
 };
@@ -27,7 +27,7 @@ export function ClosingCta({ heading, body, children, note }: ClosingCtaProps) {
             <Text>{body}</Text>
           </p>
         ) : null}
-        <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-2">{children}</div>
+        {children ? <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-2">{children}</div> : null}
         {note ? (
           <p className="mt-6 text-[15px] text-ink-2">
             <Text>{note}</Text>

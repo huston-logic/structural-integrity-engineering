@@ -41,12 +41,15 @@ export const siteConfig = {
     fromName: "Structural Integrity Engineering website",
     /** Display name on the automatic reply. */
     replyFromName: "Dylan Gassmann",
-    // CLIENT: replace. null means not chosen yet: check:placeholders fails, the contact page shows a placeholder, and the
-    // contact Worker refuses to send (502) because the automatic reply needs a booking link.
-    schedulerUrl: null as string | null,
+    // CLIENT: replace. A booking URL (add its origin to csp.extraFrameSrc if it is embedded), or "none" when there is no
+    // booking link: pages leave out every book-a-call button and the contact page's scheduler column, and the automatic
+    // reply leaves out its booking paragraph and signature line. null means not decided yet: check:placeholders fails, the
+    // contact page shows a placeholder, and the contact Worker refuses to send (502).
+    schedulerUrl: "none" as string | null,
     bookingFallbackPath: "/contact#book",
-    // CLIENT: replace. null means not chosen yet; check:placeholders fails while it is null.
-    linkedInUrl: null as string | null,
+    // CLIENT: replace. A LinkedIn URL, or "none" when there is no page to link: the footer leaves the link out. null means
+    // not decided yet; check:placeholders fails while it is null.
+    linkedInUrl: "none" as string | null,
     /** Cloudflare Turnstile site key for the contact form. Public by design: it ships in the page. */
     turnstileSiteKey: null as string | null,
     /**

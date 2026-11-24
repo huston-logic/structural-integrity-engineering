@@ -559,12 +559,36 @@ describe("client values come from the config", () => {
     });
   }
 
+  test('a booking link of "none" is allowed: it sends, and the reply has no booking paragraph, link or signature line', async () => {
+    const response = await makeWorker({ schedulerUrl: "none" }).fetch(post(valid), env());
+    assert.equal(response.status, 200);
+    assert.ok(!logs.some((l) => l.includes("config_incomplete")));
+    assert.equal(called("reply").length, 1);
+    const text = String(called("reply")[0].json?.text);
+    const html = String(called("reply")[0].json?.html);
+    for (const out of [text, html]) {
+      assert.ok(!/book a free|pick a time|rather talk|bookingUrl/i.test(out), "no booking wording or leftover token");
+    }
+    assert.ok(!html.includes('href="none"') && !text.split("\n").includes("none"));
+    assert.ok(text.includes("Pat Example") && text.includes("Talk soon,"));
+    assert.ok(html.includes("Talk soon,") && html.includes("mailto:"));
+  });
+
+  test("the reply builder drops the booking parts for none and keeps them for a link", () => {
+    const none = buildAutoReply({ ...FIXTURE, contact: { ...FIXTURE.contact, schedulerUrl: "none" } });
+    assert.equal(none.booking, null);
+    assert.ok(!none.signatureHtml.includes("{bookingUrl}") && !none.signatureText.join("\n").includes("{bookingUrl}"));
+    assert.ok(!none.signatureHtml.includes("Book a free") && !none.signatureText.join("\n").includes("Book a free"));
+    const link = buildAutoReply(FIXTURE);
+    assert.ok(link.booking && link.signatureHtml.includes("{bookingUrl}"));
+  });
+
   test("a config full of placeholders and nulls builds the reply without throwing", () => {
     const reply = buildAutoReply({
       business: { name: "[[Business name]]", tagline: "[[Tagline]]" },
       owner: { name: "[[Owner name]]", role: "[[Owner role]]" },
       domain: { url: "https://example.com" },
-      contact: { siteEmail: null },
+      contact: { siteEmail: null, schedulerUrl: null },
       theme: { colors: { green: "#1e4fa3", ink: "#1c1917", ink2: "#44403c", rust: "#9a3412", line: "#d6d3d1" } },
     });
     assert.ok(reply.signatureHtml.includes("[[Owner name]]") && !reply.signatureHtml.includes("mailto:"));

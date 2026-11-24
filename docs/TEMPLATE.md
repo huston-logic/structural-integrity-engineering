@@ -140,7 +140,7 @@ unchanged (PR 3 swaps in placeholders; PR 4 did it for the Worker's values). Wha
 - `npm run check:placeholders` (so `build:launch`) also reads `site.config.ts`: it fails on any `[[...]]` in it and on
   any empty required value, naming the key. `legalName`, `prices.website`, `csp.extra*` and `analytics` are optional.
 - Held in the config but **not yet read** by anything: `contact.bookingFallbackPath` (the Worker no longer needs it: it
-  refuses to send while `schedulerUrl` is `null`; the page code still uses its own `/contact#book`),
+  refuses to send while `schedulerUrl` is `null` (`"none"` is allowed: no booking link anywhere); the page code still uses its own `/contact#book`),
   `brand.wordmark/full/headshot`, `prices.website`. `Marks.tsx`/`AboutTeaser.tsx` (PR 3) will take the brand files.
 - Read by the Worker since PR 4 (`worker/config.ts`): `business.name`, `owner.name/role`, `domain.url`, `workerName`,
   `previewHostSuffix`, `contact.siteEmail`, `fromName`, `replyFromName`, `schedulerUrl`, `sheetWriter`, `sheetTabs`, and
@@ -164,9 +164,9 @@ export const siteConfig = {
     siteEmail: "",          // From, notify To, Reply-To
     fromName: "",           // display name for the notification
     replyFromName: "",      // display name for the automatic reply
-    schedulerUrl: "",       // also feeds CSP frame-src if it is an embed
+    schedulerUrl: "",       // a URL, or "none" for no booking link; also feeds CSP frame-src if it is an embed
     bookingFallbackPath: "/contact#book",
-    linkedInUrl: null as string | null,
+    linkedInUrl: null as string | null, // a URL, or "none" for no LinkedIn link
     turnstileSiteKey: "",
     sheetTabs: { production: "Submissions", preview: "Preview" },
     rateLimit: { limit: 5, periodSeconds: 60, namespaceIds: { production: "", preview: "" } },

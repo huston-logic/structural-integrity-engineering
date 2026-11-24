@@ -164,8 +164,9 @@ async function handleContact(config: WorkerConfig, request: Request, env: Contac
   }
 
   // Fail closed while the site email or booking link is still unset (the starter template): no Sheet row, no mail.
+  // A booking link of "none" is a decision, not a gap: the reply just leaves the booking parts out.
   const { siteEmail, bookingUrl } = config;
-  if (!siteEmail || !bookingUrl) {
+  if (!siteEmail || config.bookingUnset) {
     log("config_incomplete");
     return json(502, { ok: false, error: "failed" });
   }
