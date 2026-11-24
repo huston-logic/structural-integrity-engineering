@@ -4,7 +4,7 @@ import { siteConfig } from "./site";
 
 /**
  * Contact page copy, from the copy deck (Contact). The six field labels live in `contact-fields.ts`, which the Worker
- * also reads. Anything the deck does not give is a double-bracket placeholder (SEO text is task 11).
+ * also reads. Anything the deck does not give is a double-bracket placeholder.
  */
 export const contactMeta = seo.contact;
 

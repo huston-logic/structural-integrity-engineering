@@ -11,8 +11,7 @@ const withName = (headline: string) => `${headline} | ${name}`;
 
 export type SeoEntry = {
   title: string;
-  /** null only for the privacy page: the deck has no text to build one from, and an invented line is not allowed. */
-  description: string | null;
+  description: string;
 };
 
 export const seo = {
@@ -47,7 +46,7 @@ export const seo = {
   },
   privacy: {
     title: withName("Privacy Policy"),
-    description: null,
+    description: "Build smarter. Build faster.",
   },
   /** noindex pages. The thanks text is the deck's "After sending" line. */
   thanks: {
