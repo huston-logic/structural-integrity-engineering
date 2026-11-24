@@ -9,6 +9,7 @@ import { providers } from "@/content/providers";
 import { saveHandoff } from "@/lib/contact-handoff";
 import { validateContact, type ContactField, type ContactInput } from "@/lib/contact-validation";
 import { firstName } from "@/lib/first-name";
+import { buttonClass } from "./Button";
 import { turnstileSiteKey, useTurnstile } from "./useTurnstile";
 
 type Errors = Partial<Record<ContactField, string>>;
@@ -16,16 +17,16 @@ type SendError = keyof typeof noteForm.sendErrors;
 
 const FIELD_ORDER: ContactField[] = ["need", "name", "email", "message"];
 
-const label = "block font-ui text-[15px] font-medium text-ink";
+const label = "block text-[15px] font-semibold text-snow";
 const control =
-  "mt-2 block w-full rounded-field border border-ink-2 bg-white px-[14px] font-text text-[17px] text-ink placeholder:text-ink-2 focus:border-ink aria-[invalid=true]:border-rust";
+  "mt-2 block w-full rounded-field border border-mist bg-night px-[14px] text-[17px] text-snow [color-scheme:dark] placeholder:text-mist focus:border-amber aria-[invalid=true]:border-error";
 const input = `${control} h-[52px]`;
 
 function ErrorLine({ id, message }: { id: string; message?: string }) {
   return (
     <div id={id} aria-live="polite">
       {message ? (
-        <p className="mt-2 flex items-start gap-2 text-[15px] text-rust">
+        <p className="mt-2 flex items-start gap-2 text-[15px] text-error">
           <svg aria-hidden="true" viewBox="0 0 16 16" className="mt-[3px] size-4 shrink-0" fill="none" stroke="currentColor" strokeWidth="1.75">
             <circle cx="8" cy="8" r="6.25" />
           </svg>
@@ -172,8 +173,8 @@ function Form({ urlTopic }: { urlTopic: string | null }) {
   const described = (f: ContactField, extra?: string) => [extra, errors[f] ? `cf-${f}-error` : undefined].filter(Boolean).join(" ") || undefined;
 
   return (
-    <div className="rounded-panel bg-white p-6 shadow-card md:p-9">
-      <h2 className="font-ui text-[28px] font-bold leading-tight tracking-[-0.03em]">
+    <div className="rounded-panel bg-dusk-deep p-6 md:p-9">
+      <h2 className="text-[28px] font-semibold leading-tight tracking-[-0.02em]">
         {partner ? noteForm.partnerHeading : noteForm.heading}
       </h2>
 
@@ -198,11 +199,11 @@ function Form({ urlTopic }: { urlTopic: string | null }) {
                     className="peer sr-only"
                   />
                   <span
-                    className={`inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-pill border px-[18px] font-ui text-[16px] font-medium peer-focus-visible:outline-2 peer-focus-visible:outline-offset-[3px] peer-focus-visible:outline-rust ${
-                      need === option.value ? "border-ink bg-ink text-silver" : errors.need ? "border-rust text-ink" : "border-ink-2 text-ink"
+                    className={`inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-pill border px-[18px] text-[16px] font-semibold peer-focus-visible:outline-3 peer-focus-visible:outline-offset-[3px] peer-focus-visible:outline-amber ${
+                      need === option.value ? "border-amber bg-amber text-night" : errors.need ? "border-error text-snow" : "border-mist text-snow"
                     }`}
                   >
-                    {need === option.value ? <span aria-hidden="true" className="size-2 rounded-pill bg-rust" /> : null}
+                    {need === option.value ? <span aria-hidden="true" className="size-2 rounded-pill bg-night" /> : null}
                     {option.label}
                   </span>
                 </label>
@@ -267,7 +268,7 @@ function Form({ urlTopic }: { urlTopic: string | null }) {
             onChange={(ev) => setMessage(ev.target.value)}
             className={`${control} min-h-[140px] py-3`}
           />
-          <p id="cf-privacy" className="mt-2 text-small text-ink-2">
+          <p id="cf-privacy" className="mt-2 text-fine text-mist">
             {noteForm.privacyNote}
           </p>
           <ErrorLine id="cf-message-error" message={errors.message} />
@@ -305,7 +306,7 @@ function Form({ urlTopic }: { urlTopic: string | null }) {
             type="submit"
             aria-disabled={sending ? "true" : undefined}
             aria-busy={sending ? "true" : undefined}
-            className="inline-flex min-h-[54px] w-full items-center justify-center rounded-btn bg-ink px-6 font-ui text-btn font-semibold text-silver aria-disabled:cursor-wait aria-disabled:opacity-70 md:w-auto md:justify-start md:pl-[22px]"
+            className={`${buttonClass({ fullWidthOnMobile: true })} aria-disabled:cursor-wait aria-disabled:opacity-70`}
           >
             {noteForm.submitLabel}
           </button>
@@ -313,7 +314,7 @@ function Form({ urlTopic }: { urlTopic: string | null }) {
 
         <div role="status">
           {sendError ? (
-            <p className="text-[15px] text-rust">
+            <p className="text-[15px] text-error">
               <Text>{noteForm.sendErrors[sendError]}</Text>
             </p>
           ) : null}

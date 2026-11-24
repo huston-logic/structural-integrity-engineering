@@ -125,41 +125,42 @@ function hlCss() {
   return css;
 }
 
+// theme.fonts: `display` is required; `body` and `accent` are optional. Each role present becomes one next/font call
+// and one CSS variable (--hl-font-display, --hl-font-body, --hl-font-accent); hl.css falls back to the display font
+// for a role that is not set. `fontVariables` is the class list the root layout puts on <html>.
+const fontRoles = {
+  display: "Display and UI: headings, nav, buttons, labels. Also the body face when no body font is set.",
+  body: "Body text.",
+  accent: "The second voice.",
+};
+
 function fonts() {
-  const { display, body, accent } = c.theme.fonts;
+  const set = Object.keys(fontRoles).filter((role) => c.theme.fonts[role]);
+  if (!set.includes("display")) throw new Error("site.config.ts theme.fonts.display is required");
   const ident = (family) => family.replace(/\s+/g, "_");
-  const weight = (f) => (f.weights && f.weights !== "variable" ? `\n  weight: ${JSON.stringify(f.weights)},` : "");
-  const names = [display, body, accent].map((f) => ident(f.family)).sort();
+  const names = unique(set.map((role) => ident(c.theme.fonts[role].family))).sort();
+  const call = (role) => {
+    const f = c.theme.fonts[role];
+    const lines = ['  subsets: ["latin"],'];
+    if (f.weights && f.weights !== "variable") lines.push(`  weight: ${JSON.stringify(f.weights)},`);
+    if (f.style) lines.push(`  style: [${JSON.stringify(f.style)}],`);
+    if (f.axes?.length) lines.push(`  axes: ${JSON.stringify(f.axes)},`);
+    lines.push(`  variable: "--hl-font-${role}",`, '  display: "swap",', "  preload: true,");
+    if (role === "display") lines.push('  fallback: ["ui-sans-serif", "system-ui", "sans-serif"],');
+    return `/** ${f.family}${f.style ? ` ${f.style}` : ""}. ${fontRoles[role]} */
+export const ${role}Font = ${ident(f.family)}({
+${lines.join("\n")}
+});
+`;
+  };
   return `import { ${names.join(", ")} } from "next/font/google";
 
-// Design v3 fonts (docs/STYLE-GUIDE.md §3). Each is self-hosted at build time by next/font; no third-party font tags.
-// Preloaded: ${display.family} (header and every heading) and ${body.family} (body) render above the fold on every page.
+// Fonts (docs/STYLE-GUIDE.md §3), generated from site.config.ts theme.fonts by \`npm run sync:config\`. Each is
+// self-hosted at build time by next/font; no third-party font tags.
 
-/** Display and UI: headings, nav, buttons, eyebrows, labels. One variable file (wght 100 to 900). */
-export const outfit = ${ident(display.family)}({
-  subsets: ["latin"],${weight(display)}
-  variable: "--hl-outfit",
-  display: "swap",
-  preload: true,
-  fallback: ["ui-sans-serif", "system-ui", "sans-serif"],
-});
-
-/** Body text. One variable file. */
-export const inter = ${ident(body.family)}({
-  subsets: ["latin"],${weight(body)}
-  variable: "--font-inter",
-  display: "swap",
-  preload: true,
-});
-
-/** The second voice: ${accent.family} ${accent.style} only, never roman. */
-export const newsreader = ${ident(accent.family)}({
-  subsets: ["latin"],
-  style: [${JSON.stringify(accent.style)}],${accent.axes?.length ? `\n  axes: ${JSON.stringify(accent.axes)},` : ""}
-  variable: "--font-newsreader",
-  display: "swap",
-  preload: true,
-});
+${set.map(call).join("\n")}
+/** The font CSS variables, as class names for <html> (src/app/layout.tsx). */
+export const fontVariables = [${set.map((role) => `${role}Font.variable`).join(", ")}].join(" ");
 `;
 }
 

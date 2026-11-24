@@ -1,11 +1,7 @@
 @import "tailwindcss";
 @import "./hl.css";
 
-@theme {
-  --color-ink: #29332d;
-}
-
-/* Motion timing that Tailwind's default transitions and the mobile menu (.panel in hl.css) share. */
+/* Motion timing that Tailwind's default transitions and the menus (.panel, .hl-sub in hl.css) share. */
 @theme static {
   --ease-site: cubic-bezier(0.22, 1, 0.36, 1);
   --duration-feedback: 150ms;
@@ -15,7 +11,7 @@
   --default-transition-timing-function: var(--ease-site);
 }
 
-/* The v3 base: silver page, ink text, Inter body, Outfit headings (docs/STYLE-GUIDE.md §2-§3). */
+/* The base: dusk page, snow text, Manrope everywhere (docs/STYLE-GUIDE.md §2-§3). */
 @layer base {
   html {
     scroll-padding-top: 6rem;
@@ -23,26 +19,27 @@
   }
 
   body {
-    background: var(--hl-silver);
-    color: var(--hl-ink);
-    font-family: var(--font-text);
-    font-size: var(--hl-fs-body);
+    background: var(--hl-dusk);
+    color: var(--hl-snow);
+    font-family: var(--font-sans);
+    font-size: 18px;
     line-height: 1.6;
     font-optical-sizing: auto;
   }
 
   h1,
-  h2,
+  h2 {
+    font-weight: 500;
+  }
+
   h3,
   h4 {
-    font-family: var(--font-ui);
-    font-weight: 700;
+    font-weight: 600;
   }
 
   h1,
   h2,
   h3 {
-    letter-spacing: -0.015em;
     text-wrap: balance;
   }
 
@@ -51,14 +48,16 @@
     text-wrap: pretty;
   }
 
+  /* §11 the focus ring: 3px amber, 3px away (5.5:1 on dusk, 6.6:1 on dusk-deep). Elements with their own radius
+     (pill buttons) keep it; the 4px only rounds the ring around plain text links. */
   :focus-visible {
-    outline: 2px solid var(--hl-rust);
+    outline: 3px solid var(--hl-amber);
     outline-offset: 3px;
     border-radius: 4px;
   }
 
   ::selection {
-    background: var(--hl-mint);
-    color: var(--hl-ink);
+    background: var(--hl-amber);
+    color: var(--hl-night);
   }
 }

@@ -2,19 +2,16 @@ import Link from "next/link";
 import { Text } from "@/components/ui/Text";
 import { siteConfig } from "@/content/site";
 
-// CLIENT: replace the text with the client's logo (an SVG in public/brand/) and keep the link and aria-label.
-const sizes = {
-  header: "text-[20px] md:text-[22px]",
-  footer: "text-[20px]",
-} as const;
+// There is no logo file yet, so the wordmark is the business name set in Manrope 700, as in the option G reference.
+// When a logo arrives (public/brand/), swap the text for it and keep the link and aria-label.
 
-/** The business name as text, linking home. */
-export function Logo({ size = "header" }: { size?: keyof typeof sizes }) {
+/** The business name as a text wordmark, linking home. */
+export function Logo() {
   return (
     <Link
       href="/"
       aria-label={`${siteConfig.name}, home`}
-      className={`inline-flex min-h-11 items-center rounded-btn font-ui font-semibold text-ink ${sizes[size]}`}
+      className="inline-flex min-h-11 items-center text-wordmark font-bold text-snow transition-colors hover:text-amber"
     >
       <Text>{siteConfig.name}</Text>
     </Link>

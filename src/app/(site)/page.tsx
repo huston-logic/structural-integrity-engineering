@@ -1,17 +1,17 @@
 import type { Metadata } from "next";
 import { Button } from "@/components/hl/Button";
-import { ClosingCta } from "@/components/hl/ClosingCta";
+import { ContactBand } from "@/components/hl/ContactBand";
 import { PageHero } from "@/components/hl/PageHero";
 import { ReasonList } from "@/components/hl/ReasonList";
 import { bookCallHref } from "@/components/ui/BookCallButton";
 import { JsonLd } from "@/components/ui/JsonLd";
-import { closingCta, hero, highlights, homeMeta } from "@/content/home";
+import { hero, highlights, homeMeta } from "@/content/home";
 import { pageMetadata } from "@/lib/metadata";
 import { organizationJsonLd } from "@/lib/site-organization";
 
 export const metadata: Metadata = pageMetadata({ ...homeMeta, path: "/" });
 
-/** Home: one H1 (the hero), then a highlights list and the closing call to action. */
+/** Home (template content until task 5): one H1 (the hero), a highlights list and the contact band. */
 export default function HomePage() {
   const organization = organizationJsonLd();
   const book = bookCallHref();
@@ -22,9 +22,7 @@ export default function HomePage() {
         {book ? <Button href={book}>{hero.cta}</Button> : null}
       </PageHero>
       <ReasonList id="highlights" heading={highlights.heading} items={highlights.items} />
-      <ClosingCta heading={closingCta.heading} body={closingCta.body} note={closingCta.note}>
-        {book ? <Button href={book}>{closingCta.cta}</Button> : null}
-      </ClosingCta>
+      <ContactBand />
     </div>
   );
 }
