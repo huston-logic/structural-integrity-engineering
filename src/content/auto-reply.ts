@@ -15,7 +15,7 @@ export interface AutoReplyConfig {
   domain: { url: string };
   /** `schedulerUrl` is a URL, "none" (no booking link: the reply leaves the booking parts out) or null (not set yet). */
   contact: { siteEmail: string | null; schedulerUrl: string | null };
-  theme: { colors: { green: string; ink: string; ink2: string; rust: string; line: string } };
+  theme: { colors: { night: string; dusk: string; duskDeep: string; rule: string; mist: string } };
 }
 
 function escapeHtml(value: string): string {
@@ -30,7 +30,11 @@ function displayHost(url: string): string {
 /** Builds the reply content. It never throws: placeholder or null config values just show up as text (or are left out). */
 export function buildAutoReply(config: AutoReplyConfig) {
   const { business, owner, domain, contact, theme } = config;
-  const c = theme.colors;
+  // The email is read on a light background, so it takes the darker tokens: night text, rule (6:1 on white) for the
+  // quieter lines, dusk links, the tagline in dusk-deep and a mist separator. Amber and snow are for the dark site and
+  // would fail contrast on white.
+  const t = theme.colors;
+  const c = { ink: t.night, ink2: t.rule, green: t.dusk, rust: t.duskDeep, line: t.mist };
   const email = contact.siteEmail;
   const host = displayHost(domain.url);
   const hasBooking = contact.schedulerUrl !== NONE;

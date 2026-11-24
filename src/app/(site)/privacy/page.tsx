@@ -17,7 +17,7 @@ export default function PrivacyPage() {
           <div className="max-w-[64ch] space-y-8 text-body">
             {privacy.sections.map((section) => (
               <div key={section.heading}>
-                <h2 className="font-ui text-[24px] font-bold leading-tight">{section.heading}</h2>
+                <h2 className="text-h3">{section.heading}</h2>
                 <p className="mt-3">
                   <Text>{section.body}</Text>
                 </p>

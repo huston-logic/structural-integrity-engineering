@@ -1,31 +1,16 @@
-import { Inter, Newsreader, Outfit } from "next/font/google";
+import { Manrope } from "next/font/google";
 
-// Design v3 fonts (docs/STYLE-GUIDE.md §3). Each is self-hosted at build time by next/font; no third-party font tags.
-// Preloaded: Outfit (header and every heading) and Inter (body) render above the fold on every page.
+// Fonts (docs/STYLE-GUIDE.md §3), generated from site.config.ts theme.fonts by `npm run sync:config`. Each is
+// self-hosted at build time by next/font; no third-party font tags.
 
-/** Display and UI: headings, nav, buttons, eyebrows, labels. One variable file (wght 100 to 900). */
-export const outfit = Outfit({
+/** Manrope. Display and UI: headings, nav, buttons, labels. Also the body face when no body font is set. */
+export const displayFont = Manrope({
   subsets: ["latin"],
-  variable: "--hl-outfit",
+  variable: "--hl-font-display",
   display: "swap",
   preload: true,
   fallback: ["ui-sans-serif", "system-ui", "sans-serif"],
 });
 
-/** Body text. One variable file. */
-export const inter = Inter({
-  subsets: ["latin"],
-  variable: "--font-inter",
-  display: "swap",
-  preload: true,
-});
-
-/** The second voice: Newsreader italic only, never roman. */
-export const newsreader = Newsreader({
-  subsets: ["latin"],
-  style: ["italic"],
-  axes: ["opsz"],
-  variable: "--font-newsreader",
-  display: "swap",
-  preload: true,
-});
+/** The font CSS variables, as class names for <html> (src/app/layout.tsx). */
+export const fontVariables = [displayFont.variable].join(" ");

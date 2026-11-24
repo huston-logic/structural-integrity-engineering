@@ -12,7 +12,7 @@ import { NONE } from "@/lib/optional-setting";
 
 export const metadata: Metadata = pageMetadata({ ...contactMeta, path: "/contact" });
 
-const h2 = "font-ui text-[28px] font-bold leading-tight tracking-[-0.03em]";
+const h2 = "text-[28px] font-semibold leading-tight tracking-[-0.02em]";
 
 /** Contact: the scheduler column, the note form, then what happens next. */
 export default function ContactPage() {
@@ -43,7 +43,7 @@ export default function ContactPage() {
                   <button
                     type="button"
                     disabled
-                    className="inline-flex min-h-[54px] w-full cursor-not-allowed items-center justify-center rounded-btn bg-ink/40 px-6 font-ui text-btn font-semibold text-white md:w-auto md:justify-start"
+                    className="inline-flex min-h-[54px] w-full cursor-not-allowed items-center justify-center rounded-pill border-[1.5px] border-mist px-[30px] text-btn font-bold text-mist md:w-auto"
                   >
                     {scheduler.buttonLabel}
                   </button>
@@ -61,13 +61,13 @@ export default function ContactPage() {
 
       <section aria-labelledby="next-title" className="py-12 md:py-16">
         <Container>
-          <h2 id="next-title" className="font-ui text-h2 font-bold">
+          <h2 id="next-title" className="text-h2">
             <Text>{whatHappensNext.heading}</Text>
           </h2>
           <ol className="mt-8 max-w-[64ch] space-y-5 text-[17px] leading-[1.55]">
             {whatHappensNext.steps.map((step, index) => (
               <li key={step.lead} className="flex gap-4">
-                <span aria-hidden="true" className="w-6 shrink-0 font-ui text-item font-semibold text-green">
+                <span aria-hidden="true" className="w-6 shrink-0 text-h4 font-semibold text-amber">
                   {index + 1}
                 </span>
                 <span>

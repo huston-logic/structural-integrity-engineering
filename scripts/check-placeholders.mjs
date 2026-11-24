@@ -56,7 +56,9 @@ const requiredKeys = [
   "contact.linkedInUrl", "contact.turnstileSiteKey", "contact.sheetWriter", "contact.sheetTabs.production", "contact.sheetTabs.preview",
   "contact.rateLimit.namespaceIds.production", "contact.rateLimit.namespaceIds.preview",
   ...Object.keys(config.theme.colors).map((k) => `theme.colors.${k}`),
-  "theme.fonts.display.family", "theme.fonts.body.family", "theme.fonts.accent.family",
+  // theme.fonts.body and theme.fonts.accent are optional (they fall back to the display font).
+  "theme.fonts.display.family",
+  ...["body", "accent"].filter((role) => config.theme.fonts[role]).map((role) => `theme.fonts.${role}.family`),
 ];
 for (const key of requiredKeys) {
   const value = key.split(".").reduce((obj, part) => obj?.[part], config);

@@ -68,28 +68,23 @@ export const siteConfig = {
     },
   },
   theme: {
-    // CLIENT: replace. A neutral grey and blue palette; every pair keeps WCAG AA contrast.
+    // Option G, "Dusk" (docs/STYLE-GUIDE.md §2). Each key becomes `--hl-<key>` in src/app/hl.css and a Tailwind color
+    // (`bg-dusk`, `text-snow`, `border-rule` ...). Contrast on dusk: snow 9.2:1, mist 6.8:1, amber 5.5:1, error 6.0:1;
+    // night on amber 8.5:1. `rule` is decorative only (1.7:1), never a text or control-boundary color.
     colors: {
-      silver: "#f5f5f4",
-      silver2: "#e7e5e4",
-      white: "#ffffff",
-      ink: "#1c1917",
-      ink2: "#44403c",
-      green: "#1e4fa3",
-      greenDeep: "#173b7a",
-      greenEdge: "#5b85c9",
-      tint: "#e8eefa",
-      glow: "#c3d4f0",
-      mint: "#d5e1f5",
-      rust: "#9a3412",
-      line: "#d6d3d1",
+      dusk: "#1C4A50",
+      duskDeep: "#163A40",
+      night: "#13262B",
+      snow: "#EEF4F4",
+      mist: "#C2D6D8",
+      amber: "#F2B266",
+      rule: "#3D6A70",
+      error: "#FFB3A6",
     },
-    // CLIENT: replace. next/font/google families. `weights: "variable"` loads the one variable file. The OG fonts in
-    // src/assets/og must match the display family.
+    // next/font/google families. `weights: "variable"` loads the one variable file. `display` is required; `body` and
+    // `accent` are optional and fall back to `display`. The OG fonts in src/assets/og must match the display family.
     fonts: {
-      display: { family: "Outfit", weights: "variable" },
-      body: { family: "Inter", weights: "variable" },
-      accent: { family: "Newsreader", style: "italic", axes: ["opsz"] },
+      display: { family: "Manrope", weights: "variable" },
     },
   },
   brand: {

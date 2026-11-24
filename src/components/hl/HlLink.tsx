@@ -6,6 +6,8 @@ type HlLinkProps = {
   className?: string;
   children: ReactNode;
   "aria-current"?: "page";
+  /** Marks the menu item whose section holds the current page (styling only). */
+  "data-active"?: string;
   onClick?: () => void;
 };
 
@@ -22,7 +24,7 @@ function isPlainAnchor(href: string) {
  * Pages on this site use next/link. External http(s) links open in a new tab with noopener noreferrer (AGENTS.md);
  * mailto:, tel:, sms: and same-site files are plain anchors in the same tab.
  */
-export function HlLink({ href, className, children, "aria-current": ariaCurrent, onClick }: HlLinkProps) {
+export function HlLink({ href, className, children, "aria-current": ariaCurrent, "data-active": dataActive, onClick }: HlLinkProps) {
   if (isPlainAnchor(href)) {
     const opensNewTab = WEB_LINK.test(href);
     return (
@@ -30,6 +32,7 @@ export function HlLink({ href, className, children, "aria-current": ariaCurrent,
         href={href}
         className={className}
         aria-current={ariaCurrent}
+        data-active={dataActive}
         onClick={onClick}
         {...(opensNewTab ? { target: "_blank", rel: "noopener noreferrer" } : {})}
       >
@@ -38,7 +41,7 @@ export function HlLink({ href, className, children, "aria-current": ariaCurrent,
     );
   }
   return (
-    <Link href={href} className={className} aria-current={ariaCurrent} onClick={onClick}>
+    <Link href={href} className={className} aria-current={ariaCurrent} data-active={dataActive} onClick={onClick}>
       {children}
     </Link>
   );
