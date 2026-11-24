@@ -24,7 +24,7 @@ tests/a11y/
   contact-form.spec.ts       the form against a stubbed Worker and a stubbed Turnstile
   known-issues.ts            allowed axe findings, one rule on one selector each (currently empty)
 scripts/
-  preview.mjs                static server for out/ that applies the /* block of public/_headers
+  preview.mjs                static server for out/ that applies the /* block of public/_headers and gzips text
   lighthouse-summary.mjs     writes the per-page score table to the GitHub job summary
 src/lib/routes.ts            the single route list the sitemap, the a11y suite and Lighthouse all read
 ```
@@ -366,6 +366,7 @@ Facts around it:
 - **Why `scripts/preview.mjs` and not LHCI's static server.** So `public/_headers`, including the
   CSP, applies during the audit; header problems then show up in CI, not only on Cloudflare.
   `preview.mjs` reads the `/*` block of `out/_headers` and sends those headers on every response.
+  It also gzips text responses, as Cloudflare does, so Lighthouse measures the bytes visitors download.
 - **Chrome.** The Google Chrome preinstalled on `ubuntu-latest`; no browser download. Locally it
   uses the installed Chrome or `CHROME_PATH`.
 - **Reports.** `.lighthouseci/` (git-ignored) is uploaded as the `lighthouse-reports` artifact for
