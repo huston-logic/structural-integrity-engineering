@@ -49,7 +49,7 @@
       "@isaacs/nonrecursive-glob-match": "1.0.3"
     }
   },
-  "description": "Marketing website (static export for Cloudflare Workers).",
+  "description": "Structural Integrity Engineering website (static export for Cloudflare Workers).",
   "engines": {
     "node": ">=22.19",
     "npm": ">=10.9.2 <11"
