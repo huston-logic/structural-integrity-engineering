@@ -11,9 +11,10 @@ import { HeroDrawing } from "./HeroDrawing";
  * photo's sky, over the dusk home with the amber line drawing on the house. Layout and crop live in hl.css (`hl-hero*`).
  */
 export function HomeHero() {
-  const { photo, photoSmall } = hero;
-  // Images are unoptimized (static export), so next/image makes no srcset; the <source> offers the 1200px copy to
-  // phones (the LCP image there) and the full 2000px file to wide screens.
+  const { photo, photoSmall, photoPhone } = hero;
+  // Images are unoptimized (static export), so next/image makes no srcset. Phone screens under 2x density get the 800px
+  // copy (the LCP image there: about 63 KB); sharper phone screens choose between the 1200px copy and the full 2000px
+  // file, as wide screens do.
   const sizes = "(min-width: 900px) 100vw, 150vw";
   return (
     <section aria-labelledby="hero-title" className="hl-hero">
@@ -31,6 +32,7 @@ export function HomeHero() {
       <div className="hl-hero-stage">
         <div className="hl-hero-media">
           <picture>
+            <source media="(max-width: 899px) and (max-resolution: 1.99dppx)" srcSet={photoPhone.src} />
             <source srcSet={`${photoSmall.src} ${photoSmall.width}w, ${photo.src} ${photo.width}w`} sizes={sizes} />
             <Image
               src={photo.src}

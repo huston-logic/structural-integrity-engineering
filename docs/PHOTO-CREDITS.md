@@ -6,6 +6,7 @@ All photos are free to use under the Unsplash or Pexels license (no Unsplash+ pa
 | --- | --- | --- | --- |
 | dusk-home.jpg | Home hero | Tobias Bjørkli, Pexels | https://www.pexels.com/photo/modern-house-2059467/ |
 | dusk-home-1200.jpg | Home hero on phones (smaller copy of dusk-home.jpg) | Tobias Bjørkli, Pexels | https://www.pexels.com/photo/modern-house-2059467/ |
+| dusk-home-800.jpg | Home hero on phone screens under 2x density (800px copy of dusk-home.jpg) | Tobias Bjørkli, Pexels | https://www.pexels.com/photo/modern-house-2059467/ |
 | chalet-snow.jpg | Residential card | Darien Attridge, Unsplash | https://unsplash.com/photos/modern-house-buried-in-deep-snow-with-car-xUu9S86tR_g |
 | framing-wood.jpg | Residential hero | Nate Johnston, Unsplash | https://unsplash.com/photos/a-wooden-structure-under-construction-under-a-blue-sky-QtF2v8BP46I |
 | commercial-crane.jpg | Commercial card and hero | Salvador Rios, Unsplash | https://unsplash.com/photos/construction-of-a-building-in-progress-3GdHDDtHJ-4 |
@@ -18,7 +19,8 @@ All photos are free to use under the Unsplash or Pexels license (no Unsplash+ pa
 | chalet-snow-640.jpg | Services page, Residential card (640px copy of chalet-snow.jpg) | Darien Attridge, Unsplash | https://unsplash.com/photos/modern-house-buried-in-deep-snow-with-car-xUu9S86tR_g |
 | commercial-crane-640.jpg | Services page, Commercial card (640px copy of commercial-crane.jpg) | Salvador Rios, Unsplash | https://unsplash.com/photos/construction-of-a-building-in-progress-3GdHDDtHJ-4 |
 | curtain-wall-640.jpg | Services page, Glazing card (640px copy of curtain-wall.jpg) | Christian Wiediger, Unsplash | https://unsplash.com/photos/low-angle-photo-of-curtain-glass-wall-building-F8IAN0lyFJU |
-| dusk-home-wide.jpg | Contact band background | Crop of dusk-home.jpg (Tobias Bjørkli, Pexels) | https://www.pexels.com/photo/modern-house-2059467/ |
+| dusk-home-wide.jpg | Contact band background (source of the 1200px copy below) | Crop of dusk-home.jpg (Tobias Bjørkli, Pexels) | https://www.pexels.com/photo/modern-house-2059467/ |
+| dusk-home-wide-1200.jpg | Contact band background, under the dusk wash (1200px, compressed copy of dusk-home-wide.jpg) | Crop of dusk-home.jpg (Tobias Bjørkli, Pexels) | https://www.pexels.com/photo/modern-house-2059467/ |
 | remodel-framing.jpg | Residential, Remodels and additions | Taylor Heery, Unsplash | https://unsplash.com/photos/a-room-that-is-under-construction-with-wooden-framing-eZtWDby4HJ0 |
 | rebar.jpg | Residential, Foundations | Michael Bader, Unsplash | https://unsplash.com/photos/worms-eye-view-photography-of-rebar-eyq7H7gO0EY |
 | steel-frame.jpg | Commercial, PEMB foundations | Pexels, metal frame building site | https://www.pexels.com/photo/building-of-metal-construction-with-special-machinery-2314022/ |

@@ -6,10 +6,15 @@ export const contactBand = {
   heading: "Ready to get started?",
   body: "Quick replies, clean drawings, and fair pricing.",
   /**
-   * Optional background photo (copy deck: dusk-home-wide.jpg, a crop of the home photo). A site path under
-   * public/images/ with its pixel size; null shows the plain dusk band. Decorative, so it has no alt text.
+   * Optional background photo (copy deck: dusk-home-wide.jpg, a crop of the home photo; this is its 1200px, heavily
+   * compressed copy, since it sits under an 88% dusk wash). A site path under public/images/ with its pixel size; null
+   * shows the plain dusk band. Decorative, so it has no alt text. It loads lazily and is never on the first screen.
    */
-  photo: null as { src: string; width: number; height: number } | null,
+  photo: { src: "/images/dusk-home-wide-1200.jpg", width: 1200, height: 750 } as {
+    src: string;
+    width: number;
+    height: number;
+  } | null,
 };
 
 export const footer = {

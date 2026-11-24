@@ -22,6 +22,16 @@ export const photos = {
     height: 1499,
     alt: "A modern two-story house with a white upper floor, wood soffits and glass walls, lit from inside at dusk above a snowy slope.",
   },
+  /**
+   * dusk-home.jpg at 800px (about 63 KB) for phone screens under 2x density (the hero's phone <source>). Same aspect
+   * ratio, so the line drawing stays aligned.
+   */
+  duskHome800: {
+    src: "/images/dusk-home-800.jpg",
+    width: 800,
+    height: 999,
+    alt: "A modern two-story house with a white upper floor, wood soffits and glass walls, lit from inside at dusk above a snowy slope.",
+  },
   duskHomeWide: {
     src: "/images/dusk-home-wide.jpg",
     width: 2000,
