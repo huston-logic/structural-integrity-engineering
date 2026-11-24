@@ -11,7 +11,7 @@
  *   TAB_PREVIEW     optional  Tab for branch previews. Default "Preview" (contact.sheetTabs.preview).
  *
  * Header row of each tab (row 1), the same order the Worker sends (worker/messages.ts, sheetRow):
- *   Received (UTC) | Need | Topic | Name | Email | Business | Message | Tools | Website | Source | Mode
+ *   Received (UTC) | First name | Last name | Email | Phone | Project city and state | Project scope | Mode
  *
  * Deploy as: Web app, Execute as "Me", Who has access "Anyone". The secret is what keeps the URL private.
  * Every failure returns {"ok":false} with no details.

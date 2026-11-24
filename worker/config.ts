@@ -1,5 +1,4 @@
 import { siteConfig } from "../site.config.ts";
-import { settingUrl } from "../src/lib/optional-setting.ts";
 import { buildAutoReply, type AutoReply, type AutoReplyConfig } from "../src/content/auto-reply.ts";
 
 /** Which code appends the contact form's row to the Google Sheet. */
@@ -15,7 +14,6 @@ export interface WorkerSiteConfig extends AutoReplyConfig {
     siteEmail: string | null;
     fromName: string;
     replyFromName: string;
-    schedulerUrl: string | null;
     sheetWriter: SheetWriter;
     sheetTabs: { production: string; preview: string };
   };
@@ -28,13 +26,6 @@ export interface WorkerConfig {
   siteEmail: string | null;
   fromName: string;
   replyFromName: string;
-  /**
-   * The booking link in the automatic reply: a URL, or null when there is none ("none" in site.config.ts: the reply
-   * leaves the booking parts out, see `bookingUnset` for the not-decided case).
-   */
-  bookingUrl: string | null;
-  /** True while `contact.schedulerUrl` is null (not decided). "none" is a decision, not a gap. */
-  bookingUnset: boolean;
   workerName: string;
   previewHostSuffix: string;
   sheetWriter: SheetWriter;
@@ -49,8 +40,6 @@ export function buildWorkerConfig(config: WorkerSiteConfig): WorkerConfig {
     siteEmail: contact.siteEmail,
     fromName: contact.fromName,
     replyFromName: contact.replyFromName,
-    bookingUrl: settingUrl(contact.schedulerUrl),
-    bookingUnset: contact.schedulerUrl === null,
     workerName: domain.workerName,
     previewHostSuffix: domain.previewHostSuffix,
     sheetWriter: contact.sheetWriter,

@@ -24,7 +24,7 @@ tests/a11y/
   contact-form.spec.ts       the form against a stubbed Worker and a stubbed Turnstile
   known-issues.ts            allowed axe findings, one rule on one selector each (currently empty)
 scripts/
-  preview.mjs                static server for out/ that applies the /* block of public/_headers
+  preview.mjs                static server for out/ that applies the /* block of public/_headers and gzips text
   lighthouse-summary.mjs     writes the per-page score table to the GitHub job summary
 src/lib/routes.ts            the single route list the sitemap, the a11y suite and Lighthouse all read
 ```
@@ -366,6 +366,7 @@ Facts around it:
 - **Why `scripts/preview.mjs` and not LHCI's static server.** So `public/_headers`, including the
   CSP, applies during the audit; header problems then show up in CI, not only on Cloudflare.
   `preview.mjs` reads the `/*` block of `out/_headers` and sends those headers on every response.
+  It also gzips text responses, as Cloudflare does, so Lighthouse measures the bytes visitors download.
 - **Chrome.** The Google Chrome preinstalled on `ubuntu-latest`; no browser download. Locally it
   uses the installed Chrome or `CHROME_PATH`.
 - **Reports.** `.lighthouseci/` (git-ignored) is uploaded as the `lighthouse-reports` artifact for
@@ -427,8 +428,8 @@ export default defineConfig({
 - **Rules.** axe tags `wcag2a`, `wcag2aa`, `wcag21a`, `wcag21aa`, `wcag22aa` and `best-practice`
   (axe tags are not cumulative, so every level is listed; best-practice adds one `<h1>`, landmarks
   and heading order, which `AGENTS.md` already requires).
-- **Pages.** `indexableRoutes` plus `noindexRoutes` (`/contact/thanks`) from `src/lib/routes.ts`,
-  plus `/contact?topic=partner` (rendered differently) and `/this-page-does-not-exist` (must return
+- **Pages.** `indexableRoutes` plus `noindexRoutes` (`/contact-us/thanks`) from `src/lib/routes.ts`,
+  plus `/contact-us?topic=partner` (rendered differently) and `/this-page-does-not-exist` (must return
   404). The 404 status is asserted; every other page must return 200.
 - **Two passes per page.** Once at the top of the page with every rule, and once scrolled to the
   bottom (two animation frames after `scrollTo`, so React has committed), because that is where the
@@ -457,7 +458,7 @@ Runs against the same static preview. The Worker is not running there, so `page.
 `**/api/contact` with a scripted status and body, and the Turnstile script from
 `https://challenges.cloudflare.com/**` is replaced by a stub that hands back a token (and a new one
 after `reset()`, like the real widget). Nothing leaves the machine. It checks: a valid note lands on
-`/contact/thanks` with "Got it, thanks Ada." and nothing personal in the URL, and the JSON sent
+`/contact-us/thanks` with "Got it, thanks Ada." and nothing personal in the URL, and the JSON sent
 matches (`need`, `name`, `email`, an empty `company_fax`, `turnstileToken`); an `autoReply: false`
 answer shows the "automatic reply failed" text; a 502 keeps the answers and shows the `failed`
 message in a `role="status"` region; 429 and 403 show their own messages; an empty submit shows every
