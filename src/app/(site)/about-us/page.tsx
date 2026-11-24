@@ -19,7 +19,7 @@ export default function AboutPage() {
       <PageHero title={aboutHero.title} intro={aboutHero.intro} />
 
       <Section tone="deep">
-        <p className="reveal max-w-[34em] text-h3 font-normal leading-snug">
+        <p className="max-w-[34em] text-h3 font-normal leading-snug">
           <Text>{whatWeAre}</Text>
         </p>
       </Section>
@@ -37,7 +37,7 @@ export default function AboutPage() {
           />
         </div>
         <div>
-          <h2 id="principal-title" className="reveal max-w-[16em] text-h2">
+          <h2 id="principal-title" className="max-w-[16em] text-h2">
             <Text>{principal.heading}</Text>
           </h2>
           <p className="mt-8 max-w-[38em] text-body text-mist">
@@ -48,7 +48,7 @@ export default function AboutPage() {
 
       <section aria-labelledby="places-title" className="bg-dusk-deep py-20 md:py-[104px]">
         <Container>
-          <h2 id="places-title" className="reveal max-w-[16em] text-h2">
+          <h2 id="places-title" className="max-w-[16em] text-h2">
             <Text>{twoPlaces.heading}</Text>
           </h2>
           <ul role="list" className="mt-12 grid list-none gap-6 md:grid-cols-2">
@@ -70,7 +70,7 @@ export default function AboutPage() {
             <Text>{twoPlaces.line}</Text>
           </p>
           <FadingDivider className="mt-20" />
-          <h2 className="reveal mt-20 max-w-[16em] text-h2">
+          <h2 className="mt-20 max-w-[16em] text-h2">
             <Text>{mission.heading}</Text>
           </h2>
           <p className="mt-8 max-w-[34em] text-h3 font-normal leading-snug text-mist">

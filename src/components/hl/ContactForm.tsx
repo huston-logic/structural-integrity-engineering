@@ -158,7 +158,7 @@ export function ContactForm() {
   const sendMessage = sendError === "failed" ? failedMessage : sendError ? noteForm.sendErrors[sendError] : null;
 
   return (
-    <div className="rounded-panel bg-dusk-deep p-6 md:p-9">
+    <div className="rounded-panel bg-dusk-deep p-5 sm:p-6 md:p-9">
       <form ref={formRef} method="post" noValidate aria-label={noteForm.formLabel} onSubmit={submit} onFocus={startTurnstile} className="space-y-6">
         <p className="text-[15px] text-mist">{noteForm.requiredNote}</p>
         <div className="grid gap-6 sm:grid-cols-2">{contactFields.map(renderField)}</div>
