@@ -1,13 +1,12 @@
 import { confirmation, contactFields, fieldLabel, type ContactKey } from "./contact-fields";
+import { seo } from "./seo";
+import { siteConfig } from "./site";
 
 /**
  * Contact page copy, from the copy deck (Contact). The six field labels live in `contact-fields.ts`, which the Worker
- * also reads. Anything the deck does not give is a double-bracket placeholder (SEO text is task 11).
+ * also reads. Anything the deck does not give is a double-bracket placeholder.
  */
-export const contactMeta = {
-  title: "[[Contact page SEO title]]",
-  description: "[[Contact page SEO description]]",
-};
+export const contactMeta = seo.contact;
 
 export const contactHero = {
   title: "Let's get in touch.",
@@ -41,15 +40,15 @@ export const noteForm = {
 };
 
 export const thanks = {
-  title: "[[Thank-you page title]]",
-  description: "[[Thank-you page description]]",
+  title: seo.thanks.title,
+  description: seo.thanks.description,
   heading: confirmation.heading,
   body: confirmation.body,
   homeLabel: "Back to home",
 };
 
 export const notFound = {
-  title: "Page not found | [[Business name]]",
+  title: `Page not found | ${siteConfig.name}`,
   heading: "Page not found",
   body: "[[404 message]]",
   homeLabel: "Back to home",

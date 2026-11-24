@@ -2,12 +2,9 @@
 // that ends the page is shared (shared.ts), and the button label and address come from nav.ts (requestQuote).
 import { photos, type Photo } from "./photos";
 import { servicePages } from "./nav";
+import { seo } from "./seo";
 
-/** The copy deck has no SEO title or description for Home yet (task 11). */
-export const homeMeta = {
-  title: "[[Home page SEO title]]",
-  description: "[[Home page SEO description]]",
-};
+export const homeMeta = seo.home;
 
 export const hero = {
   title: "Strength you can build on.",

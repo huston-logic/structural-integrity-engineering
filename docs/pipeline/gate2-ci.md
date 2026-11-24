@@ -353,8 +353,8 @@ module.exports = {
 
 Facts around it:
 
-- **Pages.** `indexableRoutes` from `src/lib/routes.ts`: `/`, `/how-i-work`, `/services`,
-  `/past-work`, `/about`, `/insights`, `/contact`, `/privacy` (eight today). `noindex` pages and the
+- **Pages.** `indexableRoutes` from `src/lib/routes.ts`: `/`, `/services`, the three
+  service pages, `/about-us`, `/contact-us`, `/privacy` (eight today). `noindex` pages and the
   404 are left out on purpose.
 - **Thresholds.** All four categories are `error` at the median of three runs, and
   `scripts/lighthouse-summary.mjs` reads the level from this file. The README used to say

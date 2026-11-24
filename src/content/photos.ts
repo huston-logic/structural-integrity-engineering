@@ -101,19 +101,19 @@ export const photos = {
     height: 533,
     alt: "An engineer in a hard hat points at a floor plan pinned to a concrete column inside an unfinished building.",
   },
-  chaletSnowCard: {
+  chaletSnowServicesCard: {
     src: "/images/chalet-snow-640.jpg",
     width: 640,
     height: 960,
     alt: "A stone and log house with a car parked at the end of a deep snow drift in the driveway.",
   },
-  commercialCraneCard: {
+  commercialCraneServicesCard: {
     src: "/images/commercial-crane-640.jpg",
     width: 640,
     height: 426,
     alt: "A multi-story wood-framed building under construction, wrapped in house wrap, with a yellow tower crane above it.",
   },
-  curtainWallCard: {
+  curtainWallServicesCard: {
     src: "/images/curtain-wall-640.jpg",
     width: 640,
     height: 426,

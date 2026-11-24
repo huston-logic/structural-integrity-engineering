@@ -1,11 +1,8 @@
 import { photos } from "./photos";
+import { seo } from "./seo";
 
-// Services page copy, verbatim from the copy deck ("Services pages" > "Services"). The deck gives no SEO title or
-// description for this page, so they stay placeholders until task 11.
-export const servicesMeta = {
-  title: "[[Services page SEO title]]",
-  description: "[[Services page SEO description]]",
-};
+// Services page copy, verbatim from the copy deck ("Services pages" > "Services").
+export const servicesMeta = seo.services;
 
 /** The hero photo: a 800px-wide copy for phones, the full file from 768px up. */
 export const servicesHero = {
@@ -22,19 +19,19 @@ export const serviceChoices = {
       title: "Residential structural design",
       body: "Custom homes, remodels and additions, decks, foundations, retaining walls, lateral checks.",
       href: "/services/residential-structural-design",
-      photo: photos.chaletSnowCard,
+      photo: photos.chaletSnowServicesCard,
     },
     {
       title: "Low-rise commercial",
       body: "Small retail and office, tenant improvement scopes, framing and lateral design, connection details, permit coordination.",
       href: "/services/low-rise-commercial-structural-design",
-      photo: photos.commercialCraneCard,
+      photo: photos.commercialCraneServicesCard,
     },
     {
       title: "Glazing and mullion engineering",
       body: "Storefronts, mullion spans and deflection, anchorage, thermal movement; shop drawings and calculations.",
       href: "/services/glazing-and-mullion-engineering",
-      photo: photos.curtainWallCard,
+      photo: photos.curtainWallServicesCard,
     },
   ],
 };

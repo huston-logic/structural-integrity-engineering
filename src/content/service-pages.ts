@@ -1,9 +1,9 @@
 import { photos, type Photo } from "./photos";
+import { seo } from "./seo";
 
 /**
  * The three service pages, verbatim from the copy deck ("Services pages"). Each hero line is split at its first sentence:
- * the H1 is the page name, the rest is the line under it. The deck gives no SEO title or description for these pages, so
- * they stay placeholders until task 11.
+ * the H1 is the page name, the rest is the line under it.
  */
 export type ServicePageContent = {
   meta: { title: string; description: string };
@@ -28,7 +28,7 @@ export type ServicePageContent = {
 const stepOneTitle = "Share your plans";
 
 export const residentialPage: ServicePageContent = {
-  meta: { title: "[[Residential SEO title]]", description: "[[Residential SEO description]]" },
+  meta: seo.residential,
   title: "Residential structural design",
   intro: "Permit-ready plans for custom homes, remodels, additions, decks and foundations. Fast, accurate and affordable.",
   heroPhoto: photos.framingWoodHero,
@@ -78,7 +78,7 @@ export const residentialPage: ServicePageContent = {
 };
 
 export const commercialPage: ServicePageContent = {
-  meta: { title: "[[Low-rise commercial SEO title]]", description: "[[Low-rise commercial SEO description]]" },
+  meta: seo.commercial,
   title: "Commercial design",
   intro: "Permit-ready engineering for retail, office buildings and tenant improvements.",
   heroPhoto: photos.commercialCraneHero,
@@ -112,7 +112,7 @@ export const commercialPage: ServicePageContent = {
 };
 
 export const glazingPage: ServicePageContent = {
-  meta: { title: "[[Glazing and mullion SEO title]]", description: "[[Glazing and mullion SEO description]]" },
+  meta: seo.glazing,
   title: "Glazing engineering",
   intro: "Stamped calculation packages and redlines for storefront and curtainwall systems. Fast, accurate and affordable.",
   heroPhoto: photos.curtainWallHero,

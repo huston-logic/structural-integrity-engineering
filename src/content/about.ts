@@ -1,10 +1,8 @@
 import { photos } from "@/content/photos";
+import { seo } from "@/content/seo";
 
 /** About page copy, verbatim from the copy deck (About and Contact > About). */
-export const aboutMeta = {
-  title: "[[About page SEO title]]",
-  description: "[[About page SEO description]]",
-};
+export const aboutMeta = seo.about;
 
 export const aboutHero = {
   title: "Structural design, simplified.",
