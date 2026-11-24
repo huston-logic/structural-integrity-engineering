@@ -1,0 +1,64 @@
+@import "tailwindcss";
+@import "./hl.css";
+
+@theme {
+  --color-ink: #29332d;
+}
+
+/* Motion timing that Tailwind's default transitions and the mobile menu (.panel in hl.css) share. */
+@theme static {
+  --ease-site: cubic-bezier(0.22, 1, 0.36, 1);
+  --duration-feedback: 150ms;
+  --duration-panel: 200ms;
+
+  --default-transition-duration: var(--duration-feedback);
+  --default-transition-timing-function: var(--ease-site);
+}
+
+/* The v3 base: silver page, ink text, Inter body, Outfit headings (docs/STYLE-GUIDE.md §2-§3). */
+@layer base {
+  html {
+    scroll-padding-top: 6rem;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background: var(--hl-silver);
+    color: var(--hl-ink);
+    font-family: var(--font-text);
+    font-size: var(--hl-fs-body);
+    line-height: 1.6;
+    font-optical-sizing: auto;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-ui);
+    font-weight: 700;
+  }
+
+  h1,
+  h2,
+  h3 {
+    letter-spacing: -0.015em;
+    text-wrap: balance;
+  }
+
+  p,
+  li {
+    text-wrap: pretty;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--hl-rust);
+    outline-offset: 3px;
+    border-radius: 4px;
+  }
+
+  ::selection {
+    background: var(--hl-mint);
+    color: var(--hl-ink);
+  }
+}
