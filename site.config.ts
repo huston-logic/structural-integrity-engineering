@@ -10,38 +10,37 @@
  */
 export const siteConfig = {
   business: {
-    name: "[[Business name]]",
+    name: "Structural Integrity Engineering",
     /** Optional. Empty means the business name is used. */
-    legalName: "",
-    tagline: "[[Tagline]]",
+    legalName: "Structural Integrity Engineering, Inc.",
+    tagline: "Strength you can build on.",
     /** The positioning line. Feeds the JSON-LD description. */
-    oneLiner: "[[One-line description of the business]]",
+    oneLiner: "Structural engineering for homes, low-rise commercial buildings and glazing systems in Colorado and Alaska.",
     copyrightYear: 2026,
   },
   owner: {
-    name: "[[Owner name]]",
-    givenName: "[[Owner first name]]",
-    familyName: "[[Owner last name]]",
-    role: "[[Owner role]]",
-    phone: "[[Phone number]]",
-    regionLine: "[[Region]]",
+    name: "Dylan Gassmann",
+    givenName: "Dylan",
+    familyName: "Gassmann",
+    role: "Principal Engineer",
+    phone: "(907) 350-3456",
+    regionLine: "Colorado and Alaska",
   },
   domain: {
-    // CLIENT: replace. A real URL is required so the build can run; check:placeholders fails while it is example.com.
-    url: "https://example.com",
-    // CLIENT: replace. The Cloudflare Worker's name (wrangler.jsonc `name`). The contact Worker also uses it to tell the
-    // production workers.dev host from branch previews.
-    workerName: "[[Worker name]]",
+    url: "https://structural-integrity-engineering.com",
+    // The Cloudflare Worker's name (wrangler.jsonc `name`). The contact Worker also uses it to tell the production
+    // workers.dev host from branch previews.
+    workerName: "structural-integrity-engineering",
     previewHostSuffix: ".workers.dev",
   },
   contact: {
-    // CLIENT: replace. From, notify To and Reply-To. null means not set yet: check:placeholders fails, and the contact
-    // Worker refuses to send (502) until it is set.
-    siteEmail: null as string | null,
+    // From, notify To and Reply-To. null means not set yet: check:placeholders fails, and the contact Worker refuses to
+    // send (502) until it is set.
+    siteEmail: "dylan@structural-integrity-engineering.com" as string | null,
     /** Display name on the notification email. */
-    fromName: "[[Notification sender name]]",
+    fromName: "Structural Integrity Engineering website",
     /** Display name on the automatic reply. */
-    replyFromName: "[[Auto-reply sender name]]",
+    replyFromName: "Dylan Gassmann",
     // CLIENT: replace. null means not chosen yet: check:placeholders fails, the contact page shows a placeholder, and the
     // contact Worker refuses to send (502) because the automatic reply needs a booking link.
     schedulerUrl: null as string | null,
@@ -61,8 +60,8 @@ export const siteConfig = {
     rateLimit: {
       limit: 5,
       periodSeconds: 60,
-      // CLIENT: replace. Any integer string that is unique per Cloudflare account (for example "101" and "102").
-      namespaceIds: { production: "[[Rate limit namespace id (production)]]", preview: "[[Rate limit namespace id (preview)]]" },
+      // Integer strings unique per Cloudflare account.
+      namespaceIds: { production: "1001", preview: "1002" },
     },
   },
   theme: {

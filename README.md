@@ -1,6 +1,6 @@
-# [[CLIENT_NAME]] website
+# Structural Integrity Engineering website
 
-Website for **[[CLIENT_NAME]]** ([[ONE_LINE_DESCRIPTION]]), run by [[OWNER_NAME]]. This repo is the site template: see `docs/TEMPLATE.md`. Built with Next.js (App Router), strict TypeScript and Tailwind CSS, exported as a fully static site for **Cloudflare Workers**.
+Website for **Structural Integrity Engineering** (structural engineering for homes, low-rise commercial buildings and glazing systems in Colorado and Alaska), run by Dylan. Built from the site template: see `docs/TEMPLATE.md`. Built with Next.js (App Router), strict TypeScript and Tailwind CSS, exported as a fully static site for **Cloudflare Workers**.
 
 Permanent architecture, security and content rules are in [`AGENTS.md`](./AGENTS.md). Read it before making changes.
 
@@ -105,10 +105,10 @@ Scheduled runs only happen on the default branch, and GitHub disables schedules 
 
 | Setting | Where | Notes |
 |---|---|---|
-| Site URL | `NEXT_PUBLIC_SITE_URL` (see `.env.example`), default `https://[[DOMAIN]]` in `src/content/site.ts` | Used for canonical URLs, Open Graph, sitemap, robots and the homepage JSON-LD. Public value, not a secret. |
+| Site URL | `NEXT_PUBLIC_SITE_URL` (see `.env.example`), default `https://structural-integrity-engineering.com` in `src/content/site.ts` | Used for canonical URLs, Open Graph, sitemap, robots and the homepage JSON-LD. Public value, not a secret. |
 | Contact email, scheduler URL, LinkedIn URL, Turnstile site key, sender names, Worker name, Sheet writer and tabs, rate limit | `site.config.ts` (`contact.*`, `domain.workerName`), re-exported by `src/content/providers.ts` and `site.ts` | `null` or `[[placeholder]]` renders a visible marker and fails `build:launch`. The Worker reads this file too (`worker/config.ts`). The Turnstile site key is public. Run `npm run sync:config` after editing; secrets are in [docs/SECRETS.md](docs/SECRETS.md). |
 | Content-Security-Policy | `public/_headers` | `https://challenges.cloudflare.com` is allowed in `script-src` and `frame-src` for Turnstile on the contact form, and `https://static.cloudflareinsights.com` (`script-src`) and `https://cloudflareinsights.com` (`connect-src`) for Cloudflare Web Analytics. Nothing else is loaded from outside. `_headers` covers static files only; the Worker sets its own headers on `/api/*`. |
-| Worker settings | `wrangler.jsonc` (generated from `site.config.ts` by `npm run sync:config`) | Secret **names** only, never values. After changing it, run `npx wrangler types worker/worker-configuration.d.ts` (wrangler rejects the `[[Worker name]]` placeholder, so do this once the real Worker name is set; the committed types still list the old secret names until then). |
+| Worker settings | `wrangler.jsonc` (generated from `site.config.ts` by `npm run sync:config`) | Secret **names** only, never values. After changing it, run `npx wrangler types worker/worker-configuration.d.ts`. |
 | Framework step names, numbers, one-liners | `framework.steps` in `src/content/site.ts` | The only place "Scope it / Shape it / Ship it" is defined. Content strings use `{scope}`, `{shape}`, `{ship}`, `{steps}` tokens via `fw()` (`src/lib/framework.ts`). Rename a step here and every page follows. |
 
 ## Motion
@@ -117,14 +117,14 @@ Animation is CSS only (no library), in `src/app/hl.css`, following `docs/STYLE-G
 
 ## Placeholders and launch gate
 
-Anything only [[OWNER_NAME]] can supply is written as `[[double brackets]]` in `src/content/*` and renders as a highlighted marker on the page. Provider-dependent values (`email`, `schedulerUrl`, `linkedInUrl`, `turnstileSiteKey`) stay `null` in `site.config.ts` until set.
+Anything only Dylan can supply is written as `[[double brackets]]` in `src/content/*` and renders as a highlighted marker on the page. Provider-dependent values (`email`, `schedulerUrl`, `linkedInUrl`, `turnstileSiteKey`) stay `null` in `site.config.ts` until set.
 
 ```bash
 npm run check:placeholders   # lists every unresolved item, exits 1 while any remain
 npm run build:launch         # runs the gate, then builds
 ```
 
-The gate also fails while any flag in `decisionsConfirmed` (`src/content/site.ts`) is `false`: publish the Review price, line-art style. Set each to `true` once [[OWNER_NAME]] has confirmed the choice.
+The gate also fails while any flag in `decisionsConfirmed` (`src/content/site.ts`) is `false`: publish the Review price, line-art style. Set each to `true` once Dylan has confirmed the choice.
 
 Normal builds (and CI) allow placeholders so the site can be previewed. **Use `npm run build:launch` as the Cloudflare build command for the real launch** (see below) so a build with unresolved placeholders cannot go live.
 
@@ -155,7 +155,7 @@ The contact page shows a disabled "Pick a time" button, clearly marked, and ever
 
 The form on `/contact` (`src/components/hl/ContactForm.tsx`) posts JSON to `POST /api/contact`, handled by a small Worker script, `worker/contact.ts`. `wrangler.jsonc` runs the Worker **only for `/api/*`** (`run_worker_first`); every page and file is still the static export in `./out`.
 
-**What one submission does**, in order: same-origin check, JSON only, at most 16 KB; rate limit (5 per minute per IP, the `CONTACT_RATE_LIMIT` binding); spam-trap field (`company_fax`, refused with an honest error); the same validation as the form (`src/lib/contact-validation.ts`); Cloudflare Turnstile verified server-side (hostname and `action: "contact"` must match). Then it appends a row to [[OWNER_NAME]]'s Google Sheet, emails the submission to [[SITE_EMAIL]] (Reply-To = the visitor) with a line saying whether the Sheet row was saved, and sends the visitor the B7b automatic reply. The notification is **plain text only**, through Resend, from `<contact.fromName> <contact.siteEmail>`. The automatic reply is multipart (HTML + plain text, same words) from `<contact.replyFromName> <contact.siteEmail>`, with `Auto-Submitted: auto-replied` and `X-Auto-Response-Suppress: All` headers. Cells starting with `= + - @` (or a tab or carriage return) get a leading `'` before they are written, with either Sheet writer.
+**What one submission does**, in order: same-origin check, JSON only, at most 16 KB; rate limit (5 per minute per IP, the `CONTACT_RATE_LIMIT` binding); spam-trap field (`company_fax`, refused with an honest error); the same validation as the form (`src/lib/contact-validation.ts`); Cloudflare Turnstile verified server-side (hostname and `action: "contact"` must match). Then it appends a row to Dylan's Google Sheet, emails the submission to dylan@structural-integrity-engineering.com (Reply-To = the visitor) with a line saying whether the Sheet row was saved, and sends the visitor the B7b automatic reply. The notification is **plain text only**, through Resend, from `<contact.fromName> <contact.siteEmail>`. The automatic reply is multipart (HTML + plain text, same words) from `<contact.replyFromName> <contact.siteEmail>`, with `Auto-Submitted: auto-replied` and `X-Auto-Response-Suppress: All` headers. Cells starting with `= + - @` (or a tab or carriage return) get a leading `'` before they are written, with either Sheet writer.
 
 **Where the Worker gets its values.** Every client-specific value comes from `site.config.ts` through `worker/config.ts`: `business.name`, `owner.name` and `owner.role`, `domain.url`, `domain.workerName` and `domain.previewHostSuffix` (to tell the production host from branch previews), `contact.siteEmail`, `fromName`, `replyFromName`, `schedulerUrl` (the booking link in the automatic reply), `sheetTabs`, `sheetWriter`, and the colors and tagline in the reply's signature. The rate limit (`contact.rateLimit`) is generated into `wrangler.jsonc` as the `CONTACT_RATE_LIMIT` binding. While `siteEmail` or `schedulerUrl` is `null` (the starter template), the Worker answers 502 (logged as `config_incomplete`) before it writes a row or sends any mail. The tests build the Worker from a fixture config of obviously fake values (`createWorker` in `worker/contact.ts`), never the real one.
 
@@ -168,9 +168,9 @@ The form on `/contact` (`src/components/hl/ContactForm.tsx`) posts JSON to `POST
 
 Both give up after 8 seconds and retry once on a rate limit, server error or network failure. Change the writer, then run `npm run sync:config` so `wrangler.jsonc` lists the right secret names.
 
-**What the visitor sees.** Success only when the note reached [[OWNER_NAME]] (the Sheet row or the email). Then the form saves the first name and whether the automatic reply went out in `sessionStorage` (never the URL) and moves to `/contact/thanks`, which says "Got it, thanks {name}." If the automatic reply failed, the thanks page says so. Every failure keeps the visitor's answers and shows one of the three B7 send errors. Without JavaScript nothing is sent.
+**What the visitor sees.** Success only when the note reached Dylan (the Sheet row or the email). Then the form saves the first name and whether the automatic reply went out in `sessionStorage` (never the URL) and moves to `/contact/thanks`, which says "Got it, thanks {name}." If the automatic reply failed, the thanks page says so. Every failure keeps the visitor's answers and shows one of the three B7 send errors. Without JavaScript nothing is sent.
 
-| Sheet | Email to [[OWNER_NAME]] | Result |
+| Sheet | Email to Dylan | Result |
 |---|---|---|
 | saved | sent | Success. |
 | failed | sent | Success. The email says "Sheet: NOT saved - add this one by hand". |
@@ -181,7 +181,7 @@ Both give up after 8 seconds and retry once on a rate limit, server error or net
 
 **Modes** (`SITE_ENV`, from `wrangler.jsonc`):
 - `production`: the live site.
-- `preview`: branch previews (Cloudflare Worker Previews). Rows go to the Sheet's `Preview` tab, every subject starts with `[Preview]`, and the automatic reply goes to [[SITE_EMAIL]] instead of the visitor (its subject names who it would have gone to). Any `*.workers.dev` host other than `[[WORKER_NAME]].<account>.workers.dev` is treated as a preview even if `SITE_ENV` says production.
+- `preview`: branch previews (Cloudflare Worker Previews). Rows go to the Sheet's `Preview` tab, every subject starts with `[Preview]`, and the automatic reply goes to dylan@structural-integrity-engineering.com instead of the visitor (its subject names who it would have gone to). Any `*.workers.dev` host other than `structural-integrity-engineering.<account>.workers.dev` is treated as a preview even if `SITE_ENV` says production.
 - `development`: `wrangler dev` on localhost only. Turnstile is checked with Cloudflare's test keys, then nothing is emailed or written.
 
 **Turnstile errors.** "That didn't go through" (403) means the visitor's check failed (logged as `turnstile_failed` with a `reason`: `not_success`, `hostname_mismatch` or `action_mismatch`, plus Cloudflare's error codes). A missing `TURNSTILE_SECRET_KEY`, a secret Cloudflare refuses, or an unreachable siteverify is our fault, so it is "Something broke on my end…" (502), logged as `turnstile_config_missing` or `turnstile_unavailable`.
@@ -190,11 +190,11 @@ Both give up after 8 seconds and retry once on a rate limit, server error or net
 
 ### Secrets
 
-Four Worker secrets, set by [[OWNER_NAME]] in their own Terminal from the repo folder, never in the repo, chat or logs. `wrangler.jsonc` lists their names (`secrets.required`, generated from `contact.sheetWriter`), and a deploy fails while one is missing. Each command asks for the value with hidden input. **[docs/SECRETS.md](docs/SECRETS.md) is the full table** (every secret, which writer needs it, the production and preview commands, the Apps Script properties, the public settings and the "never commit" rules). In short:
+Four Worker secrets, set by Dylan in their own Terminal from the repo folder, never in the repo, chat or logs. `wrangler.jsonc` lists their names (`secrets.required`, generated from `contact.sheetWriter`), and a deploy fails while one is missing. Each command asks for the value with hidden input. **[docs/SECRETS.md](docs/SECRETS.md) is the full table** (every secret, which writer needs it, the production and preview commands, the Apps Script properties, the public settings and the "never commit" rules). In short:
 
 | Name | Value | Writer |
 |---|---|---|
-| `RESEND_API_KEY` | Resend API key, "Sending access" for [[DOMAIN]] only | both |
+| `RESEND_API_KEY` | Resend API key, "Sending access" for structural-integrity-engineering.com only | both |
 | `TURNSTILE_SECRET_KEY` | The Turnstile widget's secret key | both |
 | `SHEET_WEBHOOK_URL` | The Apps Script web-app URL | `apps-script` (default) |
 | `SHEET_WEBHOOK_SECRET` | The shared secret the Apps Script checks | `apps-script` (default) |
@@ -211,12 +211,12 @@ npx wrangler secret put GOOGLE_SERVICE_ACCOUNT_KEY < path/to/key.json
 npx wrangler secret put GOOGLE_SHEET_ID
 ```
 
-Previews do not share production secrets. Set the same ones for all previews with `npx wrangler preview base-config secret put <NAME>` (same values). A preview copies the base secrets **when it is created**, so set them before pushing a branch; later changes don't reach existing previews. To fix an existing preview, also set the secret on it: `npx wrangler preview secret put <NAME> --name <branch-name>` (this creates a new deployment of that preview). Names only, never values: `npx wrangler secret list` (production), `npx wrangler preview base-config secret list` (new previews), `npx wrangler preview secret list --name <branch-name>` (one preview). Each `secret put` creates a new production version (a row in Deployments). If it fails with "latest version of your Worker isn't currently deployed", use the dashboard instead: Workers & Pages, [[WORKER_NAME]], Settings, Variables and Secrets.
+Previews do not share production secrets. Set the same ones for all previews with `npx wrangler preview base-config secret put <NAME>` (same values). A preview copies the base secrets **when it is created**, so set them before pushing a branch; later changes don't reach existing previews. To fix an existing preview, also set the secret on it: `npx wrangler preview secret put <NAME> --name <branch-name>` (this creates a new deployment of that preview). Names only, never values: `npx wrangler secret list` (production), `npx wrangler preview base-config secret list` (new previews), `npx wrangler preview secret list --name <branch-name>` (one preview). Each `secret put` creates a new production version (a row in Deployments). If it fails with "latest version of your Worker isn't currently deployed", use the dashboard instead: Workers & Pages, structural-integrity-engineering, Settings, Variables and Secrets.
 
 ### Accounts and DNS
 
-- **Turnstile:** Cloudflare dashboard, Turnstile, widget `[[WORKER_NAME]] contact`, Managed mode. Hostnames: `[[DOMAIN]]` (covers its subdomains) and the account's `<account>.workers.dev` (meant to cover the production and preview workers.dev hosts, which are its subdomains; Cloudflare's docs don't mention workers.dev, so the first preview test confirms it, and error 110200 there means it doesn't). The site key goes in `contact.turnstileSiteKey` in `site.config.ts`; the secret key is the Worker secret.
-- **Resend:** domain `[[DOMAIN]]`, set up by Resend with its Forge records (as added on 2026-11-15). They sit on their own names, so they never touch Google Workspace's. All "DNS only". Open and click tracking stay off.
+- **Turnstile:** Cloudflare dashboard, Turnstile, widget `structural-integrity-engineering contact`, Managed mode. Hostnames: `structural-integrity-engineering.com` (covers its subdomains) and the account's `<account>.workers.dev` (meant to cover the production and preview workers.dev hosts, which are its subdomains; Cloudflare's docs don't mention workers.dev, so the first preview test confirms it, and error 110200 there means it doesn't). The site key goes in `contact.turnstileSiteKey` in `site.config.ts`; the secret key is the Worker secret.
+- **Resend:** domain `structural-integrity-engineering.com`, set up by Resend with its Forge records (as added on 2026-11-15). They sit on their own names, so they never touch Google Workspace's. All "DNS only". Open and click tracking stay off.
 
   | Type | Name | Content |
   |---|---|---|
@@ -225,8 +225,8 @@ Previews do not share production secrets. Set the same ones for all previews wit
   | CNAME | `rsend` | `rsend.forge.rmta.net` |
 
   There is **no MX and no SPF TXT on `send`**: a CNAME can't share its name with other records, and Resend serves the bounce (Return-Path) records through the CNAME target. Don't add any.
-- **Google Workspace** owns mail for the root domain ([[SITE_EMAIL]] must be a Workspace mailbox or alias): root MX, the root SPF `v=spf1 include:_spf.google.com ~all` (the only SPF record on the root; **never add Resend to it**) and DKIM at `google._domainkey`. DMARC (`_dmarc`) passes for Resend mail through the aligned DKIM signature on `[[DOMAIN]]`, and SPF passes on `send.[[DOMAIN]]` (aligned under relaxed alignment).
-- **Google Sheet** `[[CLIENT_NAME]] contact form`, tabs `Submissions` and `Preview` (`contact.sheetTabs`), header row `Received (UTC) | Need | Topic | Name | Email | Business | Message | Tools | Website | Source | Mode`. Set it up for the writer in `contact.sheetWriter`:
+- **Google Workspace** owns mail for the root domain (dylan@structural-integrity-engineering.com must be a Workspace mailbox or alias): root MX, the root SPF `v=spf1 include:_spf.google.com ~all` (the only SPF record on the root; **never add Resend to it**) and DKIM at `google._domainkey`. DMARC (`_dmarc`) passes for Resend mail through the aligned DKIM signature on `structural-integrity-engineering.com`, and SPF passes on `send.structural-integrity-engineering.com` (aligned under relaxed alignment).
+- **Google Sheet** `Structural Integrity Engineering contact form`, tabs `Submissions` and `Preview` (`contact.sheetTabs`), header row `Received (UTC) | Need | Topic | Name | Email | Business | Message | Tools | Website | Source | Mode`. Set it up for the writer in `contact.sheetWriter`:
   - **`apps-script` (default), the steps.** The script lives inside the Sheet, so nothing is shared with a service account and no Google Cloud project is needed.
     1. Make the Sheet with the two tabs and the header row above in row 1 of each.
     2. In the Sheet, open Extensions, then Apps Script. Replace the starter code with the contents of `docs/apps-script/contact-sheet.gs` (it contains no secret).
@@ -273,14 +273,14 @@ Before launch:
 
 - **Site down or erroring:** an UptimeRobot Free monitor checks the production URL every 5 minutes and emails the owner when it gets an error response (anything other than 2xx or 3xx), a timeout or no answer. It only sees the public HTTP response; no token or secret is involved.
 - **Tested on 2026-11-13:** a temporary monitor pointed at a page that does not exist (a 404) went Down and sent the alert email, then was deleted. The production monitor was never broken on purpose.
-- **Failed deploys have no alert.** Cloudflare has no email for a failed Workers Builds deploy; the documented route is a Queue plus a small Worker that posts to a Slack or Discord webhook. A failed production build leaves the previous version live, and the red "Workers Builds: [[WORKER_NAME]]" check on the merge commit is the only signal.
+- **Failed deploys have no alert.** Cloudflare has no email for a failed Workers Builds deploy; the documented route is a Queue plus a small Worker that posts to a Slack or Discord webhook. A failed production build leaves the previous version live, and the red "Workers Builds: structural-integrity-engineering" check on the merge commit is the only signal.
 - **When the custom domain goes live:** edit the monitor's URL (three-dot menu, Edit) to `https://<final domain>/`, then re-run the test: add a temporary monitor on a page that does not exist, wait for the Down email, delete it.
 
 ## Rollback runbook
 
 A rollback points the live site at an older version within about a minute. It changes nothing in Git: `main` still contains the bad commit, and the next merge to `main` redeploys `main`'s HEAD over the rollback. Use it when a deploy broke the live site and it must be fixed now.
 
-**Roll back:** Cloudflare dashboard, Workers & Pages, `[[WORKER_NAME]]`, Deployments. Pick an older row that was a real production deployment (match its time to the merge time of the PR; never a preview). Three-dot menu, **Rollback**. Read the dialog, add a message, confirm. The Active deployment card switches to the older version (the move is recorded under View rollout history; the Deployments list itself does not gain a row).
+**Roll back:** Cloudflare dashboard, Workers & Pages, `structural-integrity-engineering`, Deployments. Pick an older row that was a real production deployment (match its time to the merge time of the PR; never a preview). Three-dot menu, **Rollback**. Read the dialog, add a message, confirm. The Active deployment card switches to the older version (the move is recorded under View rollout history; the Deployments list itself does not gain a row).
 
 **Roll forward:** on the newer row you rolled back from, the same menu item is labelled **Promote version**. Read the dialog and confirm.
 
