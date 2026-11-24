@@ -14,10 +14,10 @@ Website for Structural Integrity Engineering (structural engineering for homes, 
 
 ## Sources of truth
 
-- **Copy:** `docs/website-plan.md` (Revision 7.1), **Section B** only. It is the single source of every visible string. Preserve it verbatim.
+- **Copy:** `incoming/sie-site-assets/copy-deck.md` (git-ignored; exported from the Claude Doc "Structural Integrity Engineering: site copy deck"). It is the single source of every visible string. Preserve it verbatim.
 - **Design:** `docs/STYLE-GUIDE.md` (style guide v3), including its approved first-screen spec. The logo files are in `public/brand/`; never redraw the mark. Where this file and those two disagree on copy or design, they win.
 - **Pricing:** the site publishes no price yet (`prices.website` is empty in `site.config.ts`, and the copy deck has none). Any price comes from the owner's approved copy, never from code.
-- **Contact form:** `src/components/hl/ContactForm.tsx` posts JSON to the contact Worker (`POST /api/contact`, `worker/contact.ts`, website-plan E6), which verifies Turnstile, appends a row to Dylan's Google Sheet (through a Google Apps Script web app by default, or a service account; `contact.sheetWriter` in `site.config.ts`), emails Dylan and sends the B7b automatic reply. The form shows success (by moving to `/contact/thanks`) only when the Worker says the note reached Dylan; there is no fake success state, and answers never go in the URL (the thanks page gets the first name from `sessionStorage`). Without JavaScript nothing is sent (no `action`, `method="post"`). See the README's "Contact form" section.
+- **Contact form:** `src/components/hl/ContactForm.tsx` posts JSON to the contact Worker (`POST /api/contact`, `worker/contact.ts`), which verifies Turnstile, appends a row to Dylan's Google Sheet (through a Google Apps Script web app by default, or a service account; `contact.sheetWriter` in `site.config.ts`), emails Dylan and sends the automatic reply. The form shows success (by moving to `/contact/thanks`) only when the Worker says the note reached Dylan; there is no fake success state, and answers never go in the URL (the thanks page gets the first name from `sessionStorage`). Without JavaScript nothing is sent (no `action`, `method="post"`). See the README's "Contact form" section.
 
 ## Architecture
 
@@ -35,7 +35,7 @@ Website for Structural Integrity Engineering (structural engineering for homes, 
 
 ## Content rules (non-negotiable)
 
-- The authoritative source is `docs/website-plan.md` (Revision 7.1, Section B) and the launch article draft. **Preserve approved copy verbatim.** Do not paraphrase, "improve", or add claims.
+- The authoritative source is `incoming/sie-site-assets/copy-deck.md`. **Preserve approved copy verbatim.** Do not paraphrase, "improve", or add claims.
 - **Pricing:** no price is published on the site yet (`prices.website` is empty in `site.config.ts`). Never hard-code a price, rate or dollar amount.
 - Do not invent credentials, results, statistics, client names, or certifications. Do not name the former agency or its clients. Agency work is never presented as Structural Integrity Engineering client work. Do not claim time savings for a named client.
 - Voice: a working engineer talking to a contractor: short, practical, confident, no hype. The approved copy keeps Dylan's own "we" (his site says "we" although he works alone), so do not change it to "I" or the reverse. Avoid "digital transformation", "unlock", "leverage", "synergy", "AI-powered".
