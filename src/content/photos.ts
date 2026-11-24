@@ -51,6 +51,30 @@ export const photos = {
     height: 750,
     alt: "An engineer in a hard hat points at a floor plan pinned to a concrete column inside an unfinished building.",
   },
+  engineerPlansSmall: {
+    src: "/images/engineer-plans-800.jpg",
+    width: 800,
+    height: 533,
+    alt: "An engineer in a hard hat points at a floor plan pinned to a concrete column inside an unfinished building.",
+  },
+  chaletSnowCard: {
+    src: "/images/chalet-snow-640.jpg",
+    width: 640,
+    height: 960,
+    alt: "A stone and log house with a car parked at the end of a deep snow drift in the driveway.",
+  },
+  commercialCraneCard: {
+    src: "/images/commercial-crane-640.jpg",
+    width: 640,
+    height: 426,
+    alt: "A multi-story wood-framed building under construction, wrapped in house wrap, with a yellow tower crane above it.",
+  },
+  curtainWallCard: {
+    src: "/images/curtain-wall-640.jpg",
+    width: 640,
+    height: 426,
+    alt: "Looking up at the glass curtain wall of a tall building, with the sky and clouds reflected in the panels.",
+  },
   remodelFraming: {
     src: "/images/remodel-framing.jpg",
     width: 800,
