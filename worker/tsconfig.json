@@ -13,5 +13,5 @@
     "erasableSyntaxOnly": true,
     "allowImportingTsExtensions": true
   },
-  "include": ["./**/*.ts", "../site.config.ts", "../src/content/contact-fields.ts", "../src/content/auto-reply.ts", "../src/content/providers.ts", "../src/lib/contact-validation.ts", "../src/lib/first-name.ts", "../src/lib/optional-setting.ts"]
+  "include": ["./**/*.ts", "../site.config.ts", "../src/content/contact-fields.ts", "../src/content/auto-reply.ts", "../src/content/providers.ts", "../src/lib/contact-validation.ts", "../src/lib/optional-setting.ts"]
 }

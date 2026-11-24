@@ -14,7 +14,7 @@ Permanent architecture, security and content rules are in [`AGENTS.md`](./AGENTS
 | `/services/low-rise-commercial-structural-design` | Low-rise commercial service page |
 | `/services/glazing-and-mullion-engineering` | Glazing and mullion service page |
 | `/about-us` | About |
-| `/contact-us` | Scheduler placeholder and the contact form (`?topic=partner` shows the partner variant) |
+| `/contact-us` | Headline, direct email and phone, and the six-field contact form |
 | `/contact-us/thanks` | Form confirmation, reached only after a real send (noindex) |
 | `POST /api/contact` | The contact form Worker (`worker/contact.ts`), not a page |
 | `/privacy` | Privacy policy (draft, needs review) |
@@ -54,7 +54,7 @@ npm run build
 PORT=4822 npm run preview   # http://localhost:4822
 ```
 
-`scripts/preview.mjs` serves `./out` with clean URLs and `404.html`, and applies the site-wide headers from `public/_headers` (including the CSP) so header problems show up locally.
+`scripts/preview.mjs` serves `./out` with clean URLs and `404.html`, gzips text files (HTML, CSS, JS, JSON, SVG and the like) the way Cloudflare does, and applies the site-wide headers from `public/_headers` (including the CSP) so header problems show up locally.
 
 ### Accessibility check (Playwright + axe)
 
@@ -81,7 +81,7 @@ npm run build
 npm run test:lighthouse
 ```
 
-`npm run build && npm run test:lighthouse` audits the built site with Lighthouse CI (mobile preset, median of 5 runs per page) against the eight indexable pages in `src/lib/routes.ts` (a `noindex` page cannot pass the SEO check, and the 404 page returns an error status). It serves `out/` through `scripts/preview.mjs`, so the headers in `public/_headers` apply, and uses the Google Chrome installed on your machine (or `CHROME_PATH`). Reports are written to `.lighthouseci/` (git-ignored). Accessibility and SEO must score 0.95 or higher, and best-practices and performance 0.9 or higher; all four fail the job (`lighthouserc.cjs`). The preview server does not compress files or set cache headers the way Cloudflare does, so its performance score understates the deployed site.
+`npm run build && npm run test:lighthouse` audits the built site with Lighthouse CI (mobile preset, median of 5 runs per page) against the eight indexable pages in `src/lib/routes.ts` (a `noindex` page cannot pass the SEO check, and the 404 page returns an error status). It serves `out/` through `scripts/preview.mjs`, so the headers in `public/_headers` apply, and uses the Google Chrome installed on your machine (or `CHROME_PATH`). Reports are written to `.lighthouseci/` (git-ignored). Accessibility and SEO must score 0.95 or higher, and best-practices and performance 0.9 or higher; all four fail the job (`lighthouserc.cjs`). The preview server gzips text files like Cloudflare (without that, Lighthouse counts about three times the real bytes and pages whose largest element is a photo fail performance), but it sets no cache headers and does not use Brotli, so its performance score still slightly understates the deployed site.
 
 In CI this is the `lighthouse` job in `.github/workflows/ci.yml`. It is a required check in the "Protect main" ruleset, so a red result blocks merge. Scores for every page are in the run's Summary, and the full HTML and JSON reports are the `lighthouse-reports` artifact (kept 14 days; open the `.report.html` for the failing URL to see which audits failed). If it fails with `NO_NAVSTART` (a Lighthouse trace-recording hiccup, not a site problem), click "Re-run failed jobs" on the run.
 
@@ -152,15 +152,15 @@ Each URL prints `PASS` or `FAIL` with the reason. A URL passes only when the fir
 
 ### Scheduler and analytics are still placeholders
 
-The contact page shows a disabled "Pick a time" button, clearly marked, and every "Book a free call" button points at `/contact-us#book` until `contact.schedulerUrl` is set in `site.config.ts`. With `contact.schedulerUrl: "none"` there is no scheduler column, no book-a-call button anywhere and no booking line in the automatic reply. If the scheduler is embedded in an iframe, add its origin to `frame-src` in `public/_headers`. Analytics is Cloudflare Web Analytics, which is cookieless: its two origins are in the CSP and the privacy page says so. Turn it on in the Cloudflare dashboard (nothing is added to the site's code).
+The contact page has no scheduler column (the copy deck gives it none), and every "Book a free call" button points at `/contact-us` until `contact.schedulerUrl` is set in `site.config.ts`. With `contact.schedulerUrl: "none"` there is no book-a-call button anywhere. The automatic reply never has a booking link. If the scheduler is embedded in an iframe, add its origin to `frame-src` in `public/_headers`. Analytics is Cloudflare Web Analytics, which is cookieless: its two origins are in the CSP and the privacy page says so. Turn it on in the Cloudflare dashboard (nothing is added to the site's code).
 
 ## Contact form
 
 The form on `/contact-us` (`src/components/hl/ContactForm.tsx`) posts JSON to `POST /api/contact`, handled by a small Worker script, `worker/contact.ts`. `wrangler.jsonc` runs the Worker **only for `/api/*`** (`run_worker_first`); every page and file is still the static export in `./out`.
 
-**What one submission does**, in order: same-origin check, JSON only, at most 16 KB; rate limit (5 per minute per IP, the `CONTACT_RATE_LIMIT` binding); spam-trap field (`company_fax`, refused with an honest error); the same validation as the form (`src/lib/contact-validation.ts`); Cloudflare Turnstile verified server-side (hostname and `action: "contact"` must match). Then it appends a row to Dylan's Google Sheet, emails the submission to dylan@structural-integrity-engineering.com (Reply-To = the visitor) with a line saying whether the Sheet row was saved, and sends the visitor the B7b automatic reply. The notification is **plain text only**, through Resend, from `<contact.fromName> <contact.siteEmail>`. The automatic reply is multipart (HTML + plain text, same words) from `<contact.replyFromName> <contact.siteEmail>`, with `Auto-Submitted: auto-replied` and `X-Auto-Response-Suppress: All` headers. Cells starting with `= + - @` (or a tab or carriage return) get a leading `'` before they are written, with either Sheet writer.
+**What one submission does**, in order: same-origin check, JSON only, at most 16 KB; rate limit (5 per minute per IP, the `CONTACT_RATE_LIMIT` binding); spam-trap field (`company_fax`, refused with an honest error); the same validation as the form (`src/lib/contact-validation.ts`); Cloudflare Turnstile verified server-side (hostname and `action: "contact"` must match). Then it appends a row to Dylan's Google Sheet, emails the submission to dylan@structural-integrity-engineering.com (Reply-To = the visitor) with a line saying whether the Sheet row was saved, and sends the visitor the automatic reply (the deck's "Thanks. Your request is in..." line and a signature, no booking link). The notification is **plain text only**, through Resend, from `<contact.fromName> <contact.siteEmail>`. The automatic reply is multipart (HTML + plain text, same words) from `<contact.replyFromName> <contact.siteEmail>`, with `Auto-Submitted: auto-replied` and `X-Auto-Response-Suppress: All` headers. Cells starting with `= + - @` (or a tab or carriage return) get a leading `'` before they are written, with either Sheet writer.
 
-**Where the Worker gets its values.** Every client-specific value comes from `site.config.ts` through `worker/config.ts`: `business.name`, `owner.name` and `owner.role`, `domain.url`, `domain.workerName` and `domain.previewHostSuffix` (to tell the production host from branch previews), `contact.siteEmail`, `fromName`, `replyFromName`, `schedulerUrl` (the booking link in the automatic reply), `sheetTabs`, `sheetWriter`, and the colors and tagline in the reply's signature. The rate limit (`contact.rateLimit`) is generated into `wrangler.jsonc` as the `CONTACT_RATE_LIMIT` binding. While `siteEmail` or `schedulerUrl` is `null` (the starter template; `"none"` is a decision, not a gap, so the reply just leaves its booking paragraph and signature line out), the Worker answers 502 (logged as `config_incomplete`) before it writes a row or sends any mail. The tests build the Worker from a fixture config of obviously fake values (`createWorker` in `worker/contact.ts`), never the real one.
+**Where the Worker gets its values.** Every client-specific value comes from `site.config.ts` through `worker/config.ts`: `business.name`, `owner.name` and `owner.role`, `domain.url`, `domain.workerName` and `domain.previewHostSuffix` (to tell the production host from branch previews), `contact.siteEmail`, `fromName`, `replyFromName`, `sheetTabs`, `sheetWriter`, and the colors and tagline in the reply's signature. The rate limit (`contact.rateLimit`) is generated into `wrangler.jsonc` as the `CONTACT_RATE_LIMIT` binding. While `siteEmail` is `null` (the starter template), the Worker answers 502 (logged as `config_incomplete`) before it writes a row or sends any mail. The tests build the Worker from a fixture config of obviously fake values (`createWorker` in `worker/contact.ts`), never the real one.
 
 **Sheet writers** (`contact.sheetWriter` in `site.config.ts`):
 
@@ -171,7 +171,7 @@ The form on `/contact-us` (`src/components/hl/ContactForm.tsx`) posts JSON to `P
 
 Both give up after 8 seconds and retry once on a rate limit, server error or network failure. Change the writer, then run `npm run sync:config` so `wrangler.jsonc` lists the right secret names.
 
-**What the visitor sees.** Success only when the note reached Dylan (the Sheet row or the email). Then the form saves the first name and whether the automatic reply went out in `sessionStorage` (never the URL) and moves to `/contact-us/thanks`, which says "Got it, thanks {name}." If the automatic reply failed, the thanks page says so. Every failure keeps the visitor's answers and shows one of the three B7 send errors. Without JavaScript nothing is sent.
+**What the visitor sees.** Success only when the note reached Dylan (the Sheet row or the email). Then the form moves to `/contact-us/thanks`, a static page ("Thanks. Your request is in, and Dylan will reply within 48 hours."); nothing the visitor typed is kept in the URL or in browser storage. Every failure keeps the visitor's answers and shows one of the three B7 send errors. Without JavaScript nothing is sent.
 
 | Sheet | Email to Dylan | Result |
 |---|---|---|
@@ -229,7 +229,7 @@ Previews do not share production secrets. Set the same ones for all previews wit
 
   There is **no MX and no SPF TXT on `send`**: a CNAME can't share its name with other records, and Resend serves the bounce (Return-Path) records through the CNAME target. Don't add any.
 - **Google Workspace** owns mail for the root domain (dylan@structural-integrity-engineering.com must be a Workspace mailbox or alias): root MX, the root SPF `v=spf1 include:_spf.google.com ~all` (the only SPF record on the root; **never add Resend to it**) and DKIM at `google._domainkey`. DMARC (`_dmarc`) passes for Resend mail through the aligned DKIM signature on `structural-integrity-engineering.com`, and SPF passes on `send.structural-integrity-engineering.com` (aligned under relaxed alignment).
-- **Google Sheet** `Structural Integrity Engineering contact form`, tabs `Submissions` and `Preview` (`contact.sheetTabs`), header row `Received (UTC) | Need | Topic | Name | Email | Business | Message | Tools | Website | Source | Mode`. Set it up for the writer in `contact.sheetWriter`:
+- **Google Sheet** `Structural Integrity Engineering contact form`, tabs `Submissions` and `Preview` (`contact.sheetTabs`), header row `Received (UTC) | First name | Last name | Email | Phone | Project city and state | Project scope | Mode`. Set it up for the writer in `contact.sheetWriter`:
   - **`apps-script` (default), the steps.** The script lives inside the Sheet, so nothing is shared with a service account and no Google Cloud project is needed.
     1. Make the Sheet with the two tabs and the header row above in row 1 of each.
     2. In the Sheet, open Extensions, then Apps Script. Replace the starter code with the contents of `docs/apps-script/contact-sheet.gs` (it contains no secret).

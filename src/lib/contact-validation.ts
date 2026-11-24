@@ -1,34 +1,32 @@
-import { fieldLimits, needOptions, sourceOptions, urlTopics, type Need, type UrlTopic } from "../content/contact-fields.ts";
+import { contactFields, contactKeys, type ContactKey } from "../content/contact-fields.ts";
 
-/** Fields that have a Rev 7.1 error message (docs/website-plan.md B7). */
-export type ContactField = "need" | "name" | "email" | "message";
+/** The fields that can fail validation: all six, because every field is required. */
+export type ContactField = ContactKey;
 
-export type ContactSubmission = {
-  need: Need | "";
-  topic: UrlTopic | "";
-  name: string;
-  email: string;
-  business: string;
-  message: string;
-  tools: string;
-  website: string;
-  source: string;
-};
+export type ContactSubmission = Record<ContactKey, string>;
 
-export const contactKeys = ["need", "topic", "name", "email", "business", "message", "tools", "website", "source"] as const;
-export type ContactInput = Partial<Record<(typeof contactKeys)[number], unknown>>;
+export { contactKeys };
+export type ContactInput = Partial<Record<ContactKey, unknown>>;
 
 export type ContactValidation =
   | { ok: true; value: ContactSubmission }
   | {
       ok: false;
-      /** Fields to show the Rev 7.1 message for, in form order. */
+      /** Fields to show an error for, in form order. */
       fields: ContactField[];
-      /** A value no person could enter through the form (wrong type, unknown option, over the length limit). */
+      /** A value no person could enter through the form (wrong type, over the length limit). */
       malformed: boolean;
     };
 
 export const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/** Digits, spaces and ( ) + . - only, with 7 to 15 digits (the E.164 range). */
+const PHONE_CHARACTERS = /^[\d\s().+-]+$/;
+
+export function isPhone(value: string): boolean {
+  const digits = value.replace(/\D/g, "").length;
+  return PHONE_CHARACTERS.test(value) && digits >= 7 && digits <= 15;
+}
 
 // C0 and C1 control characters plus DEL. cleanText keeps tab and newline.
 const CONTROL = /[\u0000-\u001f\u007f-\u009f]/g;
@@ -44,61 +42,25 @@ export function cleanText(value: string): string {
   return value.normalize("NFC").replace(/\r\n?/g, "\n").replace(CONTROL_EXCEPT_TAB_NEWLINE, "").trim();
 }
 
-function isNeed(value: string): value is Need {
-  return needOptions.some((option) => option.value === value);
-}
-
-function isUrlTopic(value: string): value is UrlTopic {
-  return (urlTopics as readonly string[]).includes(value);
-}
-
 /** Validates a contact submission exactly as the form does. Used by the form in the browser and by the Worker. */
 export function validateContact(input: ContactInput): ContactValidation {
   let malformed = false;
-  const raw = (key: (typeof contactKeys)[number]): string => {
-    const value = input[key];
-    if (value === undefined || value === null) return "";
-    if (typeof value !== "string") {
-      malformed = true;
-      return "";
-    }
-    return value;
-  };
-  const limited = (key: keyof typeof fieldLimits, clean: (value: string) => string): string => {
-    const value = raw(key);
-    if (value.length > fieldLimits[key]) malformed = true;
-    return clean(value);
-  };
-
-  const topicValue = cleanLine(raw("topic"));
-  let topic: UrlTopic | "" = "";
-  if (isUrlTopic(topicValue)) topic = topicValue;
-  else if (topicValue !== "") malformed = true;
-  const partner = topic === "partner";
-
-  const needValue = cleanLine(raw("need"));
-  let need: Need | "" = "";
-  if (isNeed(needValue)) need = partner ? "" : needValue;
-  else if (needValue !== "") malformed = true;
-
-  const name = limited("name", cleanLine);
-  const email = limited("email", cleanLine);
-  const business = limited("business", cleanLine);
-  const message = limited("message", cleanText);
-  const tools = limited("tools", cleanLine);
-  const website = limited("website", cleanLine);
-
-  const sourceValue = cleanLine(raw("source"));
-  let source = "";
-  if (sourceOptions.includes(sourceValue)) source = sourceValue;
-  else if (sourceValue !== "") malformed = true;
-
+  const value = {} as ContactSubmission;
   const fields: ContactField[] = [];
-  if (!partner && !need) fields.push("need");
-  if (!name) fields.push("name");
-  if (!EMAIL_PATTERN.test(email)) fields.push("email");
-  if (!message) fields.push("message");
+
+  for (const spec of contactFields) {
+    const given = input[spec.key];
+    let text = "";
+    if (typeof given === "string") text = given;
+    else if (given !== undefined && given !== null) malformed = true;
+    if (text.length > spec.maxLength) malformed = true;
+    const clean = spec.kind === "textarea" ? cleanText(text) : cleanLine(text);
+    value[spec.key] = clean;
+
+    const valid = spec.key === "email" ? EMAIL_PATTERN.test(clean) : spec.key === "phone" ? isPhone(clean) : clean !== "";
+    if (!valid) fields.push(spec.key);
+  }
 
   if (fields.length > 0 || malformed) return { ok: false, fields, malformed };
-  return { ok: true, value: { need, topic, name, email, business, message, tools, website, source } };
+  return { ok: true, value };
 }

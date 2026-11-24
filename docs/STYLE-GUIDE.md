@@ -123,7 +123,7 @@ labelled `nav` landmarks (Main, Mobile, Footer); the submenu stays in the tab or
 `aria-current` and an underline, not color alone; reduced motion per §9.2.
 
 ## 12. Performance budget (the `lighthouse` check: 90 or higher on mobile, all four categories)
-One self-hosted variable font; client JavaScript only in `HeaderNav`, `ContactForm` and `ThanksText`; photos
+One self-hosted variable font; client JavaScript only in `HeaderNav` and `ContactForm`; photos
 pre-sized (task 4) and lazy below the fold.
 
 ## 13. Banned
