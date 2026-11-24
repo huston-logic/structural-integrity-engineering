@@ -3,14 +3,15 @@
 // config (obviously fake values), never the real site.config.ts. A throwaway RSA key stands in for the service-account key.
 import assert from "node:assert/strict";
 import { afterEach, beforeEach, describe, test } from "node:test";
+import { readFileSync } from "node:fs";
 import { buildAutoReply } from "../src/content/auto-reply.ts";
+import { confirmation, contactFields, sheetHeaders } from "../src/content/contact-fields.ts";
 import { appendRowViaAppsScript } from "./apps-script.ts";
 import { buildWorkerConfig, type WorkerSiteConfig } from "./config.ts";
 import { createWorker } from "./contact.ts";
 import type { ContactEnv } from "./env.ts";
 import { resolveMode } from "./env.ts";
 import { resetTokenCache, safeCell, signAssertion } from "./sheets.ts";
-import { firstName } from "../src/lib/first-name.ts";
 import { validateContact } from "../src/lib/contact-validation.ts";
 
 type Call = { url: string; init: RequestInit; json: Record<string, unknown> | null };
@@ -23,7 +24,6 @@ const FIXTURE: WorkerSiteConfig = {
     siteEmail: "hello@example.test",
     fromName: "Example Co",
     replyFromName: "Pat Example",
-    schedulerUrl: "https://example.test/book",
     sheetWriter: "service-account",
     sheetTabs: { production: "Submissions", preview: "Preview" },
   },
@@ -40,12 +40,11 @@ const worker = makeWorker();
 const appsWorker = makeWorker({ sheetWriter: "apps-script" });
 
 const SITE_EMAIL = "hello@example.test";
-const BOOKING = "https://example.test/book";
 const ORIGIN = "https://example.test";
 const PREVIEW_HOST = "feat-x-example-site.acct.workers.dev";
 const WEBHOOK_URL = "https://script.google.com/macros/s/EXAMPLE_DEPLOYMENT_ID/exec";
 const WEBHOOK_SECRET = "webhook-test-secret";
-const VISITOR = { name: "Ada Lovelace", email: "ada@example.org", message: "Inquiries get lost between three inboxes." };
+const VISITOR = { firstName: "Ada", lastName: "Lovelace", email: "ada@example.org", phone: "(907) 555-0100", location: "Anchorage, AK", scope: "Two-story addition with a new foundation." };
 
 let calls: Call[] = [];
 let logs: string[] = [];
@@ -108,7 +107,7 @@ function post(body: unknown, { origin = ORIGIN, contentType = "application/json"
   });
 }
 
-const valid = { need: "website", topic: "", name: VISITOR.name, email: VISITOR.email, business: "", message: VISITOR.message, tools: "", website: "", source: "Google", company_fax: "", turnstileToken: "token-abc" };
+const valid = { ...VISITOR, company_fax: "", turnstileToken: "token-abc" };
 
 function called(kind: string): Call[] {
   return calls.filter((c) => route(c.url, c.init) === kind);
@@ -150,7 +149,7 @@ afterEach(() => {
   console.log = realLog;
   // No log line may ever hold what the visitor typed.
   for (const line of logs) {
-    for (const secret of [VISITOR.name, VISITOR.email, VISITOR.message, "203.0.113.9", "re_test", "turnstile-test-secret", WEBHOOK_SECRET, "EXAMPLE_DEPLOYMENT_ID", "script.google.com"]) {
+    for (const secret of [VISITOR.firstName, VISITOR.lastName, VISITOR.email, VISITOR.phone, VISITOR.location, VISITOR.scope, "203.0.113.9", "re_test", "turnstile-test-secret", WEBHOOK_SECRET, "EXAMPLE_DEPLOYMENT_ID", "script.google.com"]) {
       assert.ok(!line.includes(secret), `log line leaked "${secret}": ${line}`);
     }
   }
@@ -171,14 +170,16 @@ describe("requests rejected before any outside call", () => {
   const cases: [string, () => Request, number, string][] = [
     ["another origin", () => post(valid, { origin: "https://evil.example" }), 403, "rejected"],
     ["form-encoded body", () => post(valid, { contentType: "application/x-www-form-urlencoded" }), 415, "rejected"],
-    ["body over 16 KB", () => post({ ...valid, message: "x".repeat(17000) }), 413, "rejected"],
+    ["body over 16 KB", () => post({ ...valid, scope: "x".repeat(17000) }), 413, "rejected"],
     ["broken JSON", () => post(null, { raw: "{" }), 400, "rejected"],
     ["unknown key", () => post({ ...valid, extra: "1" }), 400, "rejected"],
     ["filled honeypot", () => post({ ...valid, company_fax: "555-0100" }), 400, "rejected"],
-    ["missing name", () => post({ ...valid, name: "  " }), 400, "invalid"],
+    ["missing first name", () => post({ ...valid, firstName: "  " }), 400, "invalid"],
     ["bad email", () => post({ ...valid, email: "ada@" }), 400, "invalid"],
-    ["unknown need", () => post({ ...valid, need: "logo" }), 400, "rejected"],
-    ["over-long business", () => post({ ...valid, business: "b".repeat(201) }), 400, "rejected"],
+    ["bad phone", () => post({ ...valid, phone: "call me" }), 400, "invalid"],
+    ["an old field", () => post({ ...valid, need: "website" }), 400, "rejected"],
+    ["over-long location", () => post({ ...valid, location: "b".repeat(201) }), 400, "rejected"],
+    ["a non-text value", () => post({ ...valid, scope: 5 }), 400, "rejected"],
     ["missing token", () => post({ ...valid, turnstileToken: "" }), 403, "rejected"],
   ];
   for (const [label, request, status, error] of cases) {
@@ -191,8 +192,8 @@ describe("requests rejected before any outside call", () => {
   }
 
   test("field errors name the fields", async () => {
-    const response = await worker.fetch(post({ ...valid, need: "", name: "", email: "x", message: "" }), env());
-    assert.deepEqual((await bodyOf(response)).fields, ["need", "name", "email", "message"]);
+    const response = await worker.fetch(post({ ...valid, firstName: "", lastName: "", email: "x", phone: "", location: "", scope: "" }), env());
+    assert.deepEqual((await bodyOf(response)).fields, ["firstName", "lastName", "email", "phone", "location", "scope"]);
   });
 
   test("rate limited", async () => {
@@ -255,31 +256,30 @@ describe("Turnstile", () => {
 });
 
 describe("a good submission in production", () => {
-  test("saves the row, emails the site owner and sends the B7b auto-reply, all plain text", async () => {
-    const response = await worker.fetch(post({ ...valid, business: "=HYPERLINK(\"x\")" }), env());
+  test("saves the row, emails the site owner and sends the automatic reply, all plain text except the reply", async () => {
+    const response = await worker.fetch(post({ ...valid, location: "=HYPERLINK(\"x\")" }), env());
     assert.equal(response.status, 200);
     assert.deepEqual(await bodyOf(response), { ok: true, autoReply: true });
 
     const [append] = called("sheets");
-    assert.match(append.url, /\/spreadsheets\/sheet-123\/values\/Submissions!A%3AK:append\?valueInputOption=RAW&insertDataOption=INSERT_ROWS$/);
+    assert.match(append.url, /\/spreadsheets\/sheet-123\/values\/Submissions!A%3AH:append\?valueInputOption=RAW&insertDataOption=INSERT_ROWS$/);
     const row = (append.json?.values as string[][])[0];
-    assert.equal(row.length, 11);
-    assert.deepEqual(row.slice(1, 6), ["A website", "", VISITOR.name, VISITOR.email, "'=HYPERLINK(\"x\")"]);
-    assert.equal(row[10], "production");
+    assert.equal(row.length, sheetHeaders.length);
+    assert.deepEqual(row.slice(1), [VISITOR.firstName, VISITOR.lastName, VISITOR.email, VISITOR.phone, "'=HYPERLINK(\"x\")", VISITOR.scope, "production"]);
 
     const [notify] = called("notify");
     assert.deepEqual(notify.json?.to, [SITE_EMAIL]);
     assert.equal(notify.json?.from, `Example Co <${SITE_EMAIL}>`);
     assert.equal(notify.json?.reply_to, VISITOR.email);
-    assert.equal(notify.json?.subject, `New note: A website from ${VISITOR.name}`);
-    assert.ok(String(notify.json?.text).includes("Sheet: saved"));
-    assert.ok(String(notify.json?.text).includes(VISITOR.message));
+    assert.equal(notify.json?.subject, "New request from Ada Lovelace");
+    const text = String(notify.json?.text);
+    for (const field of contactFields) assert.ok(text.includes(field.label), `labelled: ${field.label}`);
+    for (const value of [VISITOR.phone, '=HYPERLINK("x")', VISITOR.scope, "Sheet: saved"]) assert.ok(text.includes(value), value);
 
     const [reply] = called("reply");
     assert.deepEqual(reply.json?.to, [VISITOR.email]);
     assert.equal(reply.json?.reply_to, SITE_EMAIL);
-    assert.equal(reply.json?.subject, "I got your note. Here's what happens next.");
-    assert.ok(String(reply.json?.text).startsWith("Hi Ada,\n\nYou reached out!"));
+    assert.equal(reply.json?.subject, confirmation.subject);
 
     assert.ok(!("html" in (notify.json ?? {})), "the notification stays plain text");
     for (const email of [...called("notify"), ...called("reply")]) {
@@ -309,71 +309,42 @@ describe("a good submission in production", () => {
       assert.ok(!("headers" in (called("notify")[0].json ?? {})));
     });
 
-    test("multipart: the HTML and the text carry the same words", async () => {
+    test("multipart: the HTML and the text carry the deck's sentence and the signature, nothing else", async () => {
       const r = await reply();
       const text = String(r.text);
       const html = String(r.html);
-      const stripped = html.replace(/<[^>]+>/g, " ").replace(/&nbsp;/g, " ").replace(/&rarr;/g, "→").replace(/&ldquo;|&rdquo;/g, '"').replace(/&rsquo;/g, "'").replace(/&#39;/g, "'").replace(/\s+/g, " ");
-      for (const phrase of ["Hi Ada,", "You reached out! That's the first step", "This reply is automatic.", "write back within one business day.", "Talk soon,", "Founder, Example Co", "Please leave out passwords and client details."]) {
+      const stripped = html.replace(/[<>]/g, " ").replace(/&nbsp;/g, " ").replace(/\s+/g, " ");
+      for (const phrase of [`${confirmation.heading} ${confirmation.body}`, "Founder, Example Co"]) {
         assert.ok(text.includes(phrase), `text has: ${phrase}`);
         assert.ok(stripped.includes(phrase), `html has: ${phrase}`);
       }
-      assert.ok(text.includes('Changed your mind? Reply "no thanks" and I won\'t write again.'));
-      assert.ok(html.includes("Reply &ldquo;no thanks&rdquo; and I won&rsquo;t write again."));
       assert.ok(html.startsWith("<div"));
       assert.ok(!/<img|<script|<button|pixel|utm_/i.test(html), "no images, scripts, buttons or tracking");
+      assert.ok(!/book|pick a time|\{|\[\[/i.test(text + stripped), "no booking wording, tokens or placeholders");
     });
 
-    test("the booking link is the config URL: own line in text, link text in HTML, and in the signature", async () => {
-      const r = await reply();
-      const lines = String(r.text).split("\n");
-      const at = lines.indexOf("If you'd rather talk, pick a time for a free 20-minute call.");
-      assert.ok(at >= 0);
-      assert.equal(lines[at + 1], BOOKING);
-      assert.ok(lines.includes(`Book a free 20-minute call: ${BOOKING}`));
-      const html = String(r.html);
-      assert.ok(html.includes(`<a href="${BOOKING}" style="color:#112233;">pick a time for a free 20-minute call</a>`));
-      assert.ok(html.includes(`<a href="${BOOKING}" style="color:#112233;text-decoration:none;font-weight:bold;">Book a free 20-minute call &rarr;</a>`));
-      assert.equal(html.split(BOOKING).length - 1, 2, "no bare URL in the HTML");
-      assert.ok(!html.includes("{bookingUrl}") && !String(r.text).includes("{bookingUrl}"));
-    });
-
-    test("the booking link is the same in preview and never built from the request origin", async () => {
+    test("the same in preview, with the recipient named in the subject", async () => {
       const r = await reply({}, true);
-      assert.ok(String(r.text).includes(BOOKING));
-      assert.ok(String(r.html).includes(BOOKING));
+      assert.ok(String(r.text).includes(confirmation.body));
       assert.ok(!String(r.html).includes("workers.dev") && !String(r.text).includes("workers.dev"));
     });
 
-    test("a name that isn't a plain first name gets 'Hi there,' in both versions", async () => {
-      for (const name of ["www.example.com/buy now", "J. Smith", "A".repeat(31), "<b>x</b>", "R2D2"]) {
-        const r = await reply({ name });
-        assert.ok(String(r.text).startsWith("Hi there,\n\n"), `text: ${name}`);
-        assert.ok(String(r.html).includes(">Hi there,</p>"), `html: ${name}`);
-      }
-      const ok = await reply({ name: "  Mary-Anne O'Neil " });
-      assert.ok(String(ok.text).startsWith("Hi Mary-Anne,\n\n"));
-    });
-
-    test("nothing else the visitor typed appears in the email", async () => {
-      const r = await reply({ business: "Acme Plumbing", tools: "QuickBooks", website: "https://acme.example", message: "Secret message body 123" });
+    test("nothing the visitor typed appears in the email", async () => {
+      const r = await reply({ firstName: "Zed", scope: "Secret scope body 123" });
       for (const part of [String(r.text), String(r.html), String(r.subject)]) {
-        for (const typed of ["Lovelace", VISITOR.email, "Acme Plumbing", "QuickBooks", "acme.example", "Secret message body 123"]) {
+        for (const typed of ["Zed", "Lovelace", VISITOR.email, VISITOR.phone, VISITOR.location, "Secret scope body 123"]) {
           assert.ok(!part.includes(typed), `leaked: ${typed}`);
         }
       }
     });
   });
 
-  test("the partner variant needs no need field", async () => {
-    const response = await worker.fetch(post({ ...valid, need: "", topic: "partner" }), env());
-    assert.equal(response.status, 200);
-    assert.equal(called("notify")[0].json?.subject, `New note: Partner from ${VISITOR.name}`);
-  });
-
-  test("a name that isn't a name gets no greeting name", async () => {
-    await worker.fetch(post({ ...valid, name: "www.example.com/buy now" }), env());
-    assert.ok(String(called("reply")[0].json?.text).startsWith("Hi there,"));
+  test("the Sheet header row is the same in the code, the Apps Script and the README", () => {
+    assert.equal(sheetHeaders.join(" | "), "Received (UTC) | First name | Last name | Email | Phone | Project city and state | Project scope | Mode");
+    for (const file of ["../docs/apps-script/contact-sheet.gs", "../README.md", "../docs/pipeline/contact-form.md"]) {
+      const text = readFileSync(new URL(file, import.meta.url), "utf8");
+      assert.ok(text.includes(sheetHeaders.join(" | ")), `${file} lists the header row`);
+    }
   });
 
   test("the service-account JWT is RS256 and verifies with the public key", async () => {
@@ -403,11 +374,11 @@ describe("preview mode", () => {
     calls = [];
     const ok = await worker.fetch(post(valid, { origin: `https://${PREVIEW_HOST}`, url: `https://${PREVIEW_HOST}/api/contact` }), env({ SITE_ENV: "preview" }));
     assert.equal(ok.status, 200);
-    assert.match(called("sheets")[0].url, /values\/Preview!A%3AK:append/);
-    assert.ok(String(called("notify")[0].json?.subject).startsWith("[Preview] New note:"));
+    assert.match(called("sheets")[0].url, /values\/Preview!A%3AH:append/);
+    assert.ok(String(called("notify")[0].json?.subject).startsWith("[Preview] New request from"));
     const [reply] = called("reply");
     assert.deepEqual(reply.json?.to, [SITE_EMAIL]);
-    assert.equal(reply.json?.subject, `[Preview → would go to ${VISITOR.email}] I got your note. Here's what happens next.`);
+    assert.equal(reply.json?.subject, `[Preview → would go to ${VISITOR.email}] ${confirmation.subject}`);
   });
 
   test("a workers.dev branch host counts as a preview even if SITE_ENV says production", () => {
@@ -489,17 +460,6 @@ describe("failures", () => {
 });
 
 describe("shared helpers", () => {
-  test("firstName", () => {
-    assert.equal(firstName("  Pat Example "), "Pat");
-    assert.equal(firstName("Zoë"), "Zoë");
-    assert.equal(firstName("O'Neil-Smith"), "O'Neil-Smith");
-    assert.equal(firstName("J. Smith"), "J.");
-    assert.equal(firstName("spam.com"), "");
-    assert.equal(firstName("http://x"), "");
-    assert.equal(firstName("R2D2"), "");
-    assert.equal(firstName(""), "");
-  });
-
   test("safeCell", () => {
     assert.equal(safeCell("=1+1"), "'=1+1");
     assert.equal(safeCell("+1 555"), "'+1 555");
@@ -508,20 +468,24 @@ describe("shared helpers", () => {
   });
 
   test("validateContact cleans text the way the form expects", () => {
-    const result = validateContact({ need: "both", name: " Ada\nLovelace ", email: " ada@example.org ", message: "Line one\r\nLine two\u0007" });
+    const result = validateContact({ ...VISITOR, firstName: " Ada\nMae ", email: " ada@example.org ", scope: "Line one\r\nLine two\u0007" });
     assert.ok(result.ok);
     if (result.ok) {
-      assert.equal(result.value.name, "Ada Lovelace");
+      assert.equal(result.value.firstName, "Ada Mae");
       assert.equal(result.value.email, "ada@example.org");
-      assert.equal(result.value.message, "Line one\nLine two");
+      assert.equal(result.value.scope, "Line one\nLine two");
     }
+  });
+
+  test("phone numbers: 7 to 15 digits with ordinary punctuation, no letters", () => {
+    for (const phone of ["(907) 350-3456", "+1 907 350 3456", "907.350.3456", "3503456"]) assert.ok(validateContact({ ...VISITOR, phone }).ok, phone);
+    for (const phone of ["", "12345", "call me", "907-350-3456 ext 2", "1".repeat(16)]) assert.ok(!validateContact({ ...VISITOR, phone }).ok, phone);
   });
 });
 
 describe("client values come from the config", () => {
   test("the notification and the signature use the business, owner, email, domain and colors in config", async () => {
     await worker.fetch(post(valid), env());
-    assert.ok(String(called("notify")[0].json?.text).includes("Heard about Example Co: Google"));
     const html = String(called("reply")[0].json?.html);
     const text = String(called("reply")[0].json?.text);
     for (const part of ["Pat Example", "Founder, Example Co", "Plain words for plain work", `href="mailto:${SITE_EMAIL}"`, `href="https://example.test"`, ">example.test</a>", "border-left:3px solid #112233", "color:#223344", "color:#334455", "color:#445566", "color:#556677"]) {
@@ -534,53 +498,27 @@ describe("client values come from the config", () => {
     assert.ok(used.length > 0 && used.every((color) => fixtureColors.has(color)), `only config colors appear: ${used.join(", ")}`);
   });
 
-  test("another config gives another sender, sheet tab and reply", async () => {
-    const other = makeWorker({ siteEmail: "team@another.test", fromName: "Another Co", replyFromName: "Sam Other", schedulerUrl: "https://another.test/call", sheetTabs: { production: "Live", preview: "Draft" } });
+  test("another config gives another sender and sheet tab", async () => {
+    const other = makeWorker({ siteEmail: "team@another.test", fromName: "Another Co", replyFromName: "Sam Other", sheetTabs: { production: "Live", preview: "Draft" } });
     await other.fetch(post(valid), env());
-    assert.match(called("sheets")[0].url, /values\/Live!A%3AK:append/);
+    assert.match(called("sheets")[0].url, /values\/Live!A%3AH:append/);
     assert.equal(called("notify")[0].json?.from, "Another Co <team@another.test>");
     assert.deepEqual(called("notify")[0].json?.to, ["team@another.test"]);
     assert.equal(called("reply")[0].json?.from, "Sam Other <team@another.test>");
-    const replyLines = String(called("reply")[0].json?.text).split("\n");
-    assert.ok(replyLines.some((line) => line === "https://another.test/call"), "the booking link is on its own line");
-    assert.ok(replyLines.some((line) => line === "Book a free 20-minute call: https://another.test/call"));
   });
 
-  for (const [label, contact] of [
-    ["no site email", { siteEmail: null }],
-    ["no booking link", { schedulerUrl: null }],
-  ] as const) {
-    test(`fails closed with ${label}: 502, a fixed log event, no Sheet row and no mail`, async () => {
-      const response = await makeWorker(contact).fetch(post(valid), env());
-      assert.equal(response.status, 502);
-      assert.equal((await bodyOf(response)).error, "failed");
-      assert.deepEqual(calls.map((c) => route(c.url, c.init)), ["siteverify"]);
-      assert.ok(logs.some((l) => l.includes('"event":"config_incomplete"')));
-    });
-  }
+  test("fails closed with no site email: 502, a fixed log event, no Sheet row and no mail", async () => {
+    const response = await makeWorker({ siteEmail: null }).fetch(post(valid), env());
+    assert.equal(response.status, 502);
+    assert.equal((await bodyOf(response)).error, "failed");
+    assert.deepEqual(calls.map((c) => route(c.url, c.init)), ["siteverify"]);
+    assert.ok(logs.some((l) => l.includes('"event":"config_incomplete"')));
+  });
 
-  test('a booking link of "none" is allowed: it sends, and the reply has no booking paragraph, link or signature line', async () => {
-    const response = await makeWorker({ schedulerUrl: "none" }).fetch(post(valid), env());
+  test("the booking link setting does not matter: the reply never has one", async () => {
+    const response = await makeWorker({ schedulerUrl: "https://example.test/book" } as Partial<WorkerSiteConfig["contact"]>).fetch(post(valid), env());
     assert.equal(response.status, 200);
-    assert.ok(!logs.some((l) => l.includes("config_incomplete")));
-    assert.equal(called("reply").length, 1);
-    const text = String(called("reply")[0].json?.text);
-    const html = String(called("reply")[0].json?.html);
-    for (const out of [text, html]) {
-      assert.ok(!/book a free|pick a time|rather talk|bookingUrl/i.test(out), "no booking wording or leftover token");
-    }
-    assert.ok(!html.includes('href="none"') && !text.split("\n").includes("none"));
-    assert.ok(text.includes("Pat Example") && text.includes("Talk soon,"));
-    assert.ok(html.includes("Talk soon,") && html.includes("mailto:"));
-  });
-
-  test("the reply builder drops the booking parts for none and keeps them for a link", () => {
-    const none = buildAutoReply({ ...FIXTURE, contact: { ...FIXTURE.contact, schedulerUrl: "none" } });
-    assert.equal(none.booking, null);
-    assert.ok(!none.signatureHtml.includes("{bookingUrl}") && !none.signatureText.join("\n").includes("{bookingUrl}"));
-    assert.ok(!none.signatureHtml.includes("Book a free") && !none.signatureText.join("\n").includes("Book a free"));
-    const link = buildAutoReply(FIXTURE);
-    assert.ok(link.booking && link.signatureHtml.includes("{bookingUrl}"));
+    assert.ok(!String(called("reply")[0].json?.html).includes("example.test/book"));
   });
 
   test("a config full of placeholders and nulls builds the reply without throwing", () => {
@@ -588,7 +526,7 @@ describe("client values come from the config", () => {
       business: { name: "[[Business name]]", tagline: "[[Tagline]]" },
       owner: { name: "[[Owner name]]", role: "[[Owner role]]" },
       domain: { url: "https://example.com" },
-      contact: { siteEmail: null, schedulerUrl: null },
+      contact: { siteEmail: null },
       theme: { colors: { dusk: "#1c4a50", night: "#13262b", rule: "#3d6a70", duskDeep: "#163a40", mist: "#c2d6d8" } },
     });
     assert.ok(reply.signatureHtml.includes("[[Owner name]]") && !reply.signatureHtml.includes("mailto:"));
@@ -606,7 +544,7 @@ describe("the Apps Script sheet writer", () => {
   const rowCall = (): Call => called("webhook")[0];
 
   test("posts { secret, tab, row } as JSON, once, and the note is saved", async () => {
-    const response = await appsWorker.fetch(post({ ...valid, business: '=HYPERLINK("x")' }), env());
+    const response = await appsWorker.fetch(post({ ...valid, location: '=HYPERLINK("x")' }), env());
     assert.equal(response.status, 200);
     assert.equal(called("webhook").length, 1);
     assert.equal(called("sheets").length + called("token").length, 0, "no Google API call");
@@ -619,9 +557,9 @@ describe("the Apps Script sheet writer", () => {
     assert.equal(call.json?.secret, WEBHOOK_SECRET);
     assert.equal(call.json?.tab, "Submissions");
     const row = call.json?.row as string[];
-    assert.equal(row.length, 11);
-    assert.deepEqual(row.slice(1, 6), ["A website", "", VISITOR.name, VISITOR.email, "'=HYPERLINK(\"x\")"]);
-    assert.equal(row[10], "production");
+    assert.equal(row.length, sheetHeaders.length);
+    assert.deepEqual(row.slice(1, 6), [VISITOR.firstName, VISITOR.lastName, VISITOR.email, VISITOR.phone, "'=HYPERLINK(\"x\")"]);
+    assert.equal(row[7], "production");
     assert.ok(String(called("notify")[0].json?.text).includes("Sheet: saved"));
   });
 
@@ -630,7 +568,7 @@ describe("the Apps Script sheet writer", () => {
     const response = await appsWorker.fetch(post(valid, { origin: `https://${PREVIEW_HOST}`, url: `https://${PREVIEW_HOST}/api/contact` }), env({ SITE_ENV: "preview" }));
     assert.equal(response.status, 200);
     assert.equal(rowCall().json?.tab, "Preview");
-    assert.equal((rowCall().json?.row as string[])[10], "preview");
+    assert.equal((rowCall().json?.row as string[])[7], "preview");
   });
 
   test("the formula guard covers every cell", async () => {
@@ -719,7 +657,7 @@ describe("the Apps Script sheet writer", () => {
 
   test("logs hold fixed event names and status codes only: never the URL, the secret or row data", async () => {
     responders.webhook = () => jsonResponse({}, 500);
-    await appsWorker.fetch(post({ ...valid, business: "Acme Plumbing" }), env());
+    await appsWorker.fetch(post({ ...valid, location: "Acme Plumbing" }), env());
     responders.webhook = () => jsonResponse({ ok: false });
     await appsWorker.fetch(post(valid), env());
     responders.webhook = () => {

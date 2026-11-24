@@ -159,14 +159,13 @@ async function handleContact(config: WorkerConfig, request: Request, env: Contac
 
   const receivedAt = new Date().toISOString();
   if (mode === "development") {
-    log("dry_run", { messageLength: submission.message.length, partner: submission.topic === "partner" });
+    log("dry_run", { scopeLength: submission.scope.length });
     return json(200, { ok: true, autoReply: true });
   }
 
-  // Fail closed while the site email or booking link is still unset (the starter template): no Sheet row, no mail.
-  // A booking link of "none" is a decision, not a gap: the reply just leaves the booking parts out.
-  const { siteEmail, bookingUrl } = config;
-  if (!siteEmail || config.bookingUnset) {
+  // Fail closed while the site email is still unset (the starter template): no Sheet row, no mail.
+  const { siteEmail } = config;
+  if (!siteEmail) {
     log("config_incomplete");
     return json(502, { ok: false, error: "failed" });
   }
@@ -177,7 +176,7 @@ async function handleContact(config: WorkerConfig, request: Request, env: Contac
   const id = crypto.randomUUID();
   const tab = mode === "preview" ? config.sheetTabs.preview : config.sheetTabs.production;
   const sheetSaved = await saveRow(config, env, tab, sheetRow(submission, mode, receivedAt));
-  const notification = notificationEmail(config, submission, mode, receivedAt, sheetSaved);
+  const notification = notificationEmail(submission, mode, receivedAt, sheetSaved);
   const notified = await sendEmail(env.RESEND_API_KEY, { from, to: siteEmail, replyTo: submission.email, ...notification }, `${id}-notify`, "notify");
 
   if (!sheetSaved && !notified) {
@@ -186,7 +185,7 @@ async function handleContact(config: WorkerConfig, request: Request, env: Contac
   }
   if (!notified) log("notify_failed_sheet_saved");
 
-  const reply = autoReplyEmail(config, submission, mode, bookingUrl);
+  const reply = autoReplyEmail(config, submission, mode);
   const recipient = mode === "production" ? submission.email : siteEmail;
   const autoReplied = await sendEmail(env.RESEND_API_KEY, { from: replyFrom, to: recipient, replyTo: siteEmail, headers: REPLY_HEADERS, ...reply }, `${id}-reply`, "auto_reply");
   if (!autoReplied) log("auto_reply_failed");
