@@ -64,7 +64,11 @@ Sentence case everywhere. Measure: keep paragraphs under about 34em (`max-w-[34e
 Per the reference: header on the sky; centered H1 (`text-hero`), the line under it in mist (max 34em), one amber
 Request a quote button; the dusk photo below at its own 2000 x 2499 aspect ratio with the amber line drawing over it
 (SVG viewBox 0 0 2000 2499), fading into dusk at the top and dusk-deep at the bottom. Phone (under 900px): the copy
-sits above the photo, which is cropped to a 380px stage. Built in task 5.
+sits above the photo, which is cropped to a 380px stage. Built in task 5 (`HomeHero`, `HeroDrawing`, `.hl-hero*` in
+`hl.css`). From 900px the hero slides up under the sticky header by `--hl-header-h`, so the photo sits exactly where the
+reference's transparent header row put it, and the sky's dusk fade starts at the header's bottom edge (no seam). The
+page then runs: Built for every condition (deep), What we design (dusk), the numbers and Why builders call us back in
+one deep band, and the dusk contact band.
 
 ## 6. Signature elements
 - The text wordmark (Manrope 700, 17px) until a logo file exists.
@@ -106,7 +110,13 @@ Native details/summary; mist ring that gains an amber dot when open.
 
 ## 9. Motion
 Tokens: `--ease-site`, `--duration-feedback` (150ms), `--duration-panel` (200ms) in `globals.css`.
-- The home hero's line drawing is the one focal animation (task 5).
+- The home hero's line drawing is the one focal animation (`HeroDrawing`, `.hl-draw`, `.hl-draw-fade`, `.hl-draw-push`):
+  the roof, floor and columns draw in from 0.4s, the dimension lines fade in at 2s, the wind arrows push in at 2.4s and
+  the labels appear at 2.7s. Each keyframe starts hidden with `backwards` fill, so the finished drawing is the resting
+  state.
+- The home numbers count up from 0 when they scroll into view (`CountUp`, `IntersectionObserver`, 1.4s ease-out),
+  held at their final width so the unit beside them stays still. The real value is in the HTML; without JavaScript,
+  under reduced motion or when already on screen at load, the final value shows.
 - `.reveal`: rise 44px and fade in as an element enters the viewport (CSS scroll timeline, no JavaScript), for section
   headings and photo cards as in the reference. `.reveal-zoom`: a photo eases from 110% to 100% across the viewport.
 - Menus: the submenu fades and drops 4px; the mobile panel opens by grid rows.
@@ -123,7 +133,7 @@ labelled `nav` landmarks (Main, Mobile, Footer); the submenu stays in the tab or
 `aria-current` and an underline, not color alone; reduced motion per §9.2.
 
 ## 12. Performance budget (the `lighthouse` check: 90 or higher on mobile, all four categories)
-One self-hosted variable font; client JavaScript only in `HeaderNav`, `ContactForm` and `ThanksText`; photos
+One self-hosted variable font; client JavaScript only in `HeaderNav`, `ContactForm`, `ThanksText` and `CountUp`; photos
 pre-sized (task 4) and lazy below the fold.
 
 ## 13. Banned
