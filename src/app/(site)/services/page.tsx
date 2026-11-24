@@ -8,6 +8,7 @@ import { DotList } from "@/components/hl/DotList";
 import { Faq } from "@/components/hl/Faq";
 import { FadingDivider } from "@/components/hl/FadingDivider";
 import { Section } from "@/components/hl/Section";
+import { SplitSection } from "@/components/hl/SplitSection";
 import { Text } from "@/components/ui/Text";
 import {
   faq,
@@ -55,7 +56,7 @@ export default function ServicesPage() {
       </section>
 
       <Section tone="deep" labelledBy="choose-title">
-        <h2 id="choose-title" className="reveal max-w-[22em] text-h2">
+        <h2 id="choose-title" className="max-w-[22em] text-h2">
           <Text>{serviceChoices.heading}</Text>
         </h2>
         <ul className="mt-12 grid gap-x-12 gap-y-14 md:grid-cols-3">
@@ -85,30 +86,24 @@ export default function ServicesPage() {
         </ul>
       </Section>
 
-      <Section tone="dusk" labelledBy="serve-title">
-        <h2 id="serve-title" className="reveal max-w-[22em] text-h2">
-          <Text>{whoWeServe.heading}</Text>
-        </h2>
-        <DotList items={whoWeServe.items} className="mt-12 max-w-[44em] space-y-5 text-body" />
-      </Section>
+      <SplitSection id="serve-title" tone="dusk" heading={<Text>{whoWeServe.heading}</Text>}>
+        <DotList items={whoWeServe.items} className="max-w-[40em] space-y-5 text-body" />
+      </SplitSection>
 
-      <Section tone="deep" labelledBy="tools-title">
-        <h2 id="tools-title" className="reveal max-w-[22em] text-h2">
-          <Text>{toolsAndCodes.heading}</Text>
-        </h2>
-        <p className="mt-8 max-w-[44em] text-body text-mist">
+      <SplitSection id="tools-title" tone="deep" spacing="compact" heading={<Text>{toolsAndCodes.heading}</Text>}>
+        <p className="max-w-[40em] text-body text-mist">
           <Text>{toolsAndCodes.body}</Text>
         </p>
-      </Section>
+      </SplitSection>
 
       <Section tone="dusk" labelledBy="how-title">
-        <h2 id="how-title" className="reveal max-w-[22em] text-h2">
+        <h2 id="how-title" className="max-w-[22em] text-h2">
           <Text>{howWeWork.heading}</Text>
         </h2>
         <ol role="list" className="mt-12 grid list-none gap-x-12 gap-y-14 md:grid-cols-2">
           {howWeWork.steps.map((step, index) => (
-            <li key={step.title} className="relative flex gap-6">
-              <span aria-hidden="true" className="w-[1.4em] shrink-0 text-h2 font-light leading-none text-amber">
+            <li key={step.title} className="relative flex gap-4 md:gap-6">
+              <span aria-hidden="true" className="w-[1.1em] shrink-0 text-h2 font-light leading-none text-amber md:w-[1.4em]">
                 {index + 1}
               </span>
               <div>
@@ -124,22 +119,22 @@ export default function ServicesPage() {
           ))}
         </ol>
         <FadingDivider className="mt-20" />
-        <h2 id="where-title" className="reveal mt-20 max-w-[22em] text-h2">
-          <Text>{whereWeWork.heading}</Text>
-        </h2>
-        <p className="mt-8 max-w-[44em] text-body text-mist">
-          <Text>{whereWeWork.body}</Text>
-        </p>
-      </Section>
-
-      <Section tone="deep" labelledBy="faq-title">
-        <h2 id="faq-title" className="reveal text-h2">
-          <Text>{faq.heading}</Text>
-        </h2>
-        <div className="mt-8 max-w-[760px]">
-          <Faq items={faq.items} />
+        {/* The same heading column as the SplitSections around it. */}
+        <div className="mt-20 grid gap-8 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:gap-20">
+          <h2 id="where-title" className="max-w-[12em] text-h2">
+            <Text>{whereWeWork.heading}</Text>
+          </h2>
+          <p className="max-w-[40em] text-body text-mist lg:pt-3">
+            <Text>{whereWeWork.body}</Text>
+          </p>
         </div>
       </Section>
+
+      <SplitSection id="faq-title" tone="deep" heading={<Text>{faq.heading}</Text>}>
+        <div className="max-w-[760px] lg:-mt-3">
+          <Faq items={faq.items} />
+        </div>
+      </SplitSection>
 
       <ContactBand />
     </div>
