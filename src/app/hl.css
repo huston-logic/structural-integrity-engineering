@@ -22,12 +22,21 @@
   /* §3 type scale: the sizes that change on phones (< 768px). The clamp() sizes need no override. */
   --hl-fs-h3: 26px;
   --hl-fs-h4: 21px;
+
+  /* §7.1 the header's height (Header). The home hero slides under it from 900px (§5). */
+  --hl-header-h: 64px;
 }
 
 @media (max-width: 767px) {
   :root {
     --hl-fs-h3: 24px;
     --hl-fs-h4: 20px;
+  }
+}
+
+@media (min-width: 1024px) {
+  :root {
+    --hl-header-h: 84px;
   }
 }
 
@@ -230,6 +239,179 @@
     font: inherit;
     font-style: normal;
     overflow-wrap: anywhere;
+  }
+}
+
+/* §5 the home hero (HomeHero), from the option G reference. The photo and the line drawing share one box at the photo's
+   own aspect ratio (2000 x 2499; the SVG viewBox is the photo's pixel grid), so the drawing stays on the house at every
+   width; the stage only crops that box. From 900px the copy sits in the sky over the photo and the hero slides up under
+   the solid header, which covers the faded top of the sky as the reference's transparent header row did. Below 900px
+   the copy sits above a 380px stage cropped to the house. */
+@layer components {
+  .hl-hero {
+    position: relative;
+    background: var(--hl-dusk);
+  }
+
+  .hl-hero-copy {
+    position: relative;
+    z-index: 2;
+  }
+
+  .hl-hero-stage {
+    position: relative;
+    height: 380px;
+    overflow: hidden;
+  }
+
+  .hl-hero-media {
+    position: absolute;
+    top: 0;
+    left: -5%;
+    width: 150%;
+    aspect-ratio: 2000 / 2499;
+    transform: translateY(-33%);
+  }
+
+  .hl-hero-media img,
+  .hl-hero-media > svg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+
+  /* The photo's sky melts into the dusk page at the top and into the dusk-deep section below. */
+  .hl-hero-fade-top,
+  .hl-hero-fade-bottom {
+    position: absolute;
+    left: 0;
+    right: 0;
+    pointer-events: none;
+  }
+
+  .hl-hero-fade-top {
+    top: 0;
+    height: 30%;
+    background: linear-gradient(180deg, var(--hl-dusk), transparent);
+  }
+
+  .hl-hero-fade-bottom {
+    bottom: 0;
+    height: 16%;
+    background: linear-gradient(0deg, var(--hl-dusk-deep), transparent);
+  }
+
+  /* The drawing's strokes and labels, sized in photo pixels (thicker on phones, where the photo is shown smaller). */
+  .hl-ln {
+    stroke-width: 7px;
+  }
+
+  .hl-thin {
+    stroke-width: 4.5px;
+  }
+
+  .hl-lbl {
+    font-size: 46px;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    fill: var(--hl-amber);
+    paint-order: stroke;
+    stroke: var(--hl-night);
+    stroke-width: 11px;
+    stroke-linejoin: round;
+  }
+
+  /* The wind arrows and their label sit right of the phone crop. */
+  .hl-hero-wide {
+    display: none;
+  }
+
+  @media (min-width: 900px) {
+    .hl-hero {
+      margin-top: calc(var(--hl-header-h) * -1);
+    }
+
+    .hl-hero-copy {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      padding-top: var(--hl-header-h);
+    }
+
+    .hl-hero-stage {
+      height: auto;
+      aspect-ratio: 2000 / 1670;
+    }
+
+    .hl-hero-media {
+      left: 0;
+      width: 100%;
+      transform: translateY(-15.2%);
+    }
+
+    /* Starts at the header's bottom edge in solid dusk, so the header and the sky meet without a seam. */
+    .hl-hero-fade-top {
+      top: var(--hl-header-h);
+      height: 22%;
+    }
+
+    .hl-ln {
+      stroke-width: 3.4px;
+    }
+
+    .hl-thin {
+      stroke-width: 2.2px;
+    }
+
+    .hl-lbl {
+      font-size: 25px;
+      stroke-width: 5px;
+    }
+
+    .hl-hero-wide {
+      display: inline;
+    }
+  }
+}
+
+/* §9 the focal animation: the hero's line drawing draws itself, then the dimensions, wind arrows and labels arrive.
+   Each element's delay is set inline (HeroDrawing). Every keyframe runs from a hidden `from` state with `backwards`
+   fill, so the resting state is the finished drawing: without these rules, under reduced motion, or after the last
+   animation ends, the full drawing shows. */
+@media (prefers-reduced-motion: no-preference) {
+  .hl-draw {
+    stroke-dasharray: 1;
+    animation: hl-draw 1.2s cubic-bezier(0.55, 0, 0.2, 1) backwards;
+  }
+
+  .hl-draw-fade {
+    animation: hl-fade 0.7s ease-out backwards;
+  }
+
+  .hl-draw-push {
+    animation: hl-push 0.6s var(--hl-ease) backwards;
+  }
+}
+
+@keyframes hl-draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+}
+
+@keyframes hl-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes hl-push {
+  from {
+    opacity: 0;
+    transform: translateX(60px);
   }
 }
 

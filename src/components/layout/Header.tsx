@@ -10,7 +10,8 @@ export function Header() {
   return (
     <header className="sticky top-0 z-40 bg-dusk">
       <Container className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-6">
-        <div className="flex min-h-16 items-center py-2 lg:min-h-[84px]">
+        {/* --hl-header-h (64px, 84px from lg) is the header's height; the home hero slides up under it (hl.css §5). */}
+        <div className="flex min-h-(--hl-header-h) items-center py-2">
           <Logo />
         </div>
         <HeaderNav />
