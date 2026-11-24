@@ -1,5 +1,5 @@
 /**
- * How the contact form tells /contact/thanks the visitor's first name and whether the automatic reply went out,
+ * How the contact form tells /contact-us/thanks the visitor's first name and whether the automatic reply went out,
  * without putting anything personal in the URL: sessionStorage, which stays in this browser tab and clears when the
  * tab closes. Storage can be blocked (private modes, strict settings), so every access is guarded; the thanks page
  * then shows its plain version.

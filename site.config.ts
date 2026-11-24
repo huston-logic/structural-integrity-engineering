@@ -46,7 +46,7 @@ export const siteConfig = {
     // reply leaves out its booking paragraph and signature line. null means not decided yet: check:placeholders fails, the
     // contact page shows a placeholder, and the contact Worker refuses to send (502).
     schedulerUrl: "none" as string | null,
-    bookingFallbackPath: "/contact#book",
+    bookingFallbackPath: "/contact-us#book",
     // CLIENT: replace. A LinkedIn URL, or "none" when there is no page to link: the footer leaves the link out. null means
     // not decided yet; check:placeholders fails while it is null.
     linkedInUrl: "none" as string | null,

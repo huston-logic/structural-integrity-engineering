@@ -31,7 +31,7 @@ async function setUp(page: Page, answer: Answer) {
     sent.push(route.request().postDataJSON() as Record<string, unknown>);
     await route.fulfill({ status: answer.status, contentType: "application/json", body: JSON.stringify(answer.body) });
   });
-  await page.goto("/contact", { waitUntil: "networkidle" });
+  await page.goto("/contact-us", { waitUntil: "networkidle" });
   return sent;
 }
 
@@ -49,26 +49,26 @@ async function expectNoViolations(page: Page, label: string) {
   expect(results.violations, `Accessibility violations on ${label}`).toEqual([]);
 }
 
-test("a valid note goes to /contact/thanks with the first name, and nothing personal in the URL", async ({ page }) => {
+test("a valid note goes to /contact-us/thanks with the first name, and nothing personal in the URL", async ({ page }) => {
   const sent = await setUp(page, { status: 200, body: { ok: true, autoReply: true } });
   await fillValid(page);
   await page.getByRole("button", { name: noteForm.submitLabel }).click();
 
-  await expect(page).toHaveURL(/\/contact\/thanks$/);
+  await expect(page).toHaveURL(/\/contact-us\/thanks$/);
   await expect(page.getByRole("heading", { level: 1 })).toHaveText(thanks.headingWithName.replace("{firstName}", "Ada"));
   await expect(page.getByText(thanks.body)).toBeVisible();
   expect(page.url()).not.toMatch(/Ada|example\.org/);
 
   expect(sent).toHaveLength(1);
   expect(sent[0]).toMatchObject({ need: "website", name: "Ada Lovelace", email: "ada@example.org", company_fax: "", turnstileToken: "test-token-1" });
-  await expectNoViolations(page, "/contact/thanks (with a name)");
+  await expectNoViolations(page, "/contact-us/thanks (with a name)");
 });
 
 test("if the automatic reply failed, the thanks page says so", async ({ page }) => {
   await setUp(page, { status: 200, body: { ok: true, autoReply: false } });
   await fillValid(page);
   await page.getByRole("button", { name: noteForm.submitLabel }).click();
-  await expect(page).toHaveURL(/\/contact\/thanks$/);
+  await expect(page).toHaveURL(/\/contact-us\/thanks$/);
   await expect(page.getByText(thanks.bodyAutoReplyFailed)).toBeVisible();
 });
 
@@ -77,9 +77,9 @@ test("a failed send keeps the answers and shows the error", async ({ page }) => 
   await fillValid(page);
   await page.getByRole("button", { name: noteForm.submitLabel }).click();
   await expect(page.getByRole("status").getByText(noteForm.sendErrors.failed)).toBeVisible();
-  await expect(page).toHaveURL(/\/contact$/);
+  await expect(page).toHaveURL(/\/contact-us$/);
   await expect(page.getByLabel(noteForm.name.label)).toHaveValue("Ada Lovelace");
-  await expectNoViolations(page, "/contact (send failed)");
+  await expectNoViolations(page, "/contact-us (send failed)");
 });
 
 test("rate limits and refused checks show their own messages", async ({ page }) => {
@@ -101,5 +101,5 @@ test("an empty submit shows the field errors and sends nothing", async ({ page }
   await page.getByRole("button", { name: noteForm.submitLabel }).click();
   for (const message of Object.values(noteForm.errors)) await expect(page.getByText(message)).toBeVisible();
   expect(sent).toHaveLength(0);
-  await expectNoViolations(page, "/contact (field errors)");
+  await expectNoViolations(page, "/contact-us (field errors)");
 });

@@ -94,7 +94,7 @@ export const thanks = {
     lead: "[[While you wait lead]]",
     links: [
       { label: "[[Link 1 label]]", href: "/services" },
-      { label: "[[Link 2 label]]", href: "/about" },
+      { label: "[[Link 2 label]]", href: "/about-us" },
     ],
   },
 };
