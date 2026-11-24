@@ -21,7 +21,15 @@ export function ContactBand() {
     <section aria-labelledby="contact-band-title" className="relative isolate overflow-hidden bg-dusk">
       {photo ? (
         <>
-          <Image src={photo.src} alt="" width={photo.width} height={photo.height} sizes="100vw" className="absolute inset-0 -z-20 size-full object-cover" />
+          <Image
+            src={photo.src}
+            alt=""
+            width={photo.width}
+            height={photo.height}
+            loading="lazy"
+            sizes="100vw"
+            className="absolute inset-0 -z-20 size-full object-cover"
+          />
           <div aria-hidden="true" className="absolute inset-0 -z-10 bg-dusk/[0.88]" />
         </>
       ) : null}

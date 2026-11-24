@@ -13,6 +13,8 @@ export const hero = {
   photo: photos.duskHome,
   /** The same photo at 1200px, offered to phones through srcset. */
   photoSmall: photos.duskHome1200,
+  /** The same photo at 800px, for phone screens under 2x density. */
+  photoPhone: photos.duskHome800,
   /** The labels on the amber line drawing over the house. The drawing is decorative (aria-hidden). */
   labels: { cantilever: "Cantilever", clearSpan: "Clear span", wind: "Wind" },
 };

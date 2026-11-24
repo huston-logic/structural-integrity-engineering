@@ -8,7 +8,8 @@ import { siteConfig } from "./site";
  */
 export const privacyMeta = seo.privacy;
 
-const contactDetails = `${siteConfig.legalName}. ${
+// A legal name that ends in "Inc." already carries its full stop.
+const contactDetails = `${siteConfig.legalName.replace(/\.$/, "")}. ${
   siteConfig.email ? `Email ${siteConfig.email}. ` : "[[Privacy contact email]] "
 }Phone ${siteConfig.phone}.`;
 

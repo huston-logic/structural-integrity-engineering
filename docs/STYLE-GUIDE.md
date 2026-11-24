@@ -56,6 +56,9 @@ Sentence case everywhere. Measure: keep paragraphs under about 34em (`max-w-[34e
 - Column: `Container`, max 1320px, 48px side padding (22px on phones).
 - Sections: `Section` (`tone="dusk" | "deep"`, `spacing="default" | "compact"`): 104px top and bottom (80px on phones),
   or 88px (64px). Pages alternate dusk and deep; the contact band is always dusk, so the section before it is deep.
+- `SplitSection`: from 1024px the H2 sits in a 5/12 left column beside a short list or paragraph (stacked on phones),
+  so short sections use the width. The services pages use it for lists and answers; the home page keeps the
+  reference's layouts.
 - Radius by role: `rounded-pill` actions and chips, `rounded-field` (6px) inputs, `rounded-panel` (10px) menu and form
   panels. Photography is square.
 - Depth: none. No shadows; layers separate by tone (dusk, dusk-deep, night) and 1px `rule` lines.
@@ -117,8 +120,10 @@ Tokens: `--ease-site`, `--duration-feedback` (150ms), `--duration-panel` (200ms)
 - The home numbers count up from 0 when they scroll into view (`CountUp`, `IntersectionObserver`, 1.4s ease-out),
   held at their final width so the unit beside them stays still. The real value is in the HTML; without JavaScript,
   under reduced motion or when already on screen at load, the final value shows.
-- `.reveal`: rise 44px and fade in as an element enters the viewport (CSS scroll timeline, no JavaScript), for section
-  headings and photo cards as in the reference. `.reveal-zoom`: a photo eases from 110% to 100% across the viewport.
+- `.reveal`: rise 44px and fade in as an element enters the viewport (CSS scroll timeline, no JavaScript), for the home
+  page's section headings and photo cards as in the reference, and the contact band's headline. Other pages keep their
+  headings still, so the motion does not repeat on every section. `.reveal-zoom`: a photo eases from 110% to 100% across
+  the viewport (every page's secondary photos).
 - Menus: the submenu fades and drops 4px; the mobile panel opens by grid rows.
 - 9.1: in-page anchors use native smooth scroll.
 - 9.2: under `prefers-reduced-motion: reduce` nothing animates or transitions; every element shows its end state.

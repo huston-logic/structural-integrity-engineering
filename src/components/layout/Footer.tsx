@@ -17,8 +17,8 @@ export function Footer() {
   const tel = telHref(siteConfig.phone);
   return (
     <footer className="bg-dusk-deep">
-      <Container className="pb-10 pt-20 md:pt-24">
-        <div className="grid gap-x-12 gap-y-14 md:grid-cols-2 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_auto]">
+      <Container className="pb-10 pt-16 md:pt-24">
+        <div className="grid gap-x-12 gap-y-10 md:grid-cols-2 md:gap-y-14 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_auto]">
           <div className="md:col-span-2 lg:col-span-1">
             <Logo />
             <p className="mt-6 max-w-[12em] text-h3 font-medium">
