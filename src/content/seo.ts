@@ -17,14 +17,14 @@ export type SeoEntry = {
 export const seo = {
   home: {
     title: name,
-    description: "Structural engineering for homes, low-rise commercial buildings and glazing systems in Colorado and Alaska.",
+    description: "Structural engineering for homes, low-rise commercial buildings and glazing systems in Colorado.",
   },
   services: {
-    title: withName("Structural engineering services"),
+    title: withName("Engineering services"),
     description: "Fast, accurate, permit-ready plans for homes, low-rise commercial buildings and glazing systems.",
   },
   residential: {
-    title: withName("Residential structural design"),
+    title: withName("Residential design"),
     description: "Permit-ready plans for custom homes, remodels, additions, decks and foundations. Fast, accurate and affordable.",
   },
   commercial: {
@@ -36,7 +36,7 @@ export const seo = {
     description: "Stamped calculation packages and redlines for storefront and curtainwall systems. Fast, accurate and affordable.",
   },
   about: {
-    title: withName("Structural design, simplified"),
+    title: withName("About Dylan Gassmann"),
     description: "Responsive communication, modern tools and permit-ready plans you can build on.",
   },
   contact: {

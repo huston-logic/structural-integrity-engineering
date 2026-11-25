@@ -7,11 +7,11 @@ import { pageMetadata } from "@/lib/metadata";
 
 export const metadata: Metadata = pageMetadata({ ...privacyMeta, path: "/privacy" });
 
-/** A skeleton of headings. Every body is a double-bracket placeholder: the client writes (or a lawyer approves) the real text. */
+/** The privacy policy: short, plain sections in src/content/privacy.ts. */
 export default function PrivacyPage() {
   return (
     <div className="relative overflow-x-clip">
-      <PageHero title={privacy.heading} intro={privacy.reviewNote} />
+      <PageHero title={privacy.heading} intro={privacy.intro} />
       <section className="pb-16 md:pb-24">
         <Container>
           <div className="max-w-[64ch] space-y-8 text-body">

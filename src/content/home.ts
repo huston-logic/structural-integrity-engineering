@@ -9,7 +9,7 @@ export const homeMeta = seo.home;
 export const hero = {
   title: "Strength you can build on.",
   intro:
-    "Structural engineering for homes, low-rise commercial buildings and glazing systems in Colorado and Alaska.",
+    "Structural engineering for homes, low-rise commercial buildings and glazing systems in Colorado.",
   photo: photos.duskHome,
   /** The same photo at 1200px, offered to phones through srcset. */
   photoSmall: photos.duskHome1200,
@@ -25,7 +25,7 @@ export type ConditionGlyphName = "snow" | "wind" | "seismic" | "temperature";
 export const conditions = {
   heading: "Built for every condition",
   intro:
-    "From Colorado to Alaska, our experience with cold climates, wind and seismic conditions means every project is built to last.",
+    "In Colorado, our experience with cold climates, wind and seismic conditions means every project is built to last.",
   items: [
     { glyph: "snow", title: "Heavy snow", body: "Roof framing, beams and connections sized for heavy snow loads." },
     {
@@ -96,7 +96,6 @@ export const numbers = {
   items: [
     { value: 48, unit: "hours", body: "to a clear proposal with deliverables, pricing and schedule" },
     { value: 10, unit: "years", body: "of hands-on structural engineering" },
-    { value: 2, unit: "states", body: "licensed in Colorado and Alaska" },
   ],
 };
 

@@ -14,13 +14,13 @@
   "secrets": {
     "required": ["RESEND_API_KEY", "TURNSTILE_SECRET_KEY", "SHEET_WEBHOOK_URL", "SHEET_WEBHOOK_SECRET"]
   },
-  "ratelimits": [{ "name": "CONTACT_RATE_LIMIT", "namespace_id": "1001", "simple": { "limit": 5, "period": 60 } }],
+  "ratelimits": [{ "name": "CONTACT_RATE_LIMIT", "namespace_id": "2201", "simple": { "limit": 5, "period": 60 } }],
   // Invocation logs would store request metadata; the Worker's own log lines hold no personal data.
   "observability": { "enabled": true, "logs": { "invocation_logs": false } },
   // Worker Previews (branch previews) do not inherit the settings above, so they are repeated here.
   // Preview secrets are separate: `wrangler preview base-config secret put`.
   "previews": {
     "vars": { "SITE_ENV": "preview" },
-    "ratelimits": [{ "name": "CONTACT_RATE_LIMIT", "namespace_id": "1002", "simple": { "limit": 5, "period": 60 } }]
+    "ratelimits": [{ "name": "CONTACT_RATE_LIMIT", "namespace_id": "2202", "simple": { "limit": 5, "period": 60 } }]
   }
 }

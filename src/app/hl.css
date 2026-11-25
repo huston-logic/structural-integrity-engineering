@@ -396,6 +396,41 @@
   }
 }
 
+/* §9 the inner pages' one drawing (PageDrawing): amber line work in the viewBox's own units, which the box shows at
+   about 1:1 on desktop (about 0.6:1 over a phone's photo), so the strokes read as 2px lines. It uses the hero's draw and
+   fade animations above, so it ends in the finished drawing and holds still. */
+.hl-art {
+  fill: none;
+  stroke: var(--hl-amber);
+  stroke-width: var(--hl-art-w, 3);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.hl-art .hl-art-thin {
+  stroke-width: calc(var(--hl-art-w, 3) * 0.66);
+}
+
+/* Over a photo (wood, steel, glass) amber has too little contrast, so the lines are snow with a dark under-stroke, which
+   reads on any photo; on plain dusk they stay amber and the under-stroke is not drawn. */
+.hl-art-photo {
+  stroke: var(--hl-snow);
+}
+
+.hl-art .hl-art-halo {
+  stroke: var(--hl-night);
+  stroke-width: calc(var(--hl-art-w, 3) + 4);
+  opacity: 0.8;
+}
+
+.hl-art .hl-art-halo.hl-art-thin {
+  stroke-width: calc(var(--hl-art-w, 3) * 0.66 + 4);
+}
+
+.hl-art:not(.hl-art-photo) .hl-art-halo {
+  display: none;
+}
+
 @keyframes hl-draw {
   from {
     stroke-dashoffset: 1;

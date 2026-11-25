@@ -150,8 +150,8 @@ export const photos = {
   storefrontDusk: {
     src: "/images/storefront-dusk.jpg",
     width: 1200,
-    height: 675,
-    alt: "A computer rendering of a tall building with a glass base and lit ground-floor storefronts at dusk.",
+    height: 787,
+    alt: "A glass building facade at dusk, its metal framing lines catching the last purple and orange light.",
   },
   louvers: {
     src: "/images/louvers.jpg",
@@ -159,17 +159,11 @@ export const photos = {
     height: 1200,
     alt: "Close view of a glass facade with angled metal louvers running up the building.",
   },
-  alaskaChugach: {
-    src: "/images/alaska-chugach.jpg",
-    width: 1200,
-    height: 800,
-    alt: "Snow-covered mountain ridges in warm, low sunlight under a pale yellow sky.",
-  },
   coloradoPikesPeak: {
     src: "/images/colorado-pikes-peak.jpg",
     width: 1200,
     height: 800,
-    alt: "A snow-dusted mountain rising behind pine trees and a split-rail fence in winter.",
+    alt: "A snow-dusted mountain rising above a line of evergreen trees under a pale blue sky.",
   },
   dylanPortrait: {
     src: "/images/dylan-portrait.jpg",
@@ -236,8 +230,8 @@ export const photos = {
   storefrontDuskCard: {
     src: "/images/storefront-dusk-800.jpg",
     width: 800,
-    height: 450,
-    alt: "A computer rendering of a tall building with a glass base and lit ground-floor storefronts at dusk.",
+    height: 524,
+    alt: "A glass building facade at dusk, its metal framing lines catching the last purple and orange light.",
   },
   louversCard: {
     src: "/images/louvers-560.jpg",

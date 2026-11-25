@@ -7,6 +7,7 @@ import { CellDividers } from "@/components/hl/CellDividers";
 import { DotList } from "@/components/hl/DotList";
 import { Faq } from "@/components/hl/Faq";
 import { FadingDivider } from "@/components/hl/FadingDivider";
+import { PageDrawing } from "@/components/hl/PageDrawing";
 import { Section } from "@/components/hl/Section";
 import { SplitSection } from "@/components/hl/SplitSection";
 import { Text } from "@/components/ui/Text";
@@ -39,19 +40,22 @@ export default function ServicesPage() {
               <Text>{servicesHero.intro}</Text>
             </p>
           </div>
-          <picture>
-            <source media="(max-width: 767px)" srcSet={photoSmall.src} width={photoSmall.width} height={photoSmall.height} />
-            <Image
-              src={photo.src}
-              alt={photo.alt}
-              width={photo.width}
-              height={photo.height}
-              loading="eager"
-              fetchPriority="high"
-              sizes="(min-width: 1024px) 560px, 100vw"
-              className="h-auto w-full object-cover"
-            />
-          </picture>
+          <div className="relative">
+            <picture>
+              <source media="(max-width: 767px)" srcSet={photoSmall.src} width={photoSmall.width} height={photoSmall.height} />
+              <Image
+                src={photo.src}
+                alt={photo.alt}
+                width={photo.width}
+                height={photo.height}
+                loading="eager"
+                fetchPriority="high"
+                sizes="(min-width: 1024px) 560px, 100vw"
+                className="h-auto w-full object-cover"
+              />
+            </picture>
+            <PageDrawing name="services" />
+          </div>
         </Container>
       </section>
 

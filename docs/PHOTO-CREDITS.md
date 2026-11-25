@@ -24,15 +24,10 @@ All photos are free to use under the Unsplash or Pexels license (no Unsplash+ pa
 | remodel-framing.jpg | Residential, Remodels and additions | Taylor Heery, Unsplash | https://unsplash.com/photos/a-room-that-is-under-construction-with-wooden-framing-eZtWDby4HJ0 |
 | rebar.jpg | Residential, Foundations | Michael Bader, Unsplash | https://unsplash.com/photos/worms-eye-view-photography-of-rebar-eyq7H7gO0EY |
 | steel-frame.jpg | Commercial, PEMB foundations | Pexels, metal frame building site | https://www.pexels.com/photo/building-of-metal-construction-with-special-machinery-2314022/ |
-| storefront-dusk.jpg | Glazing, Storefront systems | Aalo Lens, Unsplash | https://unsplash.com/photos/modern-building-with-glass-facade-and-illuminated-storefronts-nc5NrVH5Vc8 |
+| storefront-dusk.jpg | Glazing, Storefront systems (replaced 2026-11-24: the earlier rendering showed other brands' logos) | Joakim Honkasalo, Unsplash | https://unsplash.com/photos/glass-office-building-at-dusk-gKMxcHB3U3E |
 | louvers.jpg | Glazing, Sunshades | Axville, Unsplash | https://unsplash.com/photos/modern-building-facade-with-glass-and-louvers-AsVryqhdhGU |
-| alaska-chugach.jpg | About, Alaska | Paxson Woelber, Unsplash | https://unsplash.com/photos/mountain-cover-with-snow-nssLllpgDIA |
-| colorado-pikes-peak.jpg | About, Colorado | Nathan Andress, Unsplash | https://unsplash.com/photos/a-wooden-fence-surrounded-by-snow-covered-trees-1QnJf5QQfkc |
+| colorado-pikes-peak.jpg | About, licensing section (the Alaska photo was removed 2026-11-24 when the site focused on Colorado) | Nathan Andress, Unsplash | https://unsplash.com/photos/a-wooden-fence-surrounded-by-snow-covered-trees-1QnJf5QQfkc |
 | dylan-portrait.jpg | About, principal engineer | Original file from Dylan's Wix site (not stock; ask Dylan for a sharper original if he has one) | https://static.wixstatic.com/media/527478_5a14addcd98c4d80bcd563a913266e2b~mv2.jpg |
-
-## Open question for Grant
-
-- `storefront-dusk.jpg` is a computer rendering that shows third-party retail brand logos. Crop it to remove the logos, or replace it, before launch. It is not swapped or cropped yet.
 
 ## Sized copies for the service pages
 
@@ -46,5 +41,5 @@ Same photos and credits as the originals above; only the pixel size differs.
 | remodel-framing-640.jpg | Residential, Remodels and additions | remodel-framing.jpg |
 | rebar-800.jpg | Residential, Foundations | rebar.jpg |
 | steel-frame-800.jpg | Commercial, PEMB foundations | steel-frame.jpg |
-| storefront-dusk-800.jpg | Glazing, Storefront systems (same logo question as above) | storefront-dusk.jpg |
+| storefront-dusk-800.jpg | Glazing, Storefront systems | storefront-dusk.jpg |
 | louvers-560.jpg | Glazing, Sunshades | louvers.jpg |

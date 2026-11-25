@@ -154,7 +154,7 @@ export function ContactForm() {
 
   const failedMessage = siteConfig.email
     ? noteForm.sendErrors.failed.replace("{email}", siteConfig.email).replace("{phone}", siteConfig.phone)
-    : `That didn't go through. Please call ${siteConfig.phone}.`;
+    : noteForm.sendErrors.failedNoEmail.replace("{phone}", siteConfig.phone);
   const sendMessage = sendError === "failed" ? failedMessage : sendError ? noteForm.sendErrors[sendError] : null;
 
   return (

@@ -44,7 +44,7 @@ const ORIGIN = "https://example.test";
 const PREVIEW_HOST = "feat-x-example-site.acct.workers.dev";
 const WEBHOOK_URL = "https://script.google.com/macros/s/EXAMPLE_DEPLOYMENT_ID/exec";
 const WEBHOOK_SECRET = "webhook-test-secret";
-const VISITOR = { firstName: "Ada", lastName: "Lovelace", email: "ada@example.org", phone: "(907) 555-0100", location: "Anchorage, AK", scope: "Two-story addition with a new foundation." };
+const VISITOR = { firstName: "Ada", lastName: "Lovelace", email: "ada@example.org", phone: "(907) 555-0100", location: "Colorado Springs, CO", scope: "Two-story addition with a new foundation." };
 
 let calls: Call[] = [];
 let logs: string[] = [];
@@ -309,12 +309,12 @@ describe("a good submission in production", () => {
       assert.ok(!("headers" in (called("notify")[0].json ?? {})));
     });
 
-    test("multipart: the HTML and the text carry the deck's sentence and the signature, nothing else", async () => {
+    test("multipart: the HTML and the text carry the greeting, the deck's sentence, the sign-off and the signature, nothing else", async () => {
       const r = await reply();
       const text = String(r.text);
       const html = String(r.html);
       const stripped = html.replace(/[<>]/g, " ").replace(/&nbsp;/g, " ").replace(/\s+/g, " ");
-      for (const phrase of [`${confirmation.heading} ${confirmation.body}`, "Founder, Example Co"]) {
+      for (const phrase of ["Hello,", `${confirmation.heading} ${confirmation.body}`, "Talk soon,", "Founder, Example Co"]) {
         assert.ok(text.includes(phrase), `text has: ${phrase}`);
         assert.ok(stripped.includes(phrase), `html has: ${phrase}`);
       }

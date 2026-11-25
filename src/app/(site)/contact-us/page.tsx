@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Container } from "@/components/hl/Container";
 import { ContactForm } from "@/components/hl/ContactForm";
 import { FadingDivider } from "@/components/hl/FadingDivider";
+import { PageDrawing } from "@/components/hl/PageDrawing";
 import { TextLink } from "@/components/hl/TextLink";
 import { Text } from "@/components/ui/Text";
 import { contactHero, contactMeta } from "@/content/contact";
@@ -37,6 +38,7 @@ export default function ContactPage() {
               ) : null}
               {tel ? <TextLink href={tel}>{siteConfig.phone}</TextLink> : null}
             </div>
+            <PageDrawing name="contact" className="mt-14 hidden max-w-[360px] min-[900px]:block" />
           </div>
           <ContactForm />
         </Container>

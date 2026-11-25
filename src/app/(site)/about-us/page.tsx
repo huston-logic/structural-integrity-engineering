@@ -6,17 +6,17 @@ import { FadingDivider } from "@/components/hl/FadingDivider";
 import { PageHero } from "@/components/hl/PageHero";
 import { Section } from "@/components/hl/Section";
 import { Text } from "@/components/ui/Text";
-import { aboutHero, aboutMeta, mission, principal, twoPlaces, whatWeAre } from "@/content/about";
+import { aboutHero, aboutMeta, mission, principal, standard, whatWeAre } from "@/content/about";
 import { pageMetadata } from "@/lib/metadata";
 
 export const metadata: Metadata = pageMetadata({ ...aboutMeta, path: "/about-us" });
 
-/** About: text hero, what we are, Dylan with his portrait, the Alaska and Colorado pair with the mission, contact band. */
+/** About: text hero, what we are, Dylan with his portrait, the Colorado photo with the licensing line and the mission, contact band. */
 export default function AboutPage() {
   const { photo } = principal;
   return (
     <div className="relative overflow-x-clip">
-      <PageHero title={aboutHero.title} intro={aboutHero.intro} />
+      <PageHero title={aboutHero.title} intro={aboutHero.intro} drawing="about" />
 
       <Section tone="deep">
         <p className="max-w-[34em] text-h3 font-normal leading-snug">
@@ -49,25 +49,21 @@ export default function AboutPage() {
       <section aria-labelledby="places-title" className="bg-dusk-deep py-20 md:py-[104px]">
         <Container>
           <h2 id="places-title" className="max-w-[16em] text-h2">
-            <Text>{twoPlaces.heading}</Text>
+            <Text>{standard.heading}</Text>
           </h2>
-          <ul role="list" className="mt-12 grid list-none gap-6 md:grid-cols-2">
-            {twoPlaces.photos.map((item) => (
-              <li key={item.src} className="reveal-zoom overflow-hidden">
-                <Image
-                  src={item.src}
-                  alt={item.alt}
-                  width={item.width}
-                  height={item.height}
-                  loading="lazy"
-                  sizes="(min-width: 768px) 50vw, 100vw"
-                  className="aspect-[3/2] w-full object-cover"
-                />
-              </li>
-            ))}
-          </ul>
+          <div className="reveal-zoom mt-12 overflow-hidden">
+            <Image
+              src={standard.photo.src}
+              alt={standard.photo.alt}
+              width={standard.photo.width}
+              height={standard.photo.height}
+              loading="lazy"
+              sizes="(min-width: 1200px) 1136px, 100vw"
+              className="aspect-[3/2] w-full object-cover md:aspect-[2/1]"
+            />
+          </div>
           <p className="mt-8 text-h4 font-semibold">
-            <Text>{twoPlaces.line}</Text>
+            <Text>{standard.line}</Text>
           </p>
           <FadingDivider className="mt-20" />
           <h2 className="mt-20 max-w-[16em] text-h2">

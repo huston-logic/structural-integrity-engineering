@@ -6,6 +6,7 @@ import { Container } from "./Container";
 import { DotList } from "./DotList";
 import { FadingDivider } from "./FadingDivider";
 import { HlLink } from "./HlLink";
+import { PageDrawing } from "./PageDrawing";
 import { Section } from "./Section";
 import { SplitSection } from "./SplitSection";
 
@@ -13,7 +14,7 @@ import { SplitSection } from "./SplitSection";
  * The shared layout of the three service pages (copy deck, "Services pages"): hero with the overview, what we do with its
  * photos, what you get, a short How we work that links to the full one on /services, then the contact band.
  * Bands alternate dusk and deep and end on deep, so the dusk contact band stands apart. Only the photos move
- * (`.reveal-zoom`); the headings are static.
+ * (`.reveal-zoom`); the headings are static. The hero photo carries the page's one line drawing (PageDrawing).
  */
 export function ServicePage({ page }: { page: ServicePageContent }) {
   const { heroPhoto, heroPhotoSmall, whatWeDo, whatYouGet, howWeWork } = page;
@@ -33,24 +34,27 @@ export function ServicePage({ page }: { page: ServicePageContent }) {
               <Text>{page.intro}</Text>
             </p>
           </div>
-          <picture className="lg:col-start-2 lg:row-[1/span_2] lg:mt-3">
-            <source
-              media="(max-width: 767px)"
-              srcSet={heroPhotoSmall.src}
-              width={heroPhotoSmall.width}
-              height={heroPhotoSmall.height}
-            />
-            <Image
-              src={heroPhoto.src}
-              alt={heroPhoto.alt}
-              width={heroPhoto.width}
-              height={heroPhoto.height}
-              loading="eager"
-              fetchPriority="high"
-              sizes="(min-width: 1024px) 600px, 100vw"
-              className="aspect-[3/2] h-auto w-full object-cover"
-            />
-          </picture>
+          <div className="relative lg:col-start-2 lg:row-[1/span_2] lg:mt-3">
+            <picture>
+              <source
+                media="(max-width: 767px)"
+                srcSet={heroPhotoSmall.src}
+                width={heroPhotoSmall.width}
+                height={heroPhotoSmall.height}
+              />
+              <Image
+                src={heroPhoto.src}
+                alt={heroPhoto.alt}
+                width={heroPhoto.width}
+                height={heroPhoto.height}
+                loading="eager"
+                fetchPriority="high"
+                sizes="(min-width: 1024px) 600px, 100vw"
+                className="aspect-[3/2] h-auto w-full object-cover"
+              />
+            </picture>
+            <PageDrawing name={page.drawing} />
+          </div>
           <div className="lg:col-start-1 lg:row-start-2">
             <FadingDivider className="mb-10 mt-10 hidden max-w-[34em] lg:block" />
             <p className="max-w-[34em] text-body">

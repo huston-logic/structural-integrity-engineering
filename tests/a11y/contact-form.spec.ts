@@ -40,7 +40,7 @@ const ANSWERS = {
   lastName: "Lovelace",
   email: "ada@example.org",
   phone: "(907) 555-0100",
-  location: "Anchorage, AK",
+  location: "Colorado Springs, CO",
   scope: "Two-story addition with a new foundation.",
 } as const;
 
@@ -72,7 +72,7 @@ test("a failed send keeps the answers and shows the error", async ({ page }) => 
   await setUp(page, { status: 502, body: { ok: false, error: "failed" } });
   await fillValid(page);
   await page.getByRole("button", { name: noteForm.submitLabel }).click();
-  await expect(page.getByRole("status").getByText(/^That didn't go through\. Please email .+ or call /)).toBeVisible();
+  await expect(page.getByRole("status").getByText(/^That didn't go through\. Email .+ or call /)).toBeVisible();
   await expect(page).toHaveURL(/\/contact-us$/);
   await expect(page.getByLabel("First name", { exact: true })).toHaveValue("Ada");
   await expectNoViolations(page, "/contact-us (send failed)");

@@ -1,4 +1,4 @@
-import { confirmation, contactFields, fieldLabel, type ContactKey } from "./contact-fields";
+import { confirmation, contactFields, type ContactKey } from "./contact-fields";
 import { seo } from "./seo";
 import { siteConfig } from "./site";
 
@@ -13,9 +13,8 @@ export const contactHero = {
   intro: "We're here to help you move forward with clarity and confidence. Send us your plans or questions and we'll respond as fast as we can.",
 };
 
-/** Functional messages built from the deck's field labels (the deck gives no error text). */
-const requiredError = (key: ContactKey) => `${fieldLabel(key)} is required.`;
 
+/** The field and send error messages are in the site's voice (short, practical). The deck gives no error text; Grant approves them in the PR. */
 export const noteForm = {
   /** Names the form for screen readers; it is the deck's button label. */
   formLabel: "Send request",
@@ -24,18 +23,20 @@ export const noteForm = {
   requiredNote: "All fields are required.",
   fields: contactFields,
   errors: {
-    firstName: requiredError("firstName"),
-    lastName: requiredError("lastName"),
-    email: `Enter a valid ${fieldLabel("email").toLowerCase()} address.`,
-    phone: `Enter a valid ${fieldLabel("phone").toLowerCase()} number.`,
-    location: requiredError("location"),
-    scope: requiredError("scope"),
+    firstName: "Add your first name.",
+    lastName: "Add your last name.",
+    email: "That email doesn't look right. Check it and try again.",
+    phone: "That phone number doesn't look right. Use 7 to 15 digits.",
+    location: "Add the project city and state.",
+    scope: "Tell us a little about the project.",
   } satisfies Record<ContactKey, string>,
   sendErrors: {
-    notVerified: "That didn't go through. Please try again.",
-    rateLimited: "Too many tries in a row. Please try again shortly.",
+    notVerified: "The spam check didn't pass. Try again in a moment.",
+    rateLimited: "That's a lot of tries in a row. Give it a minute, then send again.",
     /** `{email}` and `{phone}` are the direct contact details from site.config.ts. */
-    failed: "That didn't go through. Please email {email} or call {phone}.",
+    failed: "That didn't go through. Email {email} or call {phone}.",
+    /** Used when no site email is set yet. */
+    failedNoEmail: "That didn't go through. Call {phone}.",
   },
 };
 
@@ -50,6 +51,6 @@ export const thanks = {
 export const notFound = {
   title: `Page not found | ${siteConfig.name}`,
   heading: "Page not found",
-  body: "[[404 message]]",
+  body: "That page isn't here. The link may be old or mistyped. Head back home, or request a quote.",
   homeLabel: "Back to home",
 };
