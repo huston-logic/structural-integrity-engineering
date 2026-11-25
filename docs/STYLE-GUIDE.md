@@ -74,7 +74,9 @@ page then runs: Built for every condition (deep), What we design (dusk), the num
 one deep band, and the dusk contact band.
 
 ## 6. Signature elements
-- The text wordmark (Manrope 700, 17px) until a logo file exists.
+- The logo mark (`public/brand/sie-logo.svg`, never redrawn) on a snow hexagon badge, 48px tall, so its dark navy and
+  steel stay readable on dusk and dusk-deep, then the business name as a text wordmark (Manrope 700, 17px). The favicon
+  and apple-touch icon are the same badge.
 - Amber line work: the hero overlay and the four design-condition glyphs (2px amber strokes, round caps).
 - "Build smarter. Build faster." closes every page in the footer.
 

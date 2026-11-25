@@ -13,6 +13,8 @@ export const siteConfig = {
   oneLiner: base.business.oneLiner,
   copyrightYear: base.business.copyrightYear,
   tagline: base.business.tagline,
+  /** Site-relative path to the logo mark, or "" for none. */
+  logo: base.brand.logo,
   footerBrandLine: `${base.owner.name} · ${base.owner.regionLine}`,
   /** Provider-dependent values, set in `site.config.ts` and re-exported by `providers.ts`. */
   email: providers.email,

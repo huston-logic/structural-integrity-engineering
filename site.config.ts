@@ -89,7 +89,7 @@ export const siteConfig = {
   },
   brand: {
     /** Optional. Site-relative path to the logo image, such as "/brand/logo.png". Empty means none (not a launch blocker). */
-    logo: "",
+    logo: "/brand/sie-logo.svg",
   },
   /** Published price text. Empty means none is published (not a launch blocker). */
   prices: { website: "" },
