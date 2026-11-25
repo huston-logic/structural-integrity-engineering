@@ -1,6 +1,6 @@
 # Structural Integrity Engineering website
 
-Website for **Structural Integrity Engineering** (structural engineering for homes, low-rise commercial buildings and glazing systems in Colorado and Alaska), run by Dylan. Built from the site template: see `docs/TEMPLATE.md`. Built with Next.js (App Router), strict TypeScript and Tailwind CSS, exported as a fully static site for **Cloudflare Workers**.
+Website for **Structural Integrity Engineering** (structural engineering for homes, low-rise commercial buildings and glazing systems in Colorado), run by Dylan. Built from the site template: see `docs/TEMPLATE.md`. Built with Next.js (App Router), strict TypeScript and Tailwind CSS, exported as a fully static site for **Cloudflare Workers**.
 
 Permanent architecture, security and content rules are in [`AGENTS.md`](./AGENTS.md). Read it before making changes.
 

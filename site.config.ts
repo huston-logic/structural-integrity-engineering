@@ -15,7 +15,7 @@ export const siteConfig = {
     legalName: "Structural Integrity Engineering, Inc.",
     tagline: "Strength you can build on.",
     /** The positioning line. Feeds the JSON-LD description. */
-    oneLiner: "Structural engineering for homes, low-rise commercial buildings and glazing systems in Colorado and Alaska.",
+    oneLiner: "Structural engineering for homes, low-rise commercial buildings and glazing systems in Colorado.",
     copyrightYear: 2026,
   },
   owner: {
@@ -24,7 +24,7 @@ export const siteConfig = {
     familyName: "Gassmann",
     role: "Principal Engineer",
     phone: "(907) 350-3456",
-    regionLine: "Colorado and Alaska",
+    regionLine: "Colorado",
   },
   domain: {
     url: "https://structural-integrity-engineering.com",
@@ -64,7 +64,7 @@ export const siteConfig = {
       limit: 5,
       periodSeconds: 60,
       // Integer strings unique per Cloudflare account.
-      namespaceIds: { production: "1001", preview: "1002" },
+      namespaceIds: { production: "2201", preview: "2202" },
     },
   },
   theme: {

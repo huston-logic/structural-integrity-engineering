@@ -86,12 +86,12 @@ export const howWeWork = {
 
 export const whereWeWork = {
   heading: "Where we work",
-  body: "Currently serving Colorado and Alaska. Need help in another state? We'll get licensed quickly and handle local requirements so your schedule stays intact.",
+  body: "Currently serving Colorado. Need help in another state? We'll get licensed quickly and handle local requirements so your schedule stays intact.",
 };
 
 /** The glazing set from the deck. Dylan's Residential and Commercial answers did not come through, so they launch without. */
 export const faq = {
-  heading: "Questions",
+  heading: "Glazing questions",
   items: [
     {
       question: "What do you need to start?",
@@ -107,7 +107,7 @@ export const faq = {
     },
     {
       question: "Do you stamp drawings?",
-      answer: "We stamp calculations and drawings in Alaska and Colorado. For other states, we'll arrange licensure on request.",
+      answer: "We stamp calculations and drawings in Colorado. For other states, we'll arrange licensure on request.",
     },
     {
       question: "How fast is delivery?",

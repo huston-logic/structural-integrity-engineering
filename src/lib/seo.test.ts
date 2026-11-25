@@ -24,6 +24,12 @@ describe("seo entries", () => {
     }
   });
 
+  it("keeps every page title within 60 characters, so search results do not cut it", () => {
+    for (const [key, e] of entries) {
+      assert.ok(e.title.length <= 60, `${key} title is ${e.title.length} characters: ${e.title}`);
+    }
+  });
+
   it("gives every page a meta description", () => {
     const missing = entries.filter(([, e]) => e.description.trim() === "").map(([k]) => k);
     assert.deepEqual(missing, []);

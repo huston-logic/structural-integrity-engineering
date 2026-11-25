@@ -8,6 +8,10 @@ import { confirmation } from "./contact-fields.ts";
  * import-free files, because the Worker bundles it.
  */
 
+/** In the site's voice; Grant approves these two lines in the PR. */
+const replyGreeting = "Hello,";
+const replySignoff = "Talk soon,";
+
 /** The slice of site.config.ts the reply reads. A structural type, so tests can pass a fixture. */
 export interface AutoReplyConfig {
   business: { name: string; tagline: string };
@@ -45,7 +49,10 @@ export function buildAutoReply(config: AutoReplyConfig) {
 
   return {
     subject: confirmation.subject,
+    /** A greeting with no name (the reply holds no visitor input) and a short sign-off above the signature. */
+    greeting: replyGreeting,
     paragraphs: [`${confirmation.heading} ${confirmation.body}`],
+    signoff: replySignoff,
     /** Colors for the wrapper in worker/messages.ts: body text and links. */
     colors: { ink: c.ink, link: c.green },
     /** Inline styles only. */

@@ -10,7 +10,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 # Structural Integrity Engineering website: permanent rules
 
-Website for Structural Integrity Engineering (structural engineering for homes, low-rise commercial buildings and glazing systems in Colorado and Alaska). Next.js App Router, strict TypeScript, Tailwind CSS v4, **static export** deployed on **Cloudflare Workers**. Merging a pull request into `main` deploys automatically through Cloudflare Workers Builds; other branches get preview URLs. Never run `wrangler deploy` by hand. Read this file before changing the repo, and update it when a rule changes.
+Website for Structural Integrity Engineering (structural engineering for homes, low-rise commercial buildings and glazing systems in Colorado). Next.js App Router, strict TypeScript, Tailwind CSS v4, **static export** deployed on **Cloudflare Workers**. Merging a pull request into `main` deploys automatically through Cloudflare Workers Builds; other branches get preview URLs. Never run `wrangler deploy` by hand. Read this file before changing the repo, and update it when a rule changes.
 
 ## Sources of truth
 

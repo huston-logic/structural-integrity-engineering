@@ -10,18 +10,19 @@ export const aboutHero = {
 };
 
 export const whatWeAre =
-  "Structural Integrity Engineering is a structural engineering practice specializing in custom residential design, low-rise commercial projects and glazing and mullion engineering. We provide fast, accurate and affordable permit-ready drawings and calculations for builders, architects and homeowners in Colorado and Alaska.";
+  "Structural Integrity Engineering is a structural engineering practice specializing in custom residential design, low-rise commercial projects and glazing and mullion engineering. We provide fast, accurate and affordable permit-ready drawings and calculations for builders, architects and homeowners in Colorado.";
 
 export const principal = {
   heading: "Meet our principal engineer",
-  body: "Dylan Gassmann is the founder and principal engineer of Structural Integrity Engineering. Born and raised in Alaska, he now calls Colorado Springs home and brings a decade of hands-on experience in structural engineering for residential and commercial projects. He believes great engineering should move projects forward: quickly, clearly and affordably.",
+  body: "Dylan Gassmann is the founder and principal engineer of Structural Integrity Engineering. Based in Colorado Springs, he brings a decade of hands-on experience in structural engineering for residential and commercial projects. He believes great engineering should move projects forward: quickly, clearly and affordably.",
   photo: photos.dylanPortrait,
 };
 
-export const twoPlaces = {
-  heading: "Two places, one standard",
-  line: "Licensed in Alaska and Colorado.",
-  photos: [photos.alaskaChugach, photos.coloradoPikesPeak],
+/** The one place the site lists licensing (Dylan is licensed in Colorado and Alaska); everywhere else says Colorado. */
+export const standard = {
+  heading: "One standard",
+  line: "Licensed in Colorado and Alaska.",
+  photo: photos.coloradoPikesPeak,
 };
 
 export const mission = {
