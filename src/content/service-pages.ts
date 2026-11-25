@@ -1,6 +1,9 @@
 import { photos, type Photo } from "./photos";
 import { seo } from "./seo";
 
+/** Which line drawing lies over the page's hero photo (data, not copy; see PageDrawing). */
+type ServiceDrawing = "residential" | "commercial" | "glazing";
+
 /**
  * The three service pages, verbatim from the copy deck ("Services pages"). Each hero line is split at its first sentence:
  * the H1 is the page name, the rest is the line under it.
@@ -9,6 +12,7 @@ export type ServicePageContent = {
   meta: { title: string; description: string };
   /** The page's single H1. */
   title: string;
+  drawing: ServiceDrawing;
   intro: string;
   /** Desktop hero and the smaller copy served to phones. */
   heroPhoto: Photo;
@@ -30,6 +34,7 @@ const stepOneTitle = "Share your plans";
 export const residentialPage: ServicePageContent = {
   meta: seo.residential,
   title: "Residential structural design",
+  drawing: "residential",
   intro: "Permit-ready plans for custom homes, remodels, additions, decks and foundations. Fast, accurate and affordable.",
   heroPhoto: photos.framingWoodHero,
   heroPhotoSmall: photos.framingWoodSmall,
@@ -80,6 +85,7 @@ export const residentialPage: ServicePageContent = {
 export const commercialPage: ServicePageContent = {
   meta: seo.commercial,
   title: "Commercial design",
+  drawing: "commercial",
   intro: "Permit-ready engineering for retail, office buildings and tenant improvements.",
   heroPhoto: photos.commercialCraneHero,
   heroPhotoSmall: photos.commercialCraneSmall,
@@ -114,6 +120,7 @@ export const commercialPage: ServicePageContent = {
 export const glazingPage: ServicePageContent = {
   meta: seo.glazing,
   title: "Glazing engineering",
+  drawing: "glazing",
   intro: "Stamped calculation packages and redlines for storefront and curtainwall systems. Fast, accurate and affordable.",
   heroPhoto: photos.curtainWallHero,
   heroPhotoSmall: photos.curtainWallSmall,

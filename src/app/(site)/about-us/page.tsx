@@ -16,7 +16,7 @@ export default function AboutPage() {
   const { photo } = principal;
   return (
     <div className="relative overflow-x-clip">
-      <PageHero title={aboutHero.title} intro={aboutHero.intro} />
+      <PageHero title={aboutHero.title} intro={aboutHero.intro} drawing="about" />
 
       <Section tone="deep">
         <p className="max-w-[34em] text-h3 font-normal leading-snug">

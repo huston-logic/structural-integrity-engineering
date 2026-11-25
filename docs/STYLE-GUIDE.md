@@ -119,6 +119,13 @@ Tokens: `--ease-site`, `--duration-feedback` (150ms), `--duration-panel` (200ms)
   the roof, floor and columns draw in from 0.4s, the dimension lines fade in at 2s, the wind arrows push in at 2.4s and
   the labels appear at 2.7s. Each keyframe starts hidden with `backwards` fill, so the finished drawing is the resting
   state.
+- Inner pages get one drawing each (`PageDrawing`, added 2026-11-24 at Grant's request): a label-free line drawing that
+  draws itself when the page loads, in the home hero's own timing (`hl-draw`, `hl-draw-fade`), then holds still. The
+  three service pages and /services lay theirs over the hero photo (a house gable, a braced bay, a mullion with its
+  deflection, and the three services small); About has an I-beam section beside the hero text and Contact a loaded beam
+  under the email and phone (from 900px). Over a photo the lines are snow with a dark under-stroke, because amber has
+  too little contrast on wood, steel and glass; on plain dusk they are amber. Privacy, Thanks and the 404 stay still.
+  It is that page's only load animation; the scroll reveals below are unchanged.
 - The home numbers count up from 0 when they scroll into view (`CountUp`, `IntersectionObserver`, 1.4s ease-out),
   held at their final width so the unit beside them stays still. The real value is in the HTML; without JavaScript,
   under reduced motion or when already on screen at load, the final value shows.
