@@ -32,7 +32,10 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" suppressHydrationWarning className={fontVariables}>
+    // data-scroll-behavior: hl.css sets `scroll-behavior: smooth` on html (§9.1). Since Next 16 the router no longer
+    // switches it off for a page change, so a new page glided to whichever section its scrollIntoView calls ended on.
+    // This attribute asks Next to switch it off during the page change only (tests/a11y/navigation.spec.ts).
+    <html lang="en" suppressHydrationWarning className={fontVariables} data-scroll-behavior="smooth">
       <head>
         <script>{"document.documentElement.classList.add('js')"}</script>
       </head>
