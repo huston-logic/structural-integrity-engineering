@@ -11,7 +11,7 @@ type PageHeroProps = {
   intro?: ReactNode;
   /** The call to action this page's copy gives it. */
   children?: ReactNode;
-  /** The page's one line drawing (see PageDrawing). Shown from 768px: under the text, then beside it from 1024px. */
+  /** The page's one line drawing (see PageDrawing). Under the text (smaller on phones), then beside it from 1024px. */
   drawing?: PageDrawingName;
 };
 
@@ -34,9 +34,9 @@ export function PageHero({ eyebrow, title, intro, children, drawing }: PageHeroP
   return (
     <section className="bg-dusk pb-16 pt-16 md:pb-24 md:pt-24">
       {drawing ? (
-        <Container className="grid items-center gap-x-16 gap-y-12 lg:grid-cols-[minmax(0,1fr)_minmax(0,440px)]">
+        <Container className="grid items-center gap-x-16 gap-y-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,440px)]">
           {copy}
-          <PageDrawing name={drawing} className="hidden max-w-[440px] md:block lg:justify-self-end" />
+          <PageDrawing name={drawing} className="max-w-[260px] md:max-w-[440px] lg:justify-self-end" />
         </Container>
       ) : (
         <Container>{copy}</Container>

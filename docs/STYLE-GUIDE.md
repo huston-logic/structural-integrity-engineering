@@ -122,7 +122,7 @@ Tokens: `--ease-site`, `--duration-feedback` (150ms), `--duration-panel` (200ms)
 - Inner pages get one drawing each (`PageDrawing`, added 2026-11-24 at Grant's request): a label-free line drawing that
   draws itself when the page loads, in the home hero's own timing (`hl-draw`, `hl-draw-fade`), then holds still. The
   three service pages and /services lay theirs over the hero photo (a house gable, a braced bay, a mullion with its
-  deflection, and the three services small); About has an I-beam section beside the hero text and Contact a loaded beam
+  deflection, and the three services small); About has an I-beam section beside the hero text (under it, smaller, on phones) and Contact a loaded beam
   under the email and phone (from 900px). Over a photo the lines are snow with a dark under-stroke, because amber has
   too little contrast on wood, steel and glass; on plain dusk they are amber. Privacy, Thanks and the 404 stay still.
   It is that page's only load animation; the scroll reveals below are unchanged.

@@ -54,7 +54,7 @@ export default function ServicesPage() {
                 className="h-auto w-full object-cover"
               />
             </picture>
-            <PageDrawing name="services" className="pointer-events-none absolute inset-0 h-full" />
+            <PageDrawing name="services" />
           </div>
         </Container>
       </section>

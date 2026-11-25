@@ -53,7 +53,7 @@ export function ServicePage({ page }: { page: ServicePageContent }) {
                 className="aspect-[3/2] h-auto w-full object-cover"
               />
             </picture>
-            <PageDrawing name={page.drawing} className="pointer-events-none absolute inset-0 h-full" />
+            <PageDrawing name={page.drawing} />
           </div>
           <div className="lg:col-start-1 lg:row-start-2">
             <FadingDivider className="mb-10 mt-10 hidden max-w-[34em] lg:block" />

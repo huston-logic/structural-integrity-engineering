@@ -5,7 +5,7 @@ import { siteConfig } from "@/content/site";
 
 // Dylan's mark is dark navy and steel on a transparent background, so on the dusk header it would vanish. It sits on a
 // snow hexagon (the same outline as the mark, a little larger) so the frame and letters keep their own colors and read
-// at 9:1 against the bar. The mark file is never altered. The name stays as text beside it.
+// at 8.8:1 against the dusk bar and 11:1 against dusk-deep. The mark file is never altered. The name stays as text beside it.
 const markWidth = 1266;
 const markHeight = 1370;
 
@@ -27,8 +27,7 @@ export function Logo() {
             alt=""
             width={markWidth}
             height={markHeight}
-            unoptimized
-            priority
+            loading="eager"
             className="h-[85%] w-auto"
           />
         </span>

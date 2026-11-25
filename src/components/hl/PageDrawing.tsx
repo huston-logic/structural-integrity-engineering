@@ -151,6 +151,7 @@ function Glazing() {
     <>
       <g>
         <Draw points="470,60 470,320" at={0.5} />
+        <path className="hl-draw hl-art-halo hl-art-thin" pathLength={1} d="M470,60 Q530,190 470,320" style={delay(1.1)} />
         <path className="hl-draw hl-art-thin" pathLength={1} d="M470,60 Q530,190 470,320" style={delay(1.1)} />
         <Draw points="410,60 410,320" at={1.3} thin />
         <Draw points="530,60 530,320" at={1.4} thin />
@@ -176,10 +177,12 @@ const drawings: Record<PageDrawingName, { viewBox: string; Art: () => ReactEleme
  * shifts. Without motion or without CSS animation support the finished drawing shows.
  */
 export function PageDrawing({ name, className = "" }: { name: PageDrawingName; className?: string }) {
+  // The four photo drawings always lie over the photo's box (the parent is `relative`); the other two take their size from `className`.
   const photo = name !== "about" && name !== "contact";
+  const box = photo ? "pointer-events-none absolute inset-0 h-full w-full" : "h-auto w-full";
   const { viewBox, Art } = drawings[name];
   return (
-    <svg viewBox={viewBox} aria-hidden="true" focusable="false" className={`hl-art ${photo ? "hl-art-photo " : ""}h-auto w-full ${className}`}>
+    <svg viewBox={viewBox} aria-hidden="true" focusable="false" className={`hl-art ${photo ? "hl-art-photo " : ""}${box} ${className}`}>
       <Art />
     </svg>
   );

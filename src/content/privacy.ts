@@ -4,9 +4,10 @@ import { siteConfig } from "./site";
 /**
  * The privacy page. Every line states only what this site actually does (checked against the code on 2026-11-24):
  * the contact form has six fields; the Worker checks Turnstile, emails the site owner through Resend, sends the automatic
- * reply and adds a row to a Google Sheet; nothing in the site sets a cookie or stores anything in the browser; there are
- * no ads. Grant and Dylan read every line in the PR. Do not add a promise the site cannot keep (a deletion deadline, a
- * legal right) without Dylan's say-so.
+ * reply and adds a row to a Google Sheet; the site's own code sets no cookie and stores nothing in the browser (only the
+ * Turnstile script may, which the page says); there are no ads. Grant asked for the deletion-by-email line; Dylan
+ * confirms every line in the PR. Do not add a promise the site cannot keep (a deletion deadline, a legal right) without
+ * Dylan's say-so.
  */
 export const privacyMeta = seo.privacy;
 

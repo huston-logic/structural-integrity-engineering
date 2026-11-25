@@ -419,12 +419,12 @@
 
 .hl-art .hl-art-halo {
   stroke: var(--hl-night);
-  stroke-width: calc(var(--hl-art-w, 3) + 3);
-  opacity: 0.6;
+  stroke-width: calc(var(--hl-art-w, 3) + 4);
+  opacity: 0.8;
 }
 
 .hl-art .hl-art-halo.hl-art-thin {
-  stroke-width: calc(var(--hl-art-w, 3) * 0.66 + 3);
+  stroke-width: calc(var(--hl-art-w, 3) * 0.66 + 4);
 }
 
 .hl-art:not(.hl-art-photo) .hl-art-halo {

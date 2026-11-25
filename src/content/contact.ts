@@ -13,8 +13,8 @@ export const contactHero = {
   intro: "We're here to help you move forward with clarity and confidence. Send us your plans or questions and we'll respond as fast as we can.",
 };
 
-/** Error messages in the site's voice (short, practical). The deck gives no error text; Grant approves these in the PR. */
 
+/** The field and send error messages are in the site's voice (short, practical). The deck gives no error text; Grant approves them in the PR. */
 export const noteForm = {
   /** Names the form for screen readers; it is the deck's button label. */
   formLabel: "Send request",
@@ -35,6 +35,8 @@ export const noteForm = {
     rateLimited: "That's a lot of tries in a row. Give it a minute, then send again.",
     /** `{email}` and `{phone}` are the direct contact details from site.config.ts. */
     failed: "That didn't go through. Email {email} or call {phone}.",
+    /** Used when no site email is set yet. */
+    failedNoEmail: "That didn't go through. Call {phone}.",
   },
 };
 
