@@ -44,7 +44,7 @@ const gallery = defineBlock({
       label: "Pictures",
       min: 1,
       max: 4,
-      of: { kind: "object", label: "Picture", fields: { photo: { kind: "image", label: "Photo" }, caption: { kind: "text", label: "Caption", max: 50, required: false } } },
+      of: { kind: "object", label: "Picture", fields: { photo: { kind: "image", label: "Photo", shape: "3:2" }, caption: { kind: "text", label: "Caption", max: 50, required: false } } },
     },
   },
   variants: [
@@ -148,4 +148,14 @@ test("--check logic names each stale file and the fix", () => {
   const message = staleMessage(stale);
   assert.match(message, /docs\/BLOCKS\.md/);
   assert.match(message, /run npm run blocks:catalog/);
+});
+
+test("an image field shows its shape, and the page rules cover focus and files", () => {
+  const catalog = buildCatalog(registry);
+  assert.equal(catalog.blocks[1].fields[0].of.fields[0].shape, "3:2");
+  assert.match(catalog.pageRules.images.rule, /optional focus: center, top, bottom, left or right/);
+  assert.match(catalog.pageRules.files.rule, /\/files\/price-sheet-k3x9q2mz\.pdf/);
+  const md = renderBlocksMarkdown(catalog);
+  assert.match(md, /a picture under \/images\/ with real alt text, shape 3:2/);
+  assert.match(md, /- \*\*Files\.\*\* A link may point to a PDF under \/files\//);
 });

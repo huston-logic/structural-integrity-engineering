@@ -211,3 +211,122 @@ describe("configProblems: editor", () => {
     assert.deepEqual(configProblems(template), []);
   });
 });
+
+/** A site with the editor on and uploads set the way the template's defaults are, but enabled. */
+function withUploads(uploads = {}, editor = {}) {
+  return withEditor({
+    uploads: {
+      enabled: true,
+      bucket: "example-site-uploads",
+      maxPhotoBytes: 20_000_000,
+      maxPdfBytes: 10_000_000,
+      maxTotalBytes: 200_000_000,
+      maxPerDay: 50,
+      expireDays: 30,
+      types: ["jpeg", "png", "webp", "heic", "pdf"],
+      ...uploads,
+    },
+    ...editor,
+  });
+}
+
+describe("configProblems: editor.uploads", () => {
+  test("nothing is checked while the uploads block is missing", () => {
+    assert.deepEqual(configProblems(withEditor()), []);
+    assert.deepEqual(configProblems({ ...config(), editor: { enabled: false } }), []);
+  });
+
+  test("a complete enabled block has no problems", () => {
+    assert.deepEqual(configProblems(withUploads()), []);
+  });
+
+  test("a disabled block with a null bucket and default numbers has no problems", () => {
+    assert.deepEqual(configProblems(withUploads({ enabled: false, bucket: null })), []);
+  });
+
+  test("each bad value fails with a plain message naming it", () => {
+    const cases = [
+      [{ maxPhotoBytes: 0 }, /editor\.uploads\.maxPhotoBytes must be a whole number of at least 1/],
+      [{ maxPhotoBytes: 1.5 }, /editor\.uploads\.maxPhotoBytes must be a whole number/],
+      [{ maxPhotoBytes: "20000000" }, /editor\.uploads\.maxPhotoBytes must be a whole number/],
+      [{ maxPhotoBytes: 20_000_001 }, /editor\.uploads\.maxPhotoBytes is over the 20000000-byte limit/],
+      [{ maxPdfBytes: 10_000_001 }, /editor\.uploads\.maxPdfBytes is over the 10000000-byte limit/],
+      [{ maxPdfBytes: -5 }, /editor\.uploads\.maxPdfBytes must be a whole number/],
+      [{ maxTotalBytes: 0 }, /editor\.uploads\.maxTotalBytes must be a whole number/],
+      [{ maxPerDay: 0 }, /editor\.uploads\.maxPerDay must be a whole number/],
+      [{ expireDays: 0 }, /editor\.uploads\.expireDays must be a whole number from 1 to 90/],
+      [{ expireDays: 91 }, /editor\.uploads\.expireDays must be a whole number from 1 to 90/],
+      [{ expireDays: 2.5 }, /editor\.uploads\.expireDays must be a whole number from 1 to 90/],
+      [{ types: [] }, /editor\.uploads\.types needs at least one of/],
+      [{ types: "jpeg" }, /editor\.uploads\.types needs at least one of/],
+      [{ types: ["jpeg", "gif"] }, /editor\.uploads\.types has "gif"/],
+      [{ types: ["jpeg", "jpeg"] }, /editor\.uploads\.types lists "jpeg" more than once/],
+    ];
+    for (const [override, pattern] of cases) {
+      const problems = configProblems(withUploads(override));
+      assert.equal(problems.length, 1, `${JSON.stringify(override)} gave ${JSON.stringify(problems)}`);
+      assert.match(problems[0], pattern);
+    }
+  });
+
+  test("the numbers are checked even while uploads are disabled", () => {
+    assert.ok(configProblems(withUploads({ enabled: false, bucket: null, expireDays: 400 })).some((p) => /expireDays/.test(p)));
+  });
+
+  test("the limits at their caps are fine", () => {
+    assert.deepEqual(configProblems(withUploads({ maxPhotoBytes: 20_000_000, maxPdfBytes: 10_000_000, expireDays: 90 })), []);
+    assert.deepEqual(configProblems(withUploads({ expireDays: 1, types: ["pdf"] })), []);
+  });
+
+  test("enabled uploads need the editor to be enabled", () => {
+    const c = withUploads({}, { enabled: false });
+    const problems = configProblems(c);
+    assert.equal(problems.length, 1);
+    assert.match(problems[0], /editor\.uploads\.enabled is true, but editor\.enabled is not/);
+  });
+
+  test("enabled uploads need a valid R2 bucket name", () => {
+    for (const bucket of [null, "", "ab", "a".repeat(64), "Example-Uploads", "-example", "example-", "exa_mple", "[[Bucket]]", 7]) {
+      const problems = configProblems(withUploads({ bucket }));
+      assert.equal(problems.length, 1, `expected one problem for ${JSON.stringify(bucket)}`);
+      assert.match(problems[0], /editor\.uploads\.bucket must be an R2 bucket name/);
+    }
+    for (const bucket of ["abc", "a".repeat(63), "site-uploads-2"]) {
+      assert.deepEqual(configProblems(withUploads({ bucket })), [], bucket);
+    }
+  });
+
+  test("a disabled block does not need a bucket", () => {
+    assert.deepEqual(configProblems(withUploads({ enabled: false, bucket: null })), []);
+  });
+});
+
+describe("wranglerText: uploads bindings", () => {
+  test("uploads on add the R2 bucket and the Images binding, each with a comment", () => {
+    const text = wranglerText(withUploads());
+    assert.match(text, /"r2_buckets": \[\{ "binding": "UPLOADS", "bucket_name": "example-site-uploads" \}\]/);
+    assert.match(text, /"images": \{ "binding": "IMAGES" \}/);
+    const parsed = JSON.parse(text.replace(/^\s*\/\/.*$/gm, ""));
+    assert.deepEqual(parsed.r2_buckets, [{ binding: "UPLOADS", bucket_name: "example-site-uploads" }]);
+    assert.deepEqual(parsed.images, { binding: "IMAGES" });
+    const before = text.slice(0, text.indexOf('"r2_buckets"'));
+    assert.match(before.trimEnd().split("\n").at(-1), /^\s*\/\/ /);
+    const imagesBefore = text.slice(0, text.indexOf('"images"'));
+    assert.match(imagesBefore.trimEnd().split("\n").at(-1), /^\s*\/\/ /);
+  });
+
+  test("previews get no uploads bindings", () => {
+    const text = wranglerText(withUploads());
+    assert.doesNotMatch(text.slice(text.indexOf('"previews"')), /UPLOADS|IMAGES/);
+  });
+
+  test("uploads off, uploads missing and editor off add no bindings", () => {
+    for (const c of [withEditor(), withUploads({ enabled: false, bucket: null }), withUploads({}, { enabled: false }), config()]) {
+      assert.doesNotMatch(wranglerText(c), /r2_buckets|UPLOADS|IMAGES/);
+    }
+  });
+
+  test("uploads off generates the same text as no uploads block at all", () => {
+    assert.equal(wranglerText(withUploads({ enabled: false, bucket: null })), wranglerText(withEditor()));
+  });
+});

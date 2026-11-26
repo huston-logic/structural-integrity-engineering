@@ -13,7 +13,7 @@ export const standardAndMissionDefinition = defineBlock({
       fields: {
         heading: { kind: "text", label: "Heading", max: 40 },
         line: { kind: "text", label: "Line under the photo", max: 100 },
-        photo: { kind: "image", label: "Wide photo", help: "A 3:2 photo. A new photo needs a line in src/content/photos.ts." },
+        photo: { kind: "image", shape: "3:2", label: "Wide photo", help: "A 3:2 photo. A new photo needs a line in src/content/photos.ts." },
       },
     },
     mission: {

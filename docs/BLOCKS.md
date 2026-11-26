@@ -22,7 +22,8 @@ type, optionally a variant, and fill in its content.
 - **Length.** At most 20 blocks on a page.
 - **Text.** Text is plain. Only **bold** and [[placeholder]] marks are allowed. No HTML tags, no HTML entities, no markdown links and no control characters (line breaks, tabs, hidden characters).
 - **Links.** Allowed: An internal path (/name) or a path with an anchor (/name#anchor) that points to a live page, and to an anchor that exists on it. An https:// address. A mailto: address. A tel: number. "@booking": the site's booking link (the scheduler when set, otherwise /contact-us#book). Never: `javascript:`, `data:`, `http:`, `//host`, or any other kind of address (a `//host` address has no scheme).
-- **Images.** An image is { src, alt }. The file must exist under /images/ and be a jpg, png or webp. The alt text must really describe the picture, so it can't be empty or only a generic word. Formats: jpg, png, webp. Alt text that is only one of these words is rejected: image, img, photo, picture, graphic, icon, logo, alt, alt text, todo, tbd, untitled, placeholder.
+- **Images.** An image is { src, alt } with an optional focus: center, top, bottom, left or right. The file must exist under /images/ and be a jpg, png or webp. Each image slot has a shape (3:2, 4:3, 4:5, 1:1 or 16:9) and the picture is cropped to it; focus says which part to keep. The alt text must really describe the picture, so it can't be empty or only a generic word. Formats: jpg, png, webp. Alt text that is only one of these words is rejected: image, img, photo, picture, graphic, icon, logo, alt, alt text, todo, tbd, untitled, placeholder.
+- **Files.** A link may point to a PDF under /files/ that exists, such as /files/price-sheet-k3x9q2mz.pdf. Visitors download it.
 - **Video.** A video address must be from YouTube or Vimeo. The player is rebuilt from the video's id, not from the address that was pasted. Allowed player origins: https://www.youtube-nocookie.com, https://player.vimeo.com.
 
 ## Hero (`hero`)
@@ -62,7 +63,7 @@ The top of a page: a small line above, the page headline, a short introduction a
 
 ## Highlights (`highlights`)
 
-A heading and a set of short ideas, each with a title and a few lines of text. Good for services, reasons or features.
+A heading and a set of short ideas, each with a title and a few lines of text, and optionally a photo above each. Good for services, reasons or features.
 
 **Where it can go:** anywhere, up to 3 times.
 
@@ -76,9 +77,10 @@ A heading and a set of short ideas, each with a title and a few lines of text. G
 | Field | What it is | Required | Limits |
 | --- | --- | --- | --- |
 | `heading` | Heading | yes | up to 90 characters |
-| `items` | Ideas | yes | 2 to 9 items |
+| `items` | Ideas | yes | 2 to 9 items (give every item image, or none) |
 | `items[].title` | Title | yes | up to 70 characters |
 | `items[].body` | Text | yes | up to 280 characters |
+| `items[].image` | Photo. Cropped to a 3 by 2 shape. Give every idea a photo, or none. | no | a picture under /images/ with real alt text, shape 3:2 |
 
 **Motion:** Rises gently into place as it scrolls into view (it shows at once for visitors who prefer reduced motion).
 
@@ -342,7 +344,7 @@ One video from YouTube or Vimeo, with a title and a short caption. It plays on t
 | `url` | Video address. A YouTube or Vimeo address. | yes | a YouTube or Vimeo address |
 | `title` | Title | yes | up to 80 characters |
 | `caption` | Caption | no | up to 200 characters |
-| `poster` | Cover picture. Shown before play. Without one the video shows a plain dark panel. | no | a picture under /images/ with real alt text |
+| `poster` | Cover picture. Shown before play. Without one the video shows a plain dark panel. | no | a picture under /images/ with real alt text, shape 16:9 |
 
 **Motion:** Rises gently into place as it scrolls into view (it shows at once for visitors who prefer reduced motion).
 
@@ -378,7 +380,7 @@ Two to six videos from YouTube or Vimeo side by side, each with a title and a sh
 | `videos[].url` | Video address. A YouTube or Vimeo address. | yes | a YouTube or Vimeo address |
 | `videos[].title` | Title | yes | up to 80 characters |
 | `videos[].caption` | Caption | no | up to 200 characters |
-| `videos[].poster` | Cover picture | no | a picture under /images/ with real alt text |
+| `videos[].poster` | Cover picture | no | a picture under /images/ with real alt text, shape 16:9 |
 
 **Motion:** Rises gently into place as it scrolls into view (it shows at once for visitors who prefer reduced motion).
 
@@ -407,6 +409,122 @@ Two to six videos from YouTube or Vimeo side by side, each with a title and a sh
 }
 ```
 
+## Photo with text (`photo-text`)
+
+One photo beside a heading, a few paragraphs and an optional button. Good for an about section, a place or a service.
+
+**Where it can go:** anywhere, up to 4 times.
+
+**Variants** (set with `variant`; the first is used when it is left out):
+
+- `photo-start` (default): The photo sits on the left on wide screens, the text on the right. On phones the photo is above the text.
+- `photo-end`: The photo sits on the right on wide screens, the text on the left. On phones the photo is above the text.
+
+**Fields** (inside `content`):
+
+| Field | What it is | Required | Limits |
+| --- | --- | --- | --- |
+| `image` | Photo. Cropped to a 4 by 3 shape. | yes | a picture under /images/ with real alt text, shape 4:3 |
+| `heading` | Heading | yes | up to 90 characters |
+| `paragraphs` | Paragraphs | yes | 1 to 4 items, each up to 600 characters |
+| `action` | Button | no | button words up to 40 characters, and a link |
+
+**Motion:** Rises gently into place as it scrolls into view (it shows at once for visitors who prefer reduced motion).
+
+**Example:**
+
+```json
+{
+  "image": {
+    "src": "/images/examples/vase-and-pears.jpg",
+    "alt": "Abstract still life: a pale vase and two pears in soft window light"
+  },
+  "heading": "A short heading that says what the photo is about",
+  "paragraphs": [
+    "A few sentences that tell the story behind the photo in plain words.",
+    "A second paragraph for the detail a visitor would ask about next."
+  ],
+  "action": {
+    "label": "A short button label",
+    "href": "/contact-us"
+  }
+}
+```
+
+## Photo gallery (`gallery`)
+
+Two to twelve photos in a grid, each with an optional caption. The photos do not open larger.
+
+**Where it can go:** anywhere, up to 2 times.
+
+**Variants** (set with `variant`; the first is used when it is left out):
+
+- `three-column` (default): The photos sit three across on wide screens and two across on tablets and phones.
+- `two-column`: The photos sit two across on wide screens and tablets, and one across on phones.
+
+**Fields** (inside `content`):
+
+| Field | What it is | Required | Limits |
+| --- | --- | --- | --- |
+| `heading` | Heading. Names the group of photos for everyone, including screen reader users. | yes | up to 90 characters |
+| `intro` | Introduction | no | up to 280 characters |
+| `photos` | Photos | yes | 2 to 12 items |
+| `photos[].image` | Photo. Cropped to a 3 by 2 shape. | yes | a picture under /images/ with real alt text, shape 3:2 |
+| `photos[].caption` | Caption | no | up to 140 characters |
+
+**Motion:** Rises gently into place as it scrolls into view (it shows at once for visitors who prefer reduced motion).
+
+**Example:**
+
+```json
+{
+  "heading": "A short heading that names the photos",
+  "intro": "A sentence that says what the photos show.",
+  "photos": [
+    {
+      "image": {
+        "src": "/images/examples/vase-and-pears.jpg",
+        "alt": "Abstract still life: a pale vase and two pears in soft window light"
+      },
+      "caption": "A short caption for the first photo."
+    },
+    {
+      "image": {
+        "src": "/images/examples/bowl-and-lemons.jpg",
+        "alt": "Abstract still life: a shallow bowl with three lemons on a pale table"
+      },
+      "caption": "A short caption for the second photo."
+    },
+    {
+      "image": {
+        "src": "/images/examples/jug-and-cups.jpg",
+        "alt": "Abstract still life: a tall jug beside two small cups in morning light"
+      }
+    },
+    {
+      "image": {
+        "src": "/images/examples/stacked-books.jpg",
+        "alt": "Abstract still life: a stack of books with a round glass paperweight on top"
+      },
+      "caption": "A short caption for the fourth photo."
+    },
+    {
+      "image": {
+        "src": "/images/examples/candle-and-plate.jpg",
+        "alt": "Abstract still life: a candle in front of a plate, with a long soft shadow"
+      },
+      "caption": "A short caption for the fifth photo."
+    },
+    {
+      "image": {
+        "src": "/images/examples/window-light.jpg",
+        "alt": "Abstract still life: a round stool and a plant pot beneath a bright window"
+      }
+    }
+  ]
+}
+```
+
 ## Home hero (`home-hero`)
 
 The home page's first screen: a centered headline, a line under it and a button, in the sky of a dusk photo with an amber line drawing on the house.
@@ -424,7 +542,7 @@ The home page's first screen: a centered headline, a line under it and a button,
 | `title` | Headline. The page's one main heading. | yes | up to 60 characters |
 | `intro` | Line under the headline | yes | up to 200 characters |
 | `action` | Button | yes | button words up to 30 characters, and a link |
-| `photo` | Photo. The dusk house photo. The line drawing is drawn for this picture, so keep it. | yes | a picture under /images/ with real alt text |
+| `photo` | Photo. The dusk house photo. The line drawing is drawn for this picture, so keep it. | yes | a picture under /images/ with real alt text, shape 4:5 |
 | `labels` | Labels on the drawing | yes | a group of fields |
 | `labels.cantilever` | Cantilever | yes | up to 24 characters |
 | `labels.clearSpan` | Clear span | yes | up to 24 characters |
@@ -470,7 +588,7 @@ A page top with the headline and a line on the left and a photo on the right tha
 | --- | --- | --- | --- |
 | `title` | Headline. The page's one main heading. | yes | up to 60 characters |
 | `intro` | Line under the headline | yes | up to 200 characters |
-| `photo` | Photo. A new photo needs a line in src/content/photos.ts. | yes | a picture under /images/ with real alt text |
+| `photo` | Photo. A new photo needs a line in src/content/photos.ts. | yes | a picture under /images/ with real alt text, shape 3:2 |
 | `drawing` | Line drawing | yes | one of "services" |
 
 **Motion:** No entrance motion. This site's sections reveal themselves with CSS (reveal and reveal-zoom in hl.css), so a second entrance would double it.
@@ -506,7 +624,7 @@ The top of a service page: the headline and a line, the overview paragraph, and 
 | `title` | Headline. The page's one main heading. | yes | up to 50 characters |
 | `intro` | Line under the headline | yes | up to 200 characters |
 | `overview` | Overview paragraph | yes | up to 500 characters |
-| `photo` | Hero photo. A 3:2 photo. A new photo needs a line in src/content/photos.ts. | yes | a picture under /images/ with real alt text |
+| `photo` | Hero photo. A 3:2 photo. A new photo needs a line in src/content/photos.ts. | yes | a picture under /images/ with real alt text, shape 3:2 |
 | `drawing` | Line drawing | yes | one of "residential", "commercial", "glazing" |
 
 **Motion:** No entrance motion. This site's sections reveal themselves with CSS (reveal and reveal-zoom in hl.css), so a second entrance would double it.
@@ -658,7 +776,7 @@ A heading with a line beside it, then up to six cards: a tall photo, a title tha
 | `items[].title` | Title | yes | up to 40 characters |
 | `items[].body` | Text | yes | up to 220 characters |
 | `items[].href` | Page the card opens | yes | a link (see Page rules) |
-| `items[].photo` | Photo. A 4:5 crop. A new photo needs a line in src/content/photos.ts. | yes | a picture under /images/ with real alt text |
+| `items[].photo` | Photo. A 4:5 crop. A new photo needs a line in src/content/photos.ts. | yes | a picture under /images/ with real alt text, shape 4:5 |
 
 **Motion:** No entrance motion. This site's sections reveal themselves with CSS (reveal and reveal-zoom in hl.css), so a second entrance would double it.
 
@@ -970,7 +1088,7 @@ A deep band with a heading and a ruled list of the work, each with an optional l
 | `items` | Work | yes | 1 to 10 items |
 | `items[].title` | Title | yes | up to 70 characters |
 | `items[].body` | Detail. Leave out for a list of names alone; the titles then show larger. | no | up to 200 characters |
-| `photos` | Photos | yes | 1 to 2 items, each a picture under /images/ with real alt text |
+| `photos` | Photos | yes | 1 to 2 items, each a picture under /images/ with real alt text, shape 4:5 |
 
 **Motion:** No entrance motion. This site's sections reveal themselves with CSS (reveal and reveal-zoom in hl.css), so a second entrance would double it.
 
@@ -1076,7 +1194,7 @@ A portrait photo beside a heading and a paragraph about a person.
 | --- | --- | --- | --- |
 | `heading` | Heading | yes | up to 60 characters |
 | `body` | Paragraph | yes | up to 600 characters |
-| `photo` | Portrait. A new photo needs a line in src/content/photos.ts. | yes | a picture under /images/ with real alt text |
+| `photo` | Portrait. Shown whole, not trimmed: a portrait close to 4:5 (the current one is 3:4) keeps the layout. A new photo needs a line in src/content/photos.ts. | yes | a picture under /images/ with real alt text, shape 4:5 |
 
 **Motion:** No entrance motion. This site's sections reveal themselves with CSS (reveal and reveal-zoom in hl.css), so a second entrance would double it.
 
@@ -1110,7 +1228,7 @@ One deep band: a heading over a wide photo with a line of licensing under it, th
 | `standard` | Standard | yes | a group of fields |
 | `standard.heading` | Heading | yes | up to 40 characters |
 | `standard.line` | Line under the photo | yes | up to 100 characters |
-| `standard.photo` | Wide photo. A 3:2 photo. A new photo needs a line in src/content/photos.ts. | yes | a picture under /images/ with real alt text |
+| `standard.photo` | Wide photo. A 3:2 photo. A new photo needs a line in src/content/photos.ts. | yes | a picture under /images/ with real alt text, shape 3:2 |
 | `mission` | Mission | yes | a group of fields |
 | `mission.heading` | Heading | yes | up to 40 characters |
 | `mission.body` | Paragraph | yes | up to 300 characters |

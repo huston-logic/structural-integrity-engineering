@@ -9,7 +9,12 @@ export const profileDefinition = defineBlock({
   fields: {
     heading: { kind: "text", label: "Heading", max: 60 },
     body: { kind: "text", label: "Paragraph", max: 600 },
-    photo: { kind: "image", label: "Portrait", help: "A new photo needs a line in src/content/photos.ts." },
+    photo: {
+      kind: "image",
+      shape: "4:5",
+      label: "Portrait",
+      help: "Shown whole, not trimmed: a portrait close to 4:5 (the current one is 3:4) keeps the layout. A new photo needs a line in src/content/photos.ts.",
+    },
   },
   variants: [{ name: "default", description: "Photo on the left from 1024 px wide, above the text on phones." }],
   placement: { position: "any", maxPerPage: 1, rhythm: "none" },

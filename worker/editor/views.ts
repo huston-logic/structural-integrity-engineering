@@ -7,6 +7,8 @@ export interface ProposalView {
   createdAt: string;
   changeList: string;
   previewLink: string | null;
+  /** The uploads this proposal puts on the site. */
+  uploads: { id: string; name: string; kind: "photo" | "pdf" }[];
 }
 
 export type ChangeState = "checking" | "stuck" | "going live" | "live" | "stopped" | "unknown";
@@ -25,4 +27,18 @@ export interface ChangeView {
   unconfirmed?: boolean;
   /** True when a merged change has not shown up live for longer than expected. */
   slow?: boolean;
+}
+
+/** One upload as the tools and the owner page list it. */
+export interface UploadView {
+  id: string;
+  name: string;
+  kind: "photo" | "pdf";
+  bytes: number;
+  width?: number;
+  height?: number;
+  pages?: number;
+  uploadedAt: string;
+  expiresAt: string;
+  onSite: boolean;
 }

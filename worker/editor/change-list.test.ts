@@ -162,3 +162,73 @@ test("an edited block is named by its place on the new page, a removed one by it
   const removed = run([{ op: "remove_block", page: "/hours", block: 2 }]).text;
   assert.match(removed, /Removes block 2 \(/);
 });
+
+// ---- uploads ----
+const upload = (extra: Record<string, unknown> = {}) => ({
+  id: "up000001",
+  kind: "photo" as const,
+  path: "public/images/uploads/up000001.webp",
+  name: "Team at the counter",
+  sha256: "x",
+  bytes: 90_000,
+  width: 1600,
+  height: 1200,
+  ...extra,
+});
+const pdfUpload = { id: "up000002", kind: "pdf" as const, path: "public/files/price-sheet-up000002.pdf", name: "Price sheet", sha256: "y", bytes: 240_000 };
+const withBlocks = (blocks: unknown[]) => new Map<string, unknown>([["/about", page("/about", { blocks })]]);
+const photoBlock = (image: unknown) => ({ type: "photo-text", content: { image, heading: "Us", paragraphs: ["Hello."] } });
+
+test("a new upload photo gets its own line and the image value names it with its description", () => {
+  const before = withBlocks([{ type: "hero", content: { title: "About" } }]);
+  const after = withBlocks([{ type: "hero", content: { title: "About" } }, photoBlock({ src: "/images/uploads/up000001.webp", alt: "Sam and Ana behind the shop counter" })]);
+  const text = buildChangeList(before, after, matchBlockIds(before, after), registry, [], { uploads: [upload()], onSite: new Set() });
+  assert.ok(text.includes('Photo: "Team at the counter" (upload up000001), description: "Sam and Ana behind the shop counter"'), text);
+  assert.ok(text.includes('New photo added to the site: "Team at the counter" (upload up000001).'), text);
+  assert.ok(text.includes('Adds block 2 (Photo with text):'), "everything shown before is still shown");
+  assert.ok(text.includes('Heading: "Us"'));
+});
+
+test("an existing image shows its path and description, and an upload already on the site has no new-file line", () => {
+  const before = withBlocks([photoBlock({ src: "/images/team.png", alt: "The team" })]);
+  const after = withBlocks([photoBlock({ src: "/images/uploads/up000001.webp", alt: "The team at the counter" })]);
+  const text = buildChangeList(before, after, matchBlockIds(before, after), registry, [], { uploads: [upload()], onSite: new Set(["/images/uploads/up000001.webp"]) });
+  assert.ok(text.includes('was: Photo: /images/team.png, description: "The team"'), text);
+  assert.ok(text.includes('now: Photo: "Team at the counter" (upload up000001), description: "The team at the counter"'), text);
+  assert.ok(!text.includes("New photo added"));
+});
+
+test("a link to an upload PDF reads as a download, with a new-file line", () => {
+  const before = new Map<string, unknown>([["/services", page("/services", { blocks: [{ type: "closing-cta", content: { heading: "Ready?", action: { label: "Price sheet", href: "/contact" } } }] })]]);
+  const after = new Map<string, unknown>([["/services", page("/services", { blocks: [{ type: "closing-cta", content: { heading: "Ready?", action: { label: "Price sheet", href: "/files/price-sheet-up000002.pdf" } } }] })]]);
+  const text = buildChangeList(before, after, matchBlockIds(before, after), registry, [], { uploads: [pdfUpload], onSite: new Set() });
+  assert.ok(text.includes('now: Download: "Price sheet" (PDF, 240 KB)'), text);
+  assert.ok(text.includes('New PDF added to the site: "Price sheet" (upload up000002), 240 KB.'), text);
+});
+
+test("the fit note appears only when the slot would trim over a quarter, and names the trimmed edges", () => {
+  const make = (info: Record<string, unknown>) => {
+    const before = withBlocks([]);
+    const after = withBlocks([photoBlock({ src: "/images/uploads/up000001.webp", alt: "A tall photo" })]);
+    return buildChangeList(before, after, matchBlockIds(before, after), registry, [], { uploads: [upload(info)], onSite: new Set() });
+  };
+  // photo-text is 4:3 (1.333). A 3:4 photo (0.75) loses 44% of its area to the slot: top and bottom.
+  const tall = make({ width: 1200, height: 1600 });
+  assert.ok(tall.includes("This photo will be trimmed at the top and bottom to fit the section. Say if the top or bottom matters, and I'll set where it focuses."), tall);
+  const wide = make({ width: 2400, height: 1000 });
+  assert.ok(wide.includes("This photo will be trimmed at the sides to fit the section."), wide);
+  assert.ok(!make({ width: 1600, height: 1200 }).includes("trimmed"), "an exact fit has no note");
+  assert.ok(!make({ width: 1500, height: 1000 }).includes("trimmed"), "a 11% trim has no note");
+});
+
+test("the upload context of one call never carries over to the next", () => {
+  const before = withBlocks([]);
+  const after = withBlocks([photoBlock({ src: "/images/uploads/up000001.webp", alt: "The team" })]);
+  const ids = matchBlockIds(before, after);
+  const withContext = buildChangeList(before, after, ids, registry, [], { uploads: [upload()], onSite: new Set() });
+  assert.ok(withContext.includes('(upload up000001)') && withContext.includes("New photo added"), withContext);
+  const without = buildChangeList(before, after, ids, registry);
+  assert.ok(!without.includes("upload up000001") && !without.includes("New photo added"), without);
+  assert.ok(without.includes("Photo: /images/uploads/up000001.webp, description:"), without);
+  assert.equal(buildChangeList(before, after, ids, registry, [], { uploads: [upload()], onSite: new Set() }), withContext);
+});

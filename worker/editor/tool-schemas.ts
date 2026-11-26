@@ -45,7 +45,8 @@ const operationSchemas: Record<string, unknown>[] = [
     at: position("Where the new section goes on the page"),
     block: {
       type: "object",
-      description: "The new section: type, content, and optionally variant and anchor.",
+      description:
+        "The new section: type, content, and optionally variant and anchor. A photo is { src, alt, focus? }: use upload:<id> as src for an upload (focus is center, top, bottom, left or right: where a cropped photo keeps its focus).",
       properties: { type: { type: "string" }, variant: { type: "string" }, anchor: { type: "string" }, content: { type: "object" } },
       required: ["type", "content"],
       additionalProperties: false,
@@ -61,6 +62,7 @@ const operationSchemas: Record<string, unknown>[] = [
   strict({ op: { const: "restore_page" }, page: pagePath }),
 ];
 
+const uploadId: Prop = { type: "string", pattern: "^[a-z0-9]{8}$", description: "An upload id from list_uploads." };
 const proposalId: Prop = { type: "string", pattern: "^[a-z0-9]{8}$", description: "The proposal id that propose_change returned." };
 const changeNumber: Prop = { type: "integer", minimum: 1, description: "The change number that publish_change returned." };
 
@@ -74,13 +76,15 @@ export const schemas = {
         type: "array",
         minItems: 1,
         maxItems: 40,
-        description: "Everything the owner asked for, applied in order.",
+        description:
+          "Everything the owner asked for, applied in order. To use an upload, write upload:<id> as a photo's src (with alt: what the photo shows) or as a link's href (for a PDF); an image may also carry focus.",
         items: { type: "object", oneOf: operationSchemas },
       },
     },
     required: ["summary", "operations"],
     additionalProperties: false,
   },
+  upload: { type: "object", properties: { upload_id: uploadId }, required: ["upload_id"], additionalProperties: false },
   preview: { type: "object", properties: { proposal_id: proposalId }, required: ["proposal_id"], additionalProperties: false },
   publish: {
     type: "object",

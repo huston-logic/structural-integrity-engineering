@@ -59,6 +59,18 @@ export const rules = {
   /** Where an image's URL (such as /images/team/sam.jpg) is looked for, to find the alt text beside it. */
   imageReferenceDir: "src",
 
+  // ---- PDF rules (blocking on change branches) ---------------------------------------------------------------------
+  /** Downloadable files live here, one level, and only PDFs. They are served as downloads (public/_headers, /files/*). */
+  fileDir: "public/files/",
+  pdfFile: /^public\/files\/[a-z0-9]+(?:-[a-z0-9]+)*\.pdf$/,
+  maxPdfBytes: 10 * 1000 * 1000,
+  /** PDF names (written /Name in the file) that run code or carry files. Matched whole, after #xx escapes are decoded. */
+  pdfActiveNames: ["JavaScript", "JS", "Launch", "EmbeddedFile", "EmbeddedFiles", "RichMedia", "XFA", "AA", "SubmitForm", "ImportData", "GoToR", "GoToE", "Rendition", "Movie", "Sound"],
+  /** Where a PDF's address (such as /files/price-sheet.pdf) is looked for: it must be used. No alt text is needed. */
+  fileReferenceDir: "src",
+  /** Why anything else in public/files/ is tier 3. */
+  fileNameReason: "only PDFs named in lowercase words joined by hyphens can go in public/files/",
+
   // ---- Leftover placeholders (blocking on change branches) ---------------------------------------------------------
   /** Same folders, file types and pattern as scripts/check-placeholders.mjs; only lines ADDED by the change count. */
   placeholderDirs: ["src/content/", "src/app/"],

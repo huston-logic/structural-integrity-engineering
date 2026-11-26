@@ -2,14 +2,19 @@
 // file, the block number and the field. Pure (no file access): the caller passes the pages and a small view of the repo.
 // Import-free apart from its siblings, so Node scripts and Next both load it.
 import { parseVideoUrl, videoProviders } from "./embeds.ts";
-import { BOOKING_LINK, GENERIC_ALT_WORDS, MENU_PLACES, REQUIRED_LIVE, RESERVED_PATHS, THANKS_PATH, fileForPath, pathForFile } from "./schema.ts";
+import { BOOKING_LINK, FILE_LINK_RE, GENERIC_ALT_WORDS, IMAGE_FOCUS, IMAGE_SHAPES, MENU_PLACES, REQUIRED_LIVE, RESERVED_PATHS, THANKS_PATH, fileForPath, pathForFile } from "./schema.ts";
 import type { AnyBlockDefinition, Field, Fields } from "./schema.ts";
 
-export type Repo = { imageExists(src: string): boolean };
+export type Repo = { imageExists(src: string): boolean; fileExists(href: string): boolean };
 /** Every page in the set, by path, with the anchors a link may point to. */
 export type PageIndex = ReadonlyMap<string, { status: string; anchors: ReadonlySet<string> }>;
 /** `pages: null` checks only the shape of internal links (used for registry examples, which point at no real page). */
-export type Context = { repo: Repo; pages: PageIndex | null };
+export type Context = {
+  repo: Repo;
+  pages: PageIndex | null;
+  /** Image src to the owner's upload name: alt text equal to that name is refused. */
+  uploadNames?: ReadonlyMap<string, string>;
+};
 export type PageFile = { file: string; data: unknown; error?: string };
 
 export const PAGE_KEYS = ["path", "title", "description", "status", "menu", "blocks"];
@@ -72,7 +77,7 @@ function altProblem(text: string): string | null {
   return null;
 }
 
-const LINK_HELP = "Use /page, /page#anchor, https://..., mailto:, tel: or @booking.";
+const LINK_HELP = "Use /page, /page#anchor, https://..., mailto:, tel:, @booking or a PDF like /files/price-sheet-k3x9q2mz.pdf.";
 
 /** Why a link is not allowed, or null. */
 function linkProblem(href: string, ctx: Context): string | null {
@@ -101,6 +106,10 @@ function linkProblem(href: string, ctx: Context): string | null {
   if (lower.startsWith("tel:")) {
     return /^tel:\+?\d[\d().-]*$/.test(href) && href.replace(/\D/g, "").length >= 3 ? null : "is not a tel: link with a phone number (digits only)";
   }
+  if (href.startsWith("/files/")) {
+    if (!FILE_LINK_RE.test(href)) return "is not a file link this site allows. A /files/ link must look like /files/price-sheet-k3x9q2mz.pdf (lowercase words, digits and hyphens, ending in .pdf)";
+    return ctx.repo.fileExists(href) ? null : "is not a file in public/files/. Upload it first";
+  }
   if (href.startsWith("/")) {
     const hash = href.indexOf("#");
     const path = hash === -1 ? href : href.slice(0, hash);
@@ -118,11 +127,13 @@ function linkProblem(href: string, ctx: Context): string | null {
   return `is not a link this site allows. ${LINK_HELP}`;
 }
 
+const articleFor = (noun: string) => `a ${noun.toLowerCase()}`;
 const isRequired = (field: Field) => field.required !== false;
 
 const IMAGE_FIELDS: Fields = {
   src: { kind: "text", label: "Image file", max: 200 },
   alt: { kind: "text", label: "Alt text", max: 200 },
+  focus: { kind: "choice", label: "Focus", options: IMAGE_FOCUS, required: false },
 };
 
 function actionFields(field: Field): Fields {
@@ -190,6 +201,7 @@ function checkField(field: Field, value: unknown, label: string, where: string, 
       else if (!ctx.repo.imageExists(src)) say(`"${src}" is not a file in public/images/. Add the picture first.`);
       const bad = altProblem(alt);
       if (bad) say(`${bad}. Write what the picture shows.`);
+      else if (ctx.uploadNames?.get(src)?.trim().toLowerCase() === alt.trim().toLowerCase()) say("The description is the file's name; describe what the photo shows.");
       return;
     }
     case "video": {
@@ -214,6 +226,15 @@ function checkField(field: Field, value: unknown, label: string, where: string, 
         if (field.of.kind === "object") checkObject(item, field.of.fields, entry, "this entry accepts", where, ctx, out);
         else checkField(field.of, item, entry, where, ctx, out);
       });
+      if (field.of.kind === "object" && field.together !== undefined) {
+        const items = value.filter(isRecord);
+        for (const name of field.together) {
+          const given = items.filter((item) => item[name] !== undefined).length;
+          if (given === 0 || given === items.length) continue;
+          const inner = field.of.fields[name];
+          out.push(`${where}: ${label}: give every ${field.of.label.toLowerCase()} ${articleFor(inner?.label ?? name)}, or none.`);
+        }
+      }
       return;
     }
     case "object":
@@ -229,8 +250,22 @@ export function validateContent(def: AnyBlockDefinition, content: unknown, where
   return out;
 }
 
+/** Image fields (at any depth) that do not name one of the allowed shapes. */
+function shapeProblems(fields: Fields, owner: string, path: string): string[] {
+  const out: string[] = [];
+  for (const [key, field] of Object.entries(fields)) {
+    const here = path === "" ? key : `${path}.${key}`;
+    const inner = field.kind === "list" ? field.of : field;
+    if (inner.kind === "image" && !(IMAGE_SHAPES as readonly unknown[]).includes((inner as { shape?: unknown }).shape)) {
+      out.push(`${owner}: the image field "${here}" needs a shape: ${IMAGE_SHAPES.slice(0, -1).join(", ")} or ${IMAGE_SHAPES[IMAGE_SHAPES.length - 1]}.`);
+    }
+    if (inner.kind === "object") out.push(...shapeProblems(inner.fields, owner, here));
+  }
+  return out;
+}
+
 /** Problems in the registry itself: duplicate types, bad names, missing reasons, examples that break their own schema. */
-export function validateRegistry(registry: readonly AnyBlockDefinition[], repo: Repo = { imageExists: () => true }): string[] {
+export function validateRegistry(registry: readonly AnyBlockDefinition[], repo: Repo = { imageExists: () => true, fileExists: () => true }): string[] {
   const out: string[] = [];
   const seen = new Map<string, AnyBlockDefinition>();
   for (const def of registry) {
@@ -261,6 +296,7 @@ export function validateRegistry(registry: readonly AnyBlockDefinition[], repo: 
     if (signature !== undefined && (signature.keyframes.trim() === "" || signature.reason.trim() === "")) {
       out.push(`${name}: a signature animation needs the name of its keyframes and a reason.`);
     }
+    out.push(...shapeProblems(def.fields, name, ""));
     const problems = validateContent(def, def.example, `${name}, example`, { repo, pages: null });
     out.push(...problems.map((line) => `${line} (the example must pass its own schema)`));
   }
@@ -403,7 +439,7 @@ export function validatePages(
   files: readonly PageFile[],
   registry: readonly AnyBlockDefinition[],
   repo: Repo,
-  extra: { links?: readonly { where: string; href: string }[] } = {},
+  extra: { links?: readonly { where: string; href: string }[]; uploadNames?: ReadonlyMap<string, string> } = {},
 ): string[] {
   const out: string[] = [];
   const defs = new Map<string, AnyBlockDefinition>();
@@ -425,7 +461,7 @@ export function validatePages(
       index.set(page.path, { status: String(page.data["status"]), anchors: anchorsOf(page.data, defs) });
     }
   }
-  const ctx: Context = { repo, pages: index };
+  const ctx: Context = { repo, pages: index, ...(extra.uploadNames !== undefined ? { uploadNames: extra.uploadNames } : {}) };
 
   const fileByPath = new Map<string, string>();
   let headerLinks = 0;

@@ -76,6 +76,12 @@ function headers() {
   Cross-Origin-Resource-Policy: same-origin
   Strict-Transport-Security: max-age=31536000; includeSubDomains
 
+# PDFs in public/files/ always download and never run on the site's origin (docs/CHANGE-SCOPE.md, "PDF rules").
+/files/*
+  Content-Disposition: attachment
+  Content-Security-Policy: sandbox
+  X-Content-Type-Options: nosniff
+
 /_next/static/*
   Cache-Control: public, max-age=31536000, immutable
 

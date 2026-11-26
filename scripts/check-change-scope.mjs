@@ -19,6 +19,7 @@ import { registry } from "../src/blocks/definitions.ts";
 import { validatePages as realValidatePages } from "../src/blocks/validate.ts";
 import { imageAltCheck } from "./image-alt.mjs";
 import { inspectMetadata } from "./image-metadata.mjs";
+import { pdfProblem } from "./pdf-check.mjs";
 
 // ---- small helpers ----------------------------------------------------------------------------------------------
 
@@ -75,11 +76,11 @@ const extensionOf = (path) => {
 /** The address of an image on the site: "public/images/team/sam.jpg" is served as "/images/team/sam.jpg". */
 const urlOf = (path) => path.slice("public".length);
 
-/** The .ts, .tsx and .json files under src/ at `head` that mention the image's address, with their text. `git grep` exits 1 for "none". */
-function readReferences(path, head, git, rules) {
+/** The .ts, .tsx and .json files under `dir` at `head` that mention the file's address, with their text. `git grep` exits 1 for "none". */
+function readReferences(path, head, git, dir) {
   let found;
   try {
-    found = git(["grep", "-l", "-I", "-F", "-z", "-e", urlOf(path), head, "--", rules.imageReferenceDir]);
+    found = git(["grep", "-l", "-I", "-F", "-z", "-e", urlOf(path), head, "--", dir]);
   } catch (error) {
     if (error.status === 1) return [];
     throw error;
@@ -102,6 +103,7 @@ function readReferences(path, head, git, rules) {
 export function gatherChange({ base, head, git, rules = defaultRules }) {
   const range = `${base}...${head}`;
   const imageRefs = {};
+  const fileRefs = {};
   const files = parseRawDiff(git(["diff", "--raw", "-z", "--no-renames", range])).map(({ status, path, newMode }) => {
     const file = { path, status: ["A", "D", "T"].includes(status) ? status : "M", mode: newMode, added: [], removed: [] };
     // A symlink or submodule is rejected by classify; its "content" (a link target or a commit) is never read.
@@ -113,7 +115,15 @@ export function gatherChange({ base, head, git, rules = defaultRules }) {
         file.head = bytes.subarray(0, 12);
         file.hasMarkup = /<script|<svg|<html|<iframe/i.test(bytes.toString("latin1"));
         if (Object.hasOwn(rules.imageTypes, extensionOf(path))) file.metadata = inspectMetadata(bytes, extensionOf(path));
-        imageRefs[path] = readReferences(path, head, git, rules);
+        imageRefs[path] = readReferences(path, head, git, rules.imageReferenceDir);
+      }
+      return file;
+    }
+    if (path.startsWith(rules.fileDir)) {
+      // Only a well-named PDF is judged by its bytes; anything else in public/files/ is tier 3 whatever it holds.
+      if (file.status !== "D" && !special && rules.pdfFile.test(path)) {
+        file.pdfProblem = pdfProblem(git(["show", `${head}:${path}`]), rules);
+        fileRefs[path] = readReferences(path, head, git, rules.fileReferenceDir);
       }
       return file;
     }
@@ -123,12 +133,22 @@ export function gatherChange({ base, head, git, rules = defaultRules }) {
     if (needsContent) file.content = String(git(["show", `${head}:${path}`]));
     return file;
   });
-  // A page file added or edited, or a picture removed or replaced (a page may still use it), means the pages are checked.
+  // A page file added or edited, or a picture or PDF removed or replaced (a page may still use it), means the pages are checked.
   const touchesPages = files.some(
-    (f) => !SPECIAL_MODES.includes(f.mode) && ((isPageFile(f.path, rules) && ["A", "M"].includes(f.status)) || (f.path.startsWith(rules.imageDir) && ["D", "M"].includes(f.status))),
+    (f) =>
+      !SPECIAL_MODES.includes(f.mode) &&
+      ((isPageFile(f.path, rules) && ["A", "M"].includes(f.status)) ||
+        ((f.path.startsWith(rules.imageDir) || f.path.startsWith(rules.fileDir)) && ["D", "M"].includes(f.status))),
   );
-  if (!touchesPages) return { files, imageRefs };
-  return { files, imageRefs, pages: readPagesAt(head, git, rules), headImages: listAt(head, rules.imageDir, git, true) };
+  if (!touchesPages) return { files, imageRefs, fileRefs };
+  return {
+    files,
+    imageRefs,
+    fileRefs,
+    pages: readPagesAt(head, git, rules),
+    headImages: listAt(head, rules.imageDir, git, true),
+    headFiles: listAt(head, rules.fileDir, git, true),
+  };
 }
 
 /** The names under a folder at `head` (git ls-tree), as full paths. A missing folder gives []. */
@@ -174,6 +194,7 @@ function classify(file, rules) {
     return problem ? { ok: false, reason: `a content file may hold plain data only, but this one ${problem}` } : { ok: true };
   }
   if (path.startsWith(rules.imageDir)) return { ok: true };
+  if (path.startsWith(rules.fileDir)) return rules.pdfFile.test(path) ? { ok: true } : { ok: false, reason: rules.fileNameReason };
   if (isPageFile(path, rules)) return status === "D" ? { ok: false, reason: rules.archiveReason } : { ok: true };
   return { ok: false, reason: tier3Reason(path, rules) };
 }
@@ -203,12 +224,26 @@ function imageProblems(file, rules) {
   return problems;
 }
 
+/** True when a source file holds the PDF's address as a whole string, such as "/files/price-sheet.pdf". */
+const usesFile = (url, sources) => sources.some(({ content }) => [`"${url}"`, `'${url}'`, `\`${url}\``].some((quoted) => content.includes(quoted)));
+
+/** Why a well-named PDF fails: its bytes (computed from git in gatherChange) or nothing in src/ uses it. */
+function pdfProblems(file, fileRefs) {
+  const problems = [];
+  if (file.pdfProblem) problems.push(file.pdfProblem);
+  else if (typeof file.pdfProblem === "undefined") problems.push("the PDF could not be read");
+  if (!usesFile(urlOf(file.path), fileRefs[file.path] ?? [])) {
+    problems.push(`nothing in src/ links to ${urlOf(file.path)}. Add the link (a page's button or text link), or leave the PDF out`);
+  }
+  return problems;
+}
+
 /**
- * The pure core: takes { files, imageRefs, pages, headImages } and returns the verdict. No git, no disk.
+ * The pure core: takes { files, imageRefs, fileRefs, pages, headImages, headFiles } and returns the verdict. No git, no disk.
  * `validate` is the content check (default: the real one), so tests can run it on fake pages.
  */
-export function evaluateChange({ files, imageRefs = {}, pages, headImages = [] }, rules = defaultRules, validate = realValidatePages) {
-  const result = { tier: 1, outside: [], imageProblems: [], altProblems: [], contentProblems: [], images: [], placeholders: [], fileCount: files.length };
+export function evaluateChange({ files, imageRefs = {}, fileRefs = {}, pages, headImages = [], headFiles = [] }, rules = defaultRules, validate = realValidatePages) {
+  const result = { tier: 1, outside: [], imageProblems: [], altProblems: [], fileProblems: [], contentProblems: [], images: [], placeholders: [], fileCount: files.length };
 
   for (const file of files) {
     const verdict = classify(file, rules);
@@ -220,6 +255,12 @@ export function evaluateChange({ files, imageRefs = {}, pages, headImages = [] }
         const { problems, alts } = imageAltCheck(urlOf(file.path), imageRefs[file.path] ?? [], rules);
         result.images.push({ path: safe(file.path), alts: alts.map(safe) });
         for (const reason of problems) result.altProblems.push({ path: safe(file.path), reason: safe(reason) });
+      }
+      continue;
+    }
+    if (file.path.startsWith(rules.fileDir)) {
+      if (file.status !== "D" && rules.pdfFile.test(file.path) && !SPECIAL_MODES.includes(file.mode)) {
+        for (const reason of pdfProblems(file, fileRefs)) result.fileProblems.push({ path: safe(file.path), reason: safe(reason) });
       }
       continue;
     }
@@ -239,7 +280,8 @@ export function evaluateChange({ files, imageRefs = {}, pages, headImages = [] }
 
   if (pages) {
     const present = new Set(headImages);
-    const repo = { imageExists: (src) => present.has(`public${src}`) };
+    const presentFiles = new Set(headFiles);
+    const repo = { imageExists: (src) => present.has(`public${src}`), fileExists: (href) => presentFiles.has(`public${href}`) };
     for (const problem of validate(pages, registry, repo)) result.contentProblems.push(safe(problem));
   }
   if (result.outside.length > 0) result.tier = 3;
@@ -252,6 +294,7 @@ export function decide(result, mode) {
   if (result.outside.length > 0) reasons.push("files outside tier 1");
   if (result.imageProblems.length > 0) reasons.push("image rule broken");
   if (result.altProblems.length > 0) reasons.push("image alt text missing");
+  if (result.fileProblems.length > 0) reasons.push("PDF rule broken");
   if (result.contentProblems.length > 0) reasons.push("content problem");
   if (result.placeholders.length > 0) reasons.push("leftover [[placeholder]] text");
   return { ok: mode !== "strict" || reasons.length === 0, reasons };
@@ -282,6 +325,10 @@ export function formatReport(result, { mode = "strict", base, head } = {}) {
   if (result.altProblems.length > 0) {
     lines.push("", "Alt text problems (blocking on client change branches):");
     lines.push(...list(result.altProblems.map((p) => `  - ${p.path}: ${p.reason}`)));
+  }
+  if (result.fileProblems.length > 0) {
+    lines.push("", "PDF problems (blocking on client change branches):");
+    lines.push(...list(result.fileProblems.map((p) => `  - ${p.path}: ${p.reason}`)));
   }
   if (result.contentProblems.length > 0) {
     lines.push("", "Content problems in the page files (blocking on client change branches):");

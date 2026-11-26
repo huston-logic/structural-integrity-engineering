@@ -1,4 +1,4 @@
-import type { CheckRun, GitHub, Pull, TreeEntry } from "./github.ts";
+import type { CheckRun, CommitFile, GitHub, Pull, TreeEntry } from "./github.ts";
 import { GitHubError } from "./github.ts";
 
 /** In-memory GitHub for the editor's tests. Commits are maps of path -> content; nothing touches the network. */
@@ -20,6 +20,11 @@ export interface FakeIssue {
   body: string;
   labels: string[];
 }
+
+const BYTES_PREFIX = "bytes:base64:";
+
+/** A binary file is kept as text with this prefix, so the fake's commits stay maps of path to string. */
+const encodeBytes = (bytes: Uint8Array): string => BYTES_PREFIX + Buffer.from(bytes).toString("base64");
 
 /** A small stable string hash (cyrb53); not git-compatible, only needs to change when its input changes. */
 function hash(text: string): string {
@@ -120,9 +125,15 @@ export class FakeGitHub implements GitHub {
     return this.commitFiles(this.resolve(commit))[path] ?? null;
   }
 
-  async createCommit({ baseCommit, files, message }: { baseCommit: string; files: { path: string; content: string }[]; message: string }) {
+  /** The bytes of a binary file committed through createCommit, or null when the path holds text or nothing. */
+  bytesOn(branchOrCommit: string, path: string): Uint8Array | null {
+    const text = this.commitFiles(this.resolve(branchOrCommit))[path];
+    return text?.startsWith(BYTES_PREFIX) ? new Uint8Array(Buffer.from(text.slice(BYTES_PREFIX.length), "base64")) : null;
+  }
+
+  async createCommit({ baseCommit, files, message }: { baseCommit: string; files: CommitFile[]; message: string }) {
     const next = { ...this.commitFiles(this.resolve(baseCommit)) };
-    for (const file of files) next[file.path] = file.content;
+    for (const file of files) next[file.path] = "bytes" in file ? encodeBytes(file.bytes) : file.content;
     return this.addCommit(next, this.resolve(baseCommit), message);
   }
 

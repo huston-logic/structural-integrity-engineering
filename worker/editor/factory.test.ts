@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { WorkerConfig } from "../config.ts";
 import type { EditorEnv } from "../env.ts";
+import { createFakeR2 } from "../uploads/fake-r2.ts";
 import { buildEditor } from "./factory.ts";
 import { FakeAssets, FakeKv, testEditorConfig } from "./test-support.ts";
 
@@ -35,4 +36,25 @@ test("buildEditor reads the site through GitHub with the configured app, repo an
 
 test("buildEditor refuses to build without its bindings", () => {
   assert.throws(() => buildEditor(config, {}), /bindings/);
+});
+
+test("uploads are built only when enabled and both bindings exist; missing bindings are logged once and the editor still builds", async () => {
+  const on = testEditorConfig({ uploads: { ...testEditorConfig().uploads, enabled: true, bucket: "example-site-uploads" } });
+  const withUploads = { workerName: "example-site", editor: on } as unknown as WorkerConfig;
+  const lines: string[] = [];
+  const original = console.log;
+  console.log = (line: string) => void lines.push(String(line));
+  try {
+    const bare = buildEditor(withUploads, env);
+    assert.equal((await bare.uploads()).text, "Uploads aren't set up on this site yet.");
+    assert.deepEqual(lines.filter((l) => l.includes("uploads_not_configured")).length, 1);
+    const full = buildEditor(withUploads, { ...env, UPLOADS: createFakeR2().bucket, IMAGES: {} as ImagesBinding });
+    assert.notEqual((await full.removeUpload("abcd1234")).text, "Uploads aren't set up on this site yet.");
+    assert.equal(lines.filter((l) => l.includes("uploads_not_configured")).length, 1, "no log when configured");
+    lines.length = 0;
+    buildEditor(config, env);
+    assert.equal(lines.length, 0, "disabled uploads log nothing");
+  } finally {
+    console.log = original;
+  }
 });

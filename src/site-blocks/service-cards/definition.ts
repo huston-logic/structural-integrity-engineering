@@ -21,7 +21,7 @@ export const serviceCardsDefinition = defineBlock({
           title: { kind: "text", label: "Title", max: 40 },
           body: { kind: "text", label: "Text", max: 220 },
           href: { kind: "link", label: "Page the card opens" },
-          photo: { kind: "image", label: "Photo", help: "A 4:5 crop. A new photo needs a line in src/content/photos.ts." },
+          photo: { kind: "image", shape: "4:5", label: "Photo", help: "A 4:5 crop. A new photo needs a line in src/content/photos.ts." },
         },
       },
     },

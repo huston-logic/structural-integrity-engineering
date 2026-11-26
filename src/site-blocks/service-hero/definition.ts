@@ -10,7 +10,7 @@ export const serviceHeroDefinition = defineBlock({
     title: { kind: "text", label: "Headline", max: 50, help: "The page's one main heading." },
     intro: { kind: "text", label: "Line under the headline", max: 200 },
     overview: { kind: "text", label: "Overview paragraph", max: 500 },
-    photo: { kind: "image", label: "Hero photo", help: "A 3:2 photo. A new photo needs a line in src/content/photos.ts." },
+    photo: { kind: "image", shape: "3:2", label: "Hero photo", help: "A 3:2 photo. A new photo needs a line in src/content/photos.ts." },
     drawing: { kind: "choice", label: "Line drawing", options: ["residential", "commercial", "glazing"] },
   },
   variants: [{ name: "default", description: "Phones: headline, photo, overview. From 1024 px wide: text on the left, photo beside it." }],

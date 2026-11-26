@@ -10,6 +10,7 @@ For Huston Logic and for the site owner. The first half says what the editor doe
 - Each change is written to the site's repository on GitHub as a pull request. The repository is the folder of code and pages for the site. A pull request is a proposed change that joins the site only after its checks pass.
 - The editor is off by default. It is turned on for one site with `editor.enabled` in `site.config.ts`, after the setup below.
 - The editor works only on the live domain. Previews and local runs do not offer it, so no preview can hold the key that writes to GitHub.
+- The owner can upload photos and PDFs on the owner page, then ask their AI app to use them. See Uploads below.
 
 ## How a change goes live
 
@@ -32,12 +33,42 @@ To check, the owner asks "is it live yet?" The AI asks the Worker, which answers
 
 The first time a change is seen live, the Worker stores the time. Later answers say "live N minutes after your yes".
 
+## Uploads
+
+Photos and PDFs can be sent to the site from the owner page. Uploads need the one-time setup in "Set up uploads on one site" below. They stay off until that setup is done.
+
+**What the owner does.** Open `https://[[Site domain]]/owner` on a phone. In "Your uploads", choose one or more photos or PDFs. Each file shows its progress, and each finished photo appears as a thumbnail. Rename a file with Rename. Remove a file with Remove, and the page asks first.
+
+**What happens to a photo.** Any normal phone photo works, including iPhone HEIC. JPEG, PNG and WebP work too. The site keeps a web-ready WebP file: at most 1600 pixels on the long side and at most 450 KB. Camera and location data are removed. The original is never kept. The owner never has to resize or convert a photo.
+
+**What happens to a PDF.** Visitors download a PDF; it never opens inside the site. A PDF that holds a script, a form action or an attached file is refused, and the message says how to save it again as a plain PDF. Document properties, such as the author, are kept.
+
+**The private inbox.** An upload is not public. It is not in the site's repository until a proposal that uses it is previewed or published. A preview link can show it to anyone who has that link.
+
+**Expiry.** An upload that is not used is removed after 30 days. The list shows "Removed in N days". A file that is already on the site shows "On your site".
+
+**How the AI uses an upload.** Ask in plain words, for example "use the three photos I just uploaded". The AI app lists the uploads, looks at each photo, and then proposes a change that uses them. Every photo needs a description of what it shows. The description is shown in the change list. If the AI cannot write a good description, it asks you. The change list also says when a photo will be trimmed to fit its section. If the top or the bottom matters, say so, and the AI sets where the photo focuses.
+
+**Refusals.** Each refusal says what to do, in plain words.
+
+| What you upload | What happens |
+| --- | --- |
+| A video | Refused. Put the video on YouTube or Vimeo, then ask for it by its link. |
+| A GIF | Refused. For a still photo, upload it as a JPEG. For a video, use YouTube or Vimeo. |
+| A file that can carry code (SVG, HTML or other text) | Refused. Upload a photo or a PDF instead. |
+| Any other type (for example AVIF) | Refused. Only JPEG, PNG, WebP, iPhone HEIC and PDF are accepted. |
+| Too big | Refused. The limit is 20 MB for a photo and 10 MB for a PDF. |
+| The inbox is full | Refused. The inbox holds 200 MB. Remove files you no longer need. |
+| The daily limit is reached | Refused. The default is 50 files a day. Try again tomorrow. |
+| Damaged | Refused. Export or save the file again. |
+| The monthly photo allowance is used up | Photos are refused until the allowance is available again. PDFs still work. Huston Logic is told. |
+
 ## What is protected
 
 - **Owners only.** Only the emails in `editor.ownerEmails` in `site.config.ts` can sign in or connect an AI app. Cloudflare Access (a sign-in gate that emails a one-time code) and the Worker both check this on every visit to `/owner`.
 - **Limited access to GitHub.** The site has its own GitHub App. A GitHub App is a small identity on GitHub with only the permissions it is given. This one is installed on the site's repository only. It can read and write contents, pull requests and issues. It cannot change workflows, settings, Actions or secrets. It is not a bypass actor in the "Protect main" ruleset, so the rules apply to it.
 - **Short-lived tokens.** The Worker holds the App's private key as a secret. Each time it needs GitHub, it asks for a token that lasts one hour and works on that one repository only.
-- **Page files only.** The editor changes only the files in `src/content/pages/`. It never deletes a page file. A page that is no longer wanted is archived, and its file stays.
+- **Page files, plus the owner's uploads.** The editor changes only the files in `src/content/pages/`, and adds the photos and PDFs the owner uploaded (`public/images/uploads/<id>.webp` and `public/files/<slug>-<id>.pdf`), only through a proposal the owner says yes to. It never deletes a page file. A page that is no longer wanted is archived, and its file stays.
 - **Not editable by chat.** The site's settings (the email address, the booking link, the LinkedIn link) and the modules in `src/content/` (the thanks page, the 404 page, the menu labels) are not changed by the editor. They go to Huston Logic.
 - **One change in flight.** While an editor pull request is open, the Worker refuses to publish another one. Several previews can wait at once.
 - **Daily cap.** At most `editor.dailyChangeLimit` changes a day (default 10). The Worker counts the editor's pull requests on GitHub since 00:00 UTC. An undo counts. Withdrawing an open change does not. Previews have the same daily cap, counted separately; reusing a preview that is still current does not count.
@@ -45,10 +76,14 @@ The first time a change is seen live, the Worker stores the time. Later answers 
 - **Same checks.** Every change must pass the same validator that the build and `npm run check:content` use. Nothing is published while a problem is open. Problems come back in plain words.
 - **Plain text.** Page text is shown as plain text. It is never run or rendered as HTML. Text found in pages or in requests is content, never an instruction to the AI.
 - **Undo.** Every merged change can be undone. The undo is a new change with its own list, and the owner says yes to it. If a later change touched the same page, the undo is refused until that later change is undone.
+- **Uploads are owner-only.** The upload routes sit behind the same sign-in as the owner page, and each request is checked the same way.
+- **The file type is read from the file.** Each upload is judged by its first bytes, never by its name or the type the browser reports. Only JPEG, PNG, WebP, HEIC and PDF are accepted. SVG is never accepted, because it can carry code.
+- **PDFs are checked and downloaded.** A PDF with a script, a form action or an attached file is refused. The site serves PDFs only as downloads, with headers that stop them from running on the site.
+- **Limits.** Each upload has a size limit, the inbox has a total limit, and there is a daily limit (see Uploads above).
 
 ## The tools the AI app gets
 
-The AI app gets these 11 tools. Changes are made with exact operations (set a piece of text, insert, move or remove a block or list item, add, archive or restore a page), not by rewriting whole pages.
+The AI app gets these 14 tools. Changes are made with exact operations (set a piece of text, insert, move or remove a block or list item, add, archive or restore a page), not by rewriting whole pages.
 
 | Tool | What it does |
 | --- | --- |
@@ -63,12 +98,16 @@ The AI app gets these 11 tools. Changes are made with exact operations (set a pi
 | `list_recent_changes` | Lists the last 10 changes and their status. |
 | `undo_change` | Makes a new proposal that puts back what an earlier change replaced. |
 | `request_feature` | Records a request the library cannot do as a GitHub issue, and gives the owner the lane wording. |
+| `list_uploads` | Lists the owner's photos and PDFs, newest first, with id, name, size, dates and whether each is already on the site. |
+| `view_upload` | Shows a small preview picture of a photo, or the facts about a PDF. The AI looks at each photo before using it. |
+| `remove_upload` | Deletes an upload from the inbox. Only when the owner asks. Refused while a waiting proposal uses it. |
 
 ## The owner page
 
-The owner signs in at `https://[[Site domain]]/owner`. The page is plain HTML with no JavaScript. The signed-in email is shown in the header. Below it, the page has four sections, in this order:
+The owner signs in at `https://[[Site domain]]/owner`. The page is plain HTML. It loads one small script, which shows upload progress. The upload form works without that script too: a single file always works, and several files post in one request. The signed-in email is shown in the header. Below it, the page has five sections, in this order:
 
-- **Waiting for your yes.** Each proposal with its change list, a "Review and publish" button and its preview link. Publish and Discard are on the confirmation page.
+- **Waiting for your yes.** Each proposal with its change list, a "Review and publish" button and its preview link. Publish and Discard are on the confirmation page. The confirmation page shows the thumbnails of the proposal's new photos beside the change list.
+- **Your uploads.** A form to choose photos or PDFs, with the limits in one line. Below it, a grid of uploads, newest first, each with a thumbnail (PDFs show a document tile), its name, kind and size, the "On your site" tag when it is used, and "Removed in N days". Each upload has Rename and Remove. See Uploads above.
 - **Recent changes.** Each change with its status (a labelled tag such as "Live" or "Stuck") and times. A change that is still checking or stuck has a "Withdraw change" button. A change that is going live or live has an "Undo change" button. A stopped change has none.
 - **Connect your AI app.** The connector address is `https://[[Site domain]]/mcp`, with the steps for Claude and a general line for other apps.
 - **What you can change.** A line that tells the owner to ask their AI app "What can I change on my site?"
@@ -104,6 +143,11 @@ Lighthouse sets the pace. It checks 6 pages, three runs each.
 - **The status needs the deploy to name its commit.** `scripts/finish-build.mjs` takes the commit from Cloudflare's build variables. If they are not set, `/site-version.json` shows no commit, and the status never says `live`. It says "merged, going live; I can't confirm yet" instead.
 - **No real connection has been tested yet.** Step g below is the first test.
 - **Owners and settings are not chat tasks.** The owner list and the other `editor` settings are changed in `site.config.ts` by Huston Logic. A new block is a build by Huston Logic (see [EDITING-LANES.md](EDITING-LANES.md), Lane 3).
+- **Orientation depends on Cloudflare Images.** Photos are turned upright by Cloudflare Images before the camera data is dropped. This is checked on the first real site. If a phone photo comes out sideways, the fix is a rotation in the Worker, which Huston Logic makes.
+- **Some PDF names are not seen.** The PDF scan does not read compressed object streams, so a name inside a compressed part of a PDF is not checked. The download headers are the protection for that case.
+- **One photo size.** Each photo is one file at most 1600 pixels wide or tall. It can look a little soft on large retina screens. A second, larger size is a later build.
+- **An undo keeps the files.** Undoing a change puts the page back, but the photos and PDFs it added stay in the repository.
+- **The monthly photo allowance is shared.** It belongs to the Cloudflare account, so every site on that account uses the same allowance.
 
 ## Set up the editor on one site
 
@@ -216,6 +260,73 @@ It writes the editor's paths, bindings and secret name into `wrangler.jsonc`. Co
 
 Write down the time between the yes and `live`. That is the first real yes-to-live measurement.
 
+## Set up uploads on one site
+
+These steps are the uploads part of the setup. Do them after steps a to g, because uploads need the editor on. Like steps a to g, each step says what it does and why, and no value goes in chat, a pull request or a log. Uploads add no secret.
+
+### h. Create the private R2 bucket
+
+**What it does:** creates the storage area for the owner's uploads. R2 is Cloudflare's file storage. **Why:** each site gets its own bucket, so one site's files never sit in another site's storage.
+
+From the repo folder, run this, with `<workerName>` replaced by the Worker name in `site.config.ts` (`workerName`):
+
+```bash
+npx wrangler r2 bucket create <workerName>-uploads
+```
+
+Leave the bucket private. Do not turn on public access and do not add a custom domain.
+
+### i. Add the expiry rule
+
+**What it does:** tells R2 to delete a file 31 days after it was written. **Why:** unused uploads expire after 30 days in the Worker. This rule is the backstop if the Worker's own sweep misses a file.
+
+Run this, with `<bucket>` set to the bucket name from step h (flags checked against Wrangler's own help on 2026-11-25; `expire-inbox` is the rule's name):
+
+```bash
+npx wrangler r2 bucket lifecycle add <bucket> expire-inbox --expire-days 31
+```
+
+### j. Check that Cloudflare Images is on the account
+
+**What it does:** makes sure the Images service is available. Images is Cloudflare's image service. **Why:** the Worker uses it to turn phone photos into web-ready WebP. The Free plan is enough. The Images binding needs no key, so there is no secret to set.
+
+In the Cloudflare dashboard, open Images for the account and check that it is available.
+
+### k. Turn uploads on in site.config.ts
+
+**What it does:** names the bucket and switches uploads on. **Why:** `npm run sync:config` writes the bucket and the Images binding into `wrangler.jsonc`. It writes them only when both `editor.enabled` and `editor.uploads.enabled` are `true`.
+
+Open `editor.uploads` in `site.config.ts` and set:
+
+- `bucket`: the bucket name from step h, `<workerName>-uploads`.
+- `enabled`: `true`. `editor.enabled` must already be `true` (step e).
+
+Then run:
+
+```bash
+npm run sync:config
+```
+
+Commit the result, open a pull request and merge it.
+
+### l. Test it
+
+**What it does:** runs real files through the upload path from a phone. **Why:** the tests use fake storage and a fake Images service, so the first real run is the real test.
+
+1. Open `https://[[Site domain]]/owner` on a phone. Upload an iPhone photo that was taken in portrait (HEIC). Check that it shows upright as a thumbnail on the owner page.
+2. Upload a PDF. Once it is used on a page, check that the page's download button or link downloads it.
+3. Upload a video from a phone. Check that it is refused with the message that points to YouTube or Vimeo.
+4. Ask your AI app for a gallery on a page, using the photos you uploaded. Read the list, say yes, and check that the photos show upright in the published gallery.
+
+### What uploads cost
+
+These figures come from the design spec (`docs/superpowers/specs/2026-11-25-uploads-and-photos-design.md`).
+
+- **R2 storage** is shared by all sites on the Cloudflare account. Each month the account gets 10 GB-months of storage, 1 million writes and 10 million reads free. Deletes are free. Past that: $0.015 per GB-month of storage, $4.50 per million writes and $0.36 per million reads. No egress fees. Only converted files are kept (at most 450 KB each, plus a 30 KB preview), never originals, and each site's inbox is capped at 200 MB. A full site costs at most $0.003 a month past the free tier.
+- **Images** on the Free plan include 5,000 unique transformations a month per account, shared by all sites. Each photo takes 2 to 5 (the web file, the preview, and up to 3 retries for size), so that is about 1,000 to 2,500 photos a month before the limit. Past the limit the Free plan refuses (error 9422) and charges nothing. The paid plan is $0.50 per 1,000 beyond 5,000.
+- **Workers**: uploads run on the existing Workers Paid plan ($5 a month in total). No change.
+- **Result**: next to nothing per site, and $0 at the expected volume of tens of photos per site a month.
+
 ## Add the editor to an existing client site
 
 Use this for a site built from the template that does not have the editor yet. Paste the message below into a Claude Code session in the client's repo. It is a process run, so it works in one branch and one pull request, like the other runs in [docs/PROCESS.md](PROCESS.md). Keep it separate from any other change.
@@ -225,15 +336,19 @@ This is an autonomous process run named "Site editor". Work from the editor sect
 huston-logic/site-template repo (fetch it from GitHub; do not guess the steps). Read CLAUDE.md, AGENTS.md and
 docs/PROCESS.md in this repo first.
 
-Port these from huston-logic/site-template, as they are: worker/index.ts, the whole worker/editor/ folder, the editor
-block of site.config.ts, scripts/config-rules.mjs, scripts/finish-build.mjs, scripts/content-lane.mjs (only with the content fast lane, docs/proposals/content-fast-lane.md), the bot-author rule
-in scripts/check-change-scope.mjs (and its test), tests/a11y/owner-page.spec.ts, docs/VOICE-GUIDE.md and docs/EDITING.md.
+Port these from huston-logic/site-template, as they are: worker/index.ts, the whole worker/editor/ folder, the whole
+worker/uploads/ folder, the editor block of site.config.ts (including editor.uploads), scripts/config-rules.mjs,
+scripts/finish-build.mjs, scripts/content-lane.mjs (only with the content fast lane, docs/proposals/content-fast-lane.md),
+the bot-author rule in scripts/check-change-scope.mjs (and its test), the photo blocks (src/blocks/library/photo-text and
+src/blocks/library/gallery), src/components/hl/Photo.tsx, public/images/examples/, src/content/files.ts,
+scripts/pdf-check.mjs, the PDF and scope check changes in scripts/change-scope-rules.mjs and scripts/check-change-scope.mjs
+(and their tests), tests/a11y/owner-page.spec.ts, docs/VOICE-GUIDE.md and docs/EDITING.md.
 Merge, do not replace, anything in AGENTS.md, README.md and package.json that the client's repo has changed.
 
-Keep editor.enabled false. Do not set any editor value that needs an account: the App ID, the installation id, the
-Access team and AUD, the KV ids and the workers.dev subdomain. Do not create a GitHub App, a KV namespace or an Access
-application, and do not set any secret. Leave the [[placeholders]] in docs/VOICE-GUIDE.md as they are, and list them in
-the pull request.
+Keep editor.enabled false. Keep editor.uploads.enabled false and do not create a bucket. Do not set any editor value that
+needs an account: the App ID, the installation id, the Access team and AUD, the KV ids, the bucket name and the
+workers.dev subdomain. Do not create a GitHub App, a KV namespace, an R2 bucket or an Access application, and do not set
+any secret. Leave the [[placeholders]] in docs/VOICE-GUIDE.md as they are, and list them in the pull request.
 
 The one new runtime dependency is @cloudflare/workers-oauth-provider, pinned exactly to 1.2.4. It is allowed in this
 run. Check it is at least 7 days old (npm view @cloudflare/workers-oauth-provider time), that dependency-review passes,
@@ -246,6 +361,43 @@ Open one pull request on a branch named feat/site-editor. Its description starts
 every change to AGENTS.md, README.md, package.json and site.config.ts.
 
 Under Needs Grant in docs/STATUS.md, list the setup steps a to g in docs/EDITING.md, in order.
+
+Stop, queue the item and continue with the other work on any of these, as CLAUDE.md says: secrets or credentials, DNS,
+accounts or money, sending real email, deleting user data, lowering a threshold or a required check, or any owner-only
+path (.claude/hooks, .claude/agents, .claude/skills, .claude/settings*.json, .github/workflows). For an owner-only
+change, write the proposed file to the scratchpad and list it for Grant to copy in by hand.
+
+END OF BRIEF
+```
+
+## Add uploads to a site that already has the editor
+
+Use this for a site that already runs the editor (`editor.enabled` is `true`) and does not have uploads yet. It is a process run, like the editor port above, and keeps uploads off until Grant's setup steps h to l are done.
+
+```text
+This is an autonomous process run named "Uploads and photos". Work from the uploads sections of docs/EDITING.md in the
+huston-logic/site-template repo (fetch it from GitHub; do not guess the steps). Read CLAUDE.md, AGENTS.md and
+docs/PROCESS.md in this repo first.
+
+This site already has the site editor. Port these from huston-logic/site-template, as they are: the whole worker/uploads/
+folder, worker/index.ts and the whole worker/editor/ folder, the editor block of site.config.ts (including editor.uploads),
+scripts/config-rules.mjs, the photo blocks (src/blocks/library/photo-text and src/blocks/library/gallery),
+src/components/hl/Photo.tsx, public/images/examples/, src/content/files.ts, scripts/pdf-check.mjs, the scope check changes
+in scripts/change-scope-rules.mjs and scripts/check-change-scope.mjs (and their tests), the shared block rules in
+src/blocks/validate.ts, src/blocks/schema.ts and src/blocks/definitions.ts, and docs/EDITING.md. Regenerate docs/BLOCKS.md and
+docs/blocks.json with npm run blocks:catalog. Merge, do not replace, anything in AGENTS.md, README.md, package.json and
+site.config.ts that the client's repo has changed.
+
+Keep editor.uploads.enabled false. Do not create an R2 bucket, do not set the bucket name, and do not create or change any
+Cloudflare Images setting. Do not set any secret. No new dependency is expected; if one seems needed, stop and list it.
+
+Run npm run check:fast on each commit and npm run check before the pull request. If either fails, stop and show the
+exact error.
+
+Open one pull request on a branch named feat/uploads. Its description starts with a "Needs your eyes" line that lists
+every change to AGENTS.md, README.md, package.json and site.config.ts.
+
+Under Needs Grant in docs/STATUS.md, list the setup steps h to l in docs/EDITING.md, in order.
 
 Stop, queue the item and continue with the other work on any of these, as CLAUDE.md says: secrets or credentials, DNS,
 accounts or money, sending real email, deleting user data, lowering a threshold or a required check, or any owner-only

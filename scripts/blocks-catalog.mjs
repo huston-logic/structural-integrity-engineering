@@ -57,8 +57,12 @@ export function pageRules() {
     images: {
       folder: "/images/",
       formats: ["jpg", "png", "webp"],
-      rule: "An image is { src, alt }. The file must exist under /images/ and be a jpg, png or webp. The alt text must really describe the picture, so it can't be empty or only a generic word.",
+      rule: "An image is { src, alt } with an optional focus: center, top, bottom, left or right. The file must exist under /images/ and be a jpg, png or webp. Each image slot has a shape (3:2, 4:3, 4:5, 1:1 or 16:9) and the picture is cropped to it; focus says which part to keep. The alt text must really describe the picture, so it can't be empty or only a generic word.",
       genericAltWords: [...GENERIC_ALT_WORDS],
+    },
+    files: {
+      folder: "/files/",
+      rule: "A link may point to a PDF under /files/ that exists, such as /files/price-sheet-k3x9q2mz.pdf. Visitors download it.",
     },
     video: {
       providers: [...providerNames],
@@ -102,10 +106,12 @@ function describeField(name, field) {
     if (field.min !== undefined) out.min = field.min;
     out.max = field.max;
   }
+  if (field.kind === "image") out.shape = field.shape;
   if (field.kind === "action") out.labelMax = field.labelMax;
   if (field.kind === "choice") out.options = [...field.options];
   if (field.kind === "list") {
     out.items = { min: field.min, max: field.max };
+    if (field.together !== undefined) out.together = [...field.together];
     out.of = describeField(undefined, field.of);
   }
   if (field.kind === "object") out.fields = Object.entries(field.fields).map(([n, f]) => describeField(n, f));
@@ -181,7 +187,7 @@ function limitsWords(f) {
     case "link":
       return "a link (see Page rules)";
     case "image":
-      return "a picture under /images/ with real alt text";
+      return `a picture under /images/ with real alt text, shape ${f.shape}`;
     case "video":
       return `a ${providerNames.join(" or ")} address`;
     case "boolean":
@@ -189,7 +195,7 @@ function limitsWords(f) {
     case "choice":
       return `one of ${f.options.map((o) => `"${o}"`).join(", ")}`;
     case "list": {
-      const count = `${f.items.min} to ${f.items.max} items`;
+      const count = `${f.items.min} to ${f.items.max} items${f.together ? ` (give every item ${f.together.join(" and ")}, or none)` : ""}`;
       return f.of.kind === "object" ? count : `${count}, each ${limitsWords(f.of)}`;
     }
     case "object":
@@ -225,6 +231,7 @@ function pageRulesMarkdown(r) {
   lines.push(`- **Text.** ${r.text}`);
   lines.push(`- **Links.** Allowed: ${r.links.allowed.join(" ")} Never: ${r.links.never.map((n) => `\`${n}\``).join(", ")}, or any other kind of address (a \`//host\` address has no scheme).`);
   lines.push(`- **Images.** ${r.images.rule} Formats: ${r.images.formats.join(", ")}. Alt text that is only one of these words is rejected: ${r.images.genericAltWords.join(", ")}.`);
+  lines.push(`- **Files.** ${r.files.rule}`);
   lines.push(`- **Video.** ${r.video.rule}`);
   lines.push("");
   return lines;

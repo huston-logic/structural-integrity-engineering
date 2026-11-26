@@ -6,6 +6,8 @@ import type { GitHub } from "./github.ts";
 
 const PAGES_DIR = "src/content/pages";
 const IMAGES_DIR = "public/images";
+const FILES_DIR = "public/files";
+const FILE_BLOB = /^public\/files\/[^/]+\.pdf$/;
 const PAGE_FILE = /^src\/content\/pages\/[^/]+\.json$/;
 
 export type ThanksLinks = readonly { where: string; href: string }[];
@@ -21,8 +23,18 @@ export interface Snapshot {
   broken: PageFile[];
   /** Image paths as pages write them: /images/... */
   images: Set<string>;
+  /** PDF paths as pages write them: /files/x.pdf (top level of public/files only). */
+  files: Set<string>;
   pagesTree: string;
   imagesTree: string;
+  filesTree: string;
+}
+
+/** Files a change would add: image values and PDF values as pages write them, and each new photo's upload name. */
+export interface Pending {
+  images: ReadonlySet<string>;
+  files: ReadonlySet<string>;
+  names: ReadonlyMap<string, string>;
 }
 
 export const isPageFile = (path: string): boolean => PAGE_FILE.test(path);
@@ -39,11 +51,14 @@ export async function readSite(github: GitHub): Promise<Snapshot> {
     fileOf: new Map(),
     broken: [],
     images: new Set(),
+    files: new Set(),
     pagesTree: entries.find((e) => e.type === "tree" && e.path === PAGES_DIR)?.sha ?? "none",
     imagesTree: entries.find((e) => e.type === "tree" && e.path === IMAGES_DIR)?.sha ?? "none",
+    filesTree: entries.find((e) => e.type === "tree" && e.path === FILES_DIR)?.sha ?? "none",
   };
   for (const entry of entries) {
     if (entry.type === "blob" && entry.path.startsWith(`${IMAGES_DIR}/`)) snapshot.images.add(entry.path.slice("public".length));
+    if (entry.type === "blob" && FILE_BLOB.test(entry.path)) snapshot.files.add(entry.path.slice("public".length));
   }
   const files = entries.filter((e) => e.type === "blob" && PAGE_FILE.test(e.path)).map((e) => e.path);
   const texts = await Promise.all(files.map((path) => github.fileAt(head.commit, path)));
@@ -67,10 +82,14 @@ export function validateSet(
   after: ReadonlyMap<string, unknown>,
   registry: readonly AnyBlockDefinition[],
   links: ThanksLinks,
+  pending?: Pending,
 ): string[] {
   const files: PageFile[] = [...snapshot.broken];
   for (const [path, data] of after) files.push({ file: snapshot.fileOf.get(path) ?? fileForPath(path), data });
-  return validatePages(files, registry, { imageExists: (src) => snapshot.images.has(src) }, { links });
+  return validatePages(files, registry, {
+      imageExists: (src) => snapshot.images.has(src) || (pending?.images.has(src) ?? false),
+      fileExists: (href) => snapshot.files.has(href) || (pending?.files.has(href) ?? false),
+    }, { links, ...(pending && pending.names.size > 0 ? { uploadNames: pending.names } : {}) });
 }
 
 /** The files to commit for the pages a change touched. */

@@ -35,11 +35,14 @@ export interface CheckRun {
   conclusion: string | null;
 }
 
+/** A file in a commit: text, or raw bytes (sent as a base64 blob first). */
+export type CommitFile = { path: string; content: string } | { path: string; bytes: Uint8Array };
+
 export interface GitHub {
   headOfMain(): Promise<{ commit: string; tree: string }>;
   tree(treeSha: string): Promise<TreeEntry[]>;
   fileAt(commit: string, path: string): Promise<string | null>;
-  createCommit(input: { baseCommit: string; files: { path: string; content: string }[]; message: string }): Promise<string>;
+  createCommit(input: { baseCommit: string; files: CommitFile[]; message: string }): Promise<string>;
   setBranch(name: string, sha: string): Promise<void>;
   deleteBranch(name: string): Promise<void>;
   /** The commit a branch points at, or null when there is no such branch. */
@@ -168,6 +171,13 @@ function decodeBase64Utf8(content: string): string {
   return new TextDecoder().decode(Uint8Array.from(binary, (c) => c.charCodeAt(0)));
 }
 
+/** Base64 of bytes, built in chunks so a large file never spreads into one huge argument list. */
+export function toBase64(bytes: Uint8Array): string {
+  let binary = "";
+  for (let i = 0; i < bytes.length; i += 0x8000) binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  return btoa(binary);
+}
+
 const AUTO_MERGE_MUTATION =
   "mutation($pullRequestId: ID!) { enablePullRequestAutoMerge(input: { pullRequestId: $pullRequestId, mergeMethod: SQUASH }) { pullRequest { number } } }";
 
@@ -282,14 +292,16 @@ export function createGitHub(opts: GitHubOptions): GitHub {
 
     async createCommit({ baseCommit, files, message }) {
       const baseTree = await commitTree(baseCommit);
-      const tree = asJson(
-        (
-          await call("create tree", "POST", `${repoPath}/git/trees`, {
-            base_tree: baseTree,
-            tree: files.map((file) => ({ path: file.path, mode: "100644", type: "blob", content: file.content })),
-          })
-        ).data,
-      );
+      const entries: Record<string, string>[] = [];
+      for (const file of files) {
+        if ("bytes" in file) {
+          const blob = asJson((await call("create blob", "POST", `${repoPath}/git/blobs`, { content: toBase64(file.bytes), encoding: "base64" })).data);
+          entries.push({ path: file.path, mode: "100644", type: "blob", sha: str(blob.sha) });
+        } else {
+          entries.push({ path: file.path, mode: "100644", type: "blob", content: file.content });
+        }
+      }
+      const tree = asJson((await call("create tree", "POST", `${repoPath}/git/trees`, { base_tree: baseTree, tree: entries })).data);
       const commit = asJson((await call("create commit", "POST", `${repoPath}/git/commits`, { message, tree: str(tree.sha), parents: [baseCommit] })).data);
       return str(commit.sha);
     },

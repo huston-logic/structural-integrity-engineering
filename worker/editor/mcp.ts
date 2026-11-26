@@ -6,7 +6,7 @@ import { isOwner } from "./access.ts";
 import { serverInstructions } from "./instructions.ts";
 import { ownerKey } from "./owner-id.ts";
 import { argumentProblems, findTool, tools } from "./tools.ts";
-import type { Editor, ToolResult } from "./types.ts";
+import type { Editor, ToolImage, ToolResult } from "./types.ts";
 
 /**
  * The MCP endpoint the owner's AI app talks to: stateless Streamable HTTP, one JSON-RPC message per POST, answered as
@@ -96,8 +96,8 @@ function initialize(params: unknown, config: EditorConfig): unknown {
   };
 }
 
-function toolResult(text: string, data: unknown, isError: boolean): unknown {
-  const result: Record<string, unknown> = { content: [{ type: "text", text }], isError };
+function toolResult(text: string, data: unknown, isError: boolean, images: ToolImage[] = []): unknown {
+  const result: Record<string, unknown> = { content: [{ type: "text", text }, ...images.map((image) => ({ type: "image", data: image.data, mimeType: image.mimeType }))], isError };
   if (typeof data === "object" && data !== null && !Array.isArray(data)) result.structuredContent = data;
   return result;
 }
@@ -115,5 +115,5 @@ async function callTool(params: unknown, ctx: McpContext): Promise<unknown> {
     log("editor_tool_failed", { tool: tool.name, errorName: caught instanceof Error ? caught.name : "unknown" });
     return toolResult(FAILED, undefined, true);
   }
-  return toolResult(result.text, result.data, result.isError === true);
+  return toolResult(result.text, result.data, result.isError === true, result.images);
 }

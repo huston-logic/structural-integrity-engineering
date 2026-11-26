@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { formatTime, renderConfirm, renderConsent, renderMessage, renderOwnerHome, type PageBase } from "./owner-page.ts";
+import { formatTime, renderConfirm, renderConsent, renderMessage, renderOwnerHome, renderRemoveConfirm, type PageBase } from "./owner-page.ts";
 
 const base: PageBase = {
   siteName: "Example Co",
@@ -8,7 +8,7 @@ const base: PageBase = {
   email: "owner@example.test",
   theme: { white: "#ffffff", ink: "#1c1917", ink2: "#44403c", silver: "#f5f5f4", silver2: "#e7e5e4", green: "#1e4fa3", greenDeep: "#173b7a", rust: "#9a3412", line: "#d6d3d1", tint: "#e8eefa" },
 };
-const proposal = { id: "p1", summary: "Update hours", createdAt: "2026-01-01T12:00:00.000Z", changeList: "Page /about", previewLink: "https://preview.example.test" };
+const proposal = { id: "p1", summary: "Update hours", createdAt: "2026-01-01T12:00:00.000Z", changeList: "Page /about", previewLink: "https://preview.example.test", uploads: [] };
 
 const pages = {
   home: renderOwnerHome({
@@ -97,4 +97,44 @@ test("consent: names the client and the host, and has Allow and Don't allow", ()
   assert.match(pages.consent, /value="allow">Allow</);
   assert.match(pages.consent, /value="deny">Don't allow</);
   assert.match(pages.consent, /Nothing goes live until you say yes in the chat\./);
+});
+
+test("uploads section: cards, tags, escaping, empty state and the confirm thumbnails", () => {
+  const upload = { id: "up000001", name: "<img src=x onerror=1>", kind: "photo" as const, bytes: 102_400, uploadedAt: "2026-01-01T12:00:00.000Z", expiresAt: "2026-01-31T12:00:00.000Z", onSite: true };
+  const doc = { id: "up000002", name: "Price sheet", kind: "pdf" as const, bytes: 240_000, pages: 3, uploadedAt: "2026-01-01T12:00:00.000Z", expiresAt: "2026-01-02T12:00:00.000Z", onSite: false };
+  const limits = { photoBytes: 20_000_000, pdfBytes: 10_000_000, expireDays: 30 };
+  const now = "2026-01-01T12:00:00.000Z";
+  const home = renderOwnerHome({ ...base, proposals: [], changes: [], uploads: { items: [upload, doc], limits, now } });
+  assert.doesNotMatch(home, /<img src=x/);
+  assert.match(home, /<img src="\/owner\/uploads\/up000001\/preview" alt="" /);
+  assert.match(home, /<h3>&lt;img src=x onerror=1&gt;<\/h3>/);
+  assert.match(home, /<summary class="btn">Rename<span class="sr"> Price sheet<\/span><\/summary>/);
+  assert.match(home, /PDF \u00B7 240 KB \u00B7 3 pages \u00B7 Removed in 1 day/);
+  assert.match(home, /<span class="tag">On your site<\/span>/);
+  assert.match(home, /Removed in 30 days/);
+  assert.match(home, /href="\/owner\/uploads\/remove\?upload=up000002" aria-label="Remove: Price sheet"/);
+  assert.equal(home.match(/<script/g)?.length, 1);
+  assert.equal(home.match(/<h1[ >]/g)?.length, 1);
+  const empty = renderOwnerHome({ ...base, proposals: [], changes: [], uploads: { items: [], limits, now } });
+  assert.match(empty, /<p id="upload-empty">Nothing uploaded yet\.<\/p>/);
+  assert.match(empty, /id="upload-grid" role="list" hidden>/);
+  const confirm = renderConfirm({ ...base, proposal: { ...proposal, uploads: [{ id: "up000001", name: "Team", kind: "photo" }, { id: "up000002", name: "Price sheet", kind: "pdf" }] } });
+  assert.match(confirm, /<img src="\/owner\/uploads\/up000001\/preview" alt="" /);
+  assert.match(confirm, /<p>Team<\/p>/);
+  assert.match(confirm, /<span>PDF<\/span><\/div><p>Price sheet<\/p>/);
+  assert.doesNotMatch(renderConfirm({ ...base, proposal }), /Photos and files/);
+  const remove = renderRemoveConfirm({ ...base, upload });
+  assert.match(remove, /action="\/owner\/uploads\/remove"/);
+  assert.doesNotMatch(remove, /<img src=x/);
+});
+
+test("no-JS upload results: labelled, focusable, alert only when a file failed, names read once", () => {
+  const limits = { photoBytes: 20_000_000, pdfBytes: 10_000_000, expireDays: 30 };
+  const now = "2026-01-01T12:00:00.000Z";
+  const good = renderOwnerHome({ ...base, proposals: [], changes: [], uploads: { items: [], limits, now, results: [{ name: "a.jpg", ok: true, message: "Uploaded \u201CShop front\u201D." }] } });
+  assert.match(good, /id="upload-results" tabindex="-1" role="status" aria-labelledby="upload-results-title"><h3 id="upload-results-title">Upload results<\/h3>/);
+  assert.match(good, /<li>Uploaded \u201CShop front\u201D\.<\/li>/);
+  const bad = renderOwnerHome({ ...base, proposals: [], changes: [], uploads: { items: [], limits, now, results: [{ name: "x.mp4", ok: false, message: "Videos can't be uploaded here." }] } });
+  assert.match(bad, /role="alert"/);
+  assert.match(bad, /\u201Cx\.mp4\u201D was not uploaded\. Videos/);
 });

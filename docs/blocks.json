@@ -112,7 +112,7 @@
         "png",
         "webp"
       ],
-      "rule": "An image is { src, alt }. The file must exist under /images/ and be a jpg, png or webp. The alt text must really describe the picture, so it can't be empty or only a generic word.",
+      "rule": "An image is { src, alt } with an optional focus: center, top, bottom, left or right. The file must exist under /images/ and be a jpg, png or webp. Each image slot has a shape (3:2, 4:3, 4:5, 1:1 or 16:9) and the picture is cropped to it; focus says which part to keep. The alt text must really describe the picture, so it can't be empty or only a generic word.",
       "genericAltWords": [
         "image",
         "img",
@@ -128,6 +128,10 @@
         "untitled",
         "placeholder"
       ]
+    },
+    "files": {
+      "folder": "/files/",
+      "rule": "A link may point to a PDF under /files/ that exists, such as /files/price-sheet-k3x9q2mz.pdf. Visitors download it."
     },
     "video": {
       "providers": [
@@ -233,7 +237,7 @@
     {
       "type": "highlights",
       "title": "Highlights",
-      "description": "A heading and a set of short ideas, each with a title and a few lines of text. Good for services, reasons or features.",
+      "description": "A heading and a set of short ideas, each with a title and a few lines of text, and optionally a photo above each. Good for services, reasons or features.",
       "source": "library",
       "variants": [
         {
@@ -277,6 +281,9 @@
             "min": 2,
             "max": 9
           },
+          "together": [
+            "image"
+          ],
           "of": {
             "kind": "object",
             "label": "Idea",
@@ -295,6 +302,14 @@
                 "label": "Text",
                 "required": true,
                 "max": 280
+              },
+              {
+                "name": "image",
+                "kind": "image",
+                "label": "Photo",
+                "help": "Cropped to a 3 by 2 shape. Give every idea a photo, or none.",
+                "required": false,
+                "shape": "3:2"
               }
             ]
           }
@@ -806,7 +821,8 @@
           "kind": "image",
           "label": "Cover picture",
           "help": "Shown before play. Without one the video shows a plain dark panel.",
-          "required": false
+          "required": false,
+          "shape": "16:9"
         }
       ],
       "example": {
@@ -893,7 +909,8 @@
                 "name": "poster",
                 "kind": "image",
                 "label": "Cover picture",
-                "required": false
+                "required": false,
+                "shape": "16:9"
               }
             ]
           }
@@ -916,6 +933,218 @@
             "url": "https://youtu.be/aqz-KE-bpKQ",
             "title": "A short title for the third video",
             "caption": "A sentence about the third video."
+          }
+        ]
+      }
+    },
+    {
+      "type": "photo-text",
+      "title": "Photo with text",
+      "description": "One photo beside a heading, a few paragraphs and an optional button. Good for an about section, a place or a service.",
+      "source": "library",
+      "variants": [
+        {
+          "name": "photo-start",
+          "description": "The photo sits on the left on wide screens, the text on the right. On phones the photo is above the text.",
+          "default": true
+        },
+        {
+          "name": "photo-end",
+          "description": "The photo sits on the right on wide screens, the text on the left. On phones the photo is above the text.",
+          "default": false
+        }
+      ],
+      "placement": {
+        "position": "any",
+        "maxPerPage": 4,
+        "rhythm": "section",
+        "joinsHero": false
+      },
+      "motion": {
+        "entrance": "default",
+        "reason": null,
+        "signature": null
+      },
+      "fixedAnchor": null,
+      "interactive": null,
+      "fields": [
+        {
+          "name": "image",
+          "kind": "image",
+          "label": "Photo",
+          "help": "Cropped to a 4 by 3 shape.",
+          "required": true,
+          "shape": "4:3"
+        },
+        {
+          "name": "heading",
+          "kind": "text",
+          "label": "Heading",
+          "required": true,
+          "max": 90
+        },
+        {
+          "name": "paragraphs",
+          "kind": "list",
+          "label": "Paragraphs",
+          "required": true,
+          "items": {
+            "min": 1,
+            "max": 4
+          },
+          "of": {
+            "kind": "text",
+            "label": "Paragraph",
+            "required": true,
+            "max": 600
+          }
+        },
+        {
+          "name": "action",
+          "kind": "action",
+          "label": "Button",
+          "required": false,
+          "labelMax": 40
+        }
+      ],
+      "example": {
+        "image": {
+          "src": "/images/examples/vase-and-pears.jpg",
+          "alt": "Abstract still life: a pale vase and two pears in soft window light"
+        },
+        "heading": "A short heading that says what the photo is about",
+        "paragraphs": [
+          "A few sentences that tell the story behind the photo in plain words.",
+          "A second paragraph for the detail a visitor would ask about next."
+        ],
+        "action": {
+          "label": "A short button label",
+          "href": "/contact-us"
+        }
+      }
+    },
+    {
+      "type": "gallery",
+      "title": "Photo gallery",
+      "description": "Two to twelve photos in a grid, each with an optional caption. The photos do not open larger.",
+      "source": "library",
+      "variants": [
+        {
+          "name": "three-column",
+          "description": "The photos sit three across on wide screens and two across on tablets and phones.",
+          "default": true
+        },
+        {
+          "name": "two-column",
+          "description": "The photos sit two across on wide screens and tablets, and one across on phones.",
+          "default": false
+        }
+      ],
+      "placement": {
+        "position": "any",
+        "maxPerPage": 2,
+        "rhythm": "section",
+        "joinsHero": false
+      },
+      "motion": {
+        "entrance": "default",
+        "reason": null,
+        "signature": null
+      },
+      "fixedAnchor": null,
+      "interactive": null,
+      "fields": [
+        {
+          "name": "heading",
+          "kind": "text",
+          "label": "Heading",
+          "help": "Names the group of photos for everyone, including screen reader users.",
+          "required": true,
+          "max": 90
+        },
+        {
+          "name": "intro",
+          "kind": "text",
+          "label": "Introduction",
+          "required": false,
+          "max": 280
+        },
+        {
+          "name": "photos",
+          "kind": "list",
+          "label": "Photos",
+          "required": true,
+          "items": {
+            "min": 2,
+            "max": 12
+          },
+          "of": {
+            "kind": "object",
+            "label": "Photo",
+            "required": true,
+            "fields": [
+              {
+                "name": "image",
+                "kind": "image",
+                "label": "Photo",
+                "help": "Cropped to a 3 by 2 shape.",
+                "required": true,
+                "shape": "3:2"
+              },
+              {
+                "name": "caption",
+                "kind": "text",
+                "label": "Caption",
+                "required": false,
+                "max": 140
+              }
+            ]
+          }
+        }
+      ],
+      "example": {
+        "heading": "A short heading that names the photos",
+        "intro": "A sentence that says what the photos show.",
+        "photos": [
+          {
+            "image": {
+              "src": "/images/examples/vase-and-pears.jpg",
+              "alt": "Abstract still life: a pale vase and two pears in soft window light"
+            },
+            "caption": "A short caption for the first photo."
+          },
+          {
+            "image": {
+              "src": "/images/examples/bowl-and-lemons.jpg",
+              "alt": "Abstract still life: a shallow bowl with three lemons on a pale table"
+            },
+            "caption": "A short caption for the second photo."
+          },
+          {
+            "image": {
+              "src": "/images/examples/jug-and-cups.jpg",
+              "alt": "Abstract still life: a tall jug beside two small cups in morning light"
+            }
+          },
+          {
+            "image": {
+              "src": "/images/examples/stacked-books.jpg",
+              "alt": "Abstract still life: a stack of books with a round glass paperweight on top"
+            },
+            "caption": "A short caption for the fourth photo."
+          },
+          {
+            "image": {
+              "src": "/images/examples/candle-and-plate.jpg",
+              "alt": "Abstract still life: a candle in front of a plate, with a long soft shadow"
+            },
+            "caption": "A short caption for the fifth photo."
+          },
+          {
+            "image": {
+              "src": "/images/examples/window-light.jpg",
+              "alt": "Abstract still life: a round stool and a plant pot beneath a bright window"
+            }
           }
         ]
       }
@@ -973,7 +1202,8 @@
           "kind": "image",
           "label": "Photo",
           "help": "The dusk house photo. The line drawing is drawn for this picture, so keep it.",
-          "required": true
+          "required": true,
+          "shape": "4:5"
         },
         {
           "name": "labels",
@@ -1069,7 +1299,8 @@
           "kind": "image",
           "label": "Photo",
           "help": "A new photo needs a line in src/content/photos.ts.",
-          "required": true
+          "required": true,
+          "shape": "3:2"
         },
         {
           "name": "drawing",
@@ -1144,7 +1375,8 @@
           "kind": "image",
           "label": "Hero photo",
           "help": "A 3:2 photo. A new photo needs a line in src/content/photos.ts.",
-          "required": true
+          "required": true,
+          "shape": "3:2"
         },
         {
           "name": "drawing",
@@ -1465,7 +1697,8 @@
                 "kind": "image",
                 "label": "Photo",
                 "help": "A 4:5 crop. A new photo needs a line in src/content/photos.ts.",
-                "required": true
+                "required": true,
+                "shape": "4:5"
               }
             ]
           }
@@ -2109,8 +2342,9 @@
           "of": {
             "kind": "image",
             "label": "Photo",
-            "help": "A new photo needs a line in src/content/photos.ts.",
-            "required": true
+            "help": "Two photos are trimmed to 4:5 each; a single photo shows at 4:3. A new photo needs a line in src/content/photos.ts.",
+            "required": true,
+            "shape": "4:5"
           }
         }
       ],
@@ -2281,8 +2515,9 @@
           "name": "photo",
           "kind": "image",
           "label": "Portrait",
-          "help": "A new photo needs a line in src/content/photos.ts.",
-          "required": true
+          "help": "Shown whole, not trimmed: a portrait close to 4:5 (the current one is 3:4) keeps the layout. A new photo needs a line in src/content/photos.ts.",
+          "required": true,
+          "shape": "4:5"
         }
       ],
       "example": {
@@ -2345,7 +2580,8 @@
               "kind": "image",
               "label": "Wide photo",
               "help": "A 3:2 photo. A new photo needs a line in src/content/photos.ts.",
-              "required": true
+              "required": true,
+              "shape": "3:2"
             }
           ]
         },

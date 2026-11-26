@@ -19,7 +19,7 @@ export const videoGridDefinition = defineBlock({
           url: { kind: "video", label: "Video address", help: "A YouTube or Vimeo address." },
           title: { kind: "text", label: "Title", max: 80 },
           caption: { kind: "text", label: "Caption", max: 200, required: false },
-          poster: { kind: "image", label: "Cover picture", required: false },
+          poster: { kind: "image", shape: "16:9", label: "Cover picture", required: false },
         },
       },
     },

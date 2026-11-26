@@ -101,11 +101,55 @@ function editorProblems(c) {
   return problems;
 }
 
+const UPLOAD_TYPES = ["jpeg", "png", "webp", "heic", "pdf"];
+const MAX_PHOTO_BYTES = 20_000_000; // the Images binding's input limit
+const MAX_PDF_BYTES = 10_000_000; // the scope check's PDF cap (scripts/change-scope-rules.mjs)
+const BUCKET_NAME = /^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$/;
+
+/**
+ * Problems with `editor.uploads` (the owner's photo and PDF inbox). Nothing is checked while the block is missing. The
+ * numbers are checked whether or not uploads are on; the bucket and the editor only matter once they are.
+ */
+function uploadsProblems(c) {
+  const u = c.editor?.uploads;
+  if (u === undefined || u === null) return [];
+  const problems = [];
+  const need = (path, message) => problems.push(`site.config.ts  editor.uploads.${path} ${message}`);
+  const whole = (value) => Number.isInteger(value) && value >= 1;
+  const names = UPLOAD_TYPES.map((t) => `"${t}"`).join(", ");
+
+  for (const [key, cap] of [["maxPhotoBytes", MAX_PHOTO_BYTES], ["maxPdfBytes", MAX_PDF_BYTES], ["maxTotalBytes", null], ["maxPerDay", null]]) {
+    if (!whole(u[key])) need(key, `must be a whole number of at least 1, not ${JSON.stringify(u[key])}`);
+    else if (cap !== null && u[key] > cap) need(key, `is over the ${cap}-byte limit (${JSON.stringify(u[key])})`);
+  }
+  if (!whole(u.expireDays) || u.expireDays > 90) need("expireDays", `must be a whole number from 1 to 90, not ${JSON.stringify(u.expireDays)}`);
+
+  if (!Array.isArray(u.types) || u.types.length === 0) {
+    need("types", `needs at least one of ${names}`);
+  } else {
+    const seen = new Set();
+    for (const type of u.types) {
+      if (!UPLOAD_TYPES.includes(type)) need("types", `has ${JSON.stringify(type)}, which is not one of ${names}`);
+      else if (seen.has(type)) need("types", `lists ${JSON.stringify(type)} more than once`);
+      seen.add(type);
+    }
+  }
+
+  if (u.enabled === true) {
+    if (c.editor?.enabled !== true) need("enabled", "is true, but editor.enabled is not. Uploads exist only for the owner's editor, so turn the editor on first");
+    if (typeof u.bucket !== "string" || !BUCKET_NAME.test(u.bucket)) {
+      need("bucket", `must be an R2 bucket name (3 to 63 lowercase letters, digits and dashes, starting and ending with a letter or digit), not ${JSON.stringify(u.bucket)}`);
+    }
+  }
+  return problems;
+}
+
 /** The text of wrangler.jsonc, generated from site.config.ts. Editor bindings appear only when editor.enabled is true. */
 export function wranglerText(c) {
   const { limit, periodSeconds } = c.contact.rateLimit;
   const ids = c.contact.rateLimitIds;
   const editor = c.editor?.enabled === true ? c.editor : null;
+  const uploads = editor && editor.uploads?.enabled === true ? editor.uploads : null;
   const secrets = [...secretsFor(c.contact), ...(editor ? ["GITHUB_APP_PRIVATE_KEY"] : [])];
   const rate = (name, id, lim, period) => `{ "name": "${name}", "namespace_id": "${id}", "simple": { "limit": ${lim}, "period": ${period} } }`;
   const contactRate = (id) => rate("CONTACT_RATE_LIMIT", id, limit, periodSeconds);
@@ -116,6 +160,13 @@ export function wranglerText(c) {
     { "binding": "OAUTH_KV", "id": "${editor.kv.oauth}" },
     { "binding": "EDITOR_KV", "id": "${editor.kv.editor}" }
   ],
+`
+    : "";
+  const uploadBindings = uploads
+    ? `  // The owner's photo and PDF inbox: a private R2 bucket (docs/EDITING.md).
+  "r2_buckets": [{ "binding": "UPLOADS", "bucket_name": "${uploads.bucket}" }],
+  // Resizes and converts uploaded photos to WebP.
+  "images": { "binding": "IMAGES" },
 `
     : "";
   const ratelimits = editor
@@ -141,7 +192,7 @@ export function wranglerText(c) {
   "secrets": {
     "required": [${secrets.map((name) => `"${name}"`).join(", ")}]
   },
-${kv}  "ratelimits": ${ratelimits},
+${kv}${uploadBindings}  "ratelimits": ${ratelimits},
   // Invocation logs would store request metadata; the Worker's own log lines hold no personal data.
   "observability": { "enabled": true, "logs": { "invocation_logs": false } },
   // Worker Previews (branch previews) do not inherit the settings above, so they are repeated here.
@@ -175,7 +226,7 @@ export function configProblems(c) {
   const ids = contact.rateLimitIds;
   if (!ids || typeof ids !== "object") {
     problems.push("site.config.ts  contact.rateLimitIds is missing. Set { production, preview } to two whole numbers from docs/HOSTING.md");
-    return [...problems, ...editorProblems(c)];
+    return [...problems, ...editorProblems(c), ...uploadsProblems(c)];
   }
   let numeric = true;
   for (const key of ["production", "preview"]) {
@@ -200,5 +251,5 @@ export function configProblems(c) {
       }
     }
   }
-  return [...problems, ...editorProblems(c)];
+  return [...problems, ...editorProblems(c), ...uploadsProblems(c)];
 }
