@@ -13,16 +13,16 @@ import { turnstileSiteKey, useTurnstile } from "./useTurnstile";
 type Errors = Partial<Record<ContactField, string>>;
 type SendError = keyof typeof noteForm.sendErrors;
 
-const label = "block text-[15px] font-semibold text-snow";
+const label = "block text-label font-semibold text-snow";
 const control =
-  "mt-2 block w-full rounded-field border border-mist bg-night px-[14px] text-[17px] text-snow [color-scheme:dark] placeholder:text-mist focus:border-amber aria-[invalid=true]:border-error";
+  "mt-2 block w-full rounded-field border border-mist bg-night px-3.5 text-control text-snow scheme-dark placeholder:text-mist focus:border-amber aria-[invalid=true]:border-error";
 
 function ErrorLine({ id, message }: { id: string; message?: string }) {
   return (
     <div id={id} aria-live="polite">
       {message ? (
-        <p className="mt-2 flex items-start gap-2 text-[15px] text-error">
-          <svg aria-hidden="true" viewBox="0 0 16 16" className="mt-[3px] size-4 shrink-0" fill="none" stroke="currentColor" strokeWidth="1.75">
+        <p className="mt-2 flex items-start gap-2 text-label text-error">
+          <svg aria-hidden="true" viewBox="0 0 16 16" className="mt-0.75 size-4 shrink-0" fill="none" stroke="currentColor" strokeWidth="1.75">
             <circle cx="8" cy="8" r="6.25" />
           </svg>
           {message}
@@ -143,9 +143,9 @@ export function ContactForm() {
           {spec.label}
         </label>
         {spec.kind === "textarea" ? (
-          <textarea {...shared} rows={6} className={`${control} min-h-[160px] py-3`} />
+          <textarea {...shared} rows={6} className={`${control} min-h-40 py-3`} />
         ) : (
-          <input {...shared} type={spec.kind} className={`${control} h-[52px]`} />
+          <input {...shared} type={spec.kind} className={`${control} h-13`} />
         )}
         <ErrorLine id={`${id}-error`} message={error} />
       </div>
@@ -160,7 +160,7 @@ export function ContactForm() {
   return (
     <div className="rounded-panel bg-dusk-deep p-5 sm:p-6 md:p-9">
       <form ref={formRef} method="post" noValidate aria-label={noteForm.formLabel} onSubmit={submit} onFocus={startTurnstile} className="space-y-6">
-        <p className="text-[15px] text-mist">{noteForm.requiredNote}</p>
+        <p className="text-label text-mist">{noteForm.requiredNote}</p>
         <div className="grid gap-6 sm:grid-cols-2">{contactFields.map(renderField)}</div>
 
         {/* Spam trap: hidden from people and screen readers, out of the tab order. A filled value is refused. */}
@@ -182,7 +182,7 @@ export function ContactForm() {
           </button>
         </div>
 
-        <div role="status">{sendMessage ? <p className="text-[15px] text-error">{sendMessage}</p> : null}</div>
+        <div role="status">{sendMessage ? <p className="text-label text-error">{sendMessage}</p> : null}</div>
       </form>
     </div>
   );

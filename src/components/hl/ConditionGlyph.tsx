@@ -1,5 +1,7 @@
 import type { ReactNode } from "react";
-import type { ConditionGlyphName } from "@/content/home";
+
+/** The four design conditions; each has one amber line glyph. */
+export type ConditionGlyphName = "snow" | "wind" | "seismic" | "temperature";
 
 /** The four design-condition glyphs from the option G reference (64 x 40, 2px amber strokes, round caps). */
 const glyphs: Record<ConditionGlyphName, ReactNode> = {

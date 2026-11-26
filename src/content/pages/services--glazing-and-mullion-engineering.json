@@ -1,0 +1,82 @@
+{
+  "path": "/services/glazing-and-mullion-engineering",
+  "title": "Glazing engineering | Structural Integrity Engineering",
+  "description": "Stamped calculation packages and redlines for storefront and curtainwall systems. Fast, accurate and affordable.",
+  "status": "live",
+  "blocks": [
+    {
+      "type": "service-hero",
+      "content": {
+        "title": "Glazing engineering",
+        "intro": "Stamped calculation packages and redlines for storefront and curtainwall systems. Fast, accurate and affordable.",
+        "overview": "We engineer aluminum glazing, storefront and curtainwall mullion systems so they meet design loads and install cleanly in the field. Our packages focus on deflection control, anchorage, seismic drift compatibility and thermal expansion, backed by concise redlines and calculations.",
+        "photo": {
+          "src": "/images/curtain-wall-900.jpg",
+          "alt": "Looking up at the glass curtain wall of a tall building, with the sky and clouds reflected in the panels."
+        },
+        "drawing": "glazing"
+      }
+    },
+    {
+      "type": "what-we-do",
+      "content": {
+        "heading": "What we do",
+        "items": [
+          {
+            "title": "Storefront systems"
+          },
+          {
+            "title": "Curtainwall components"
+          },
+          {
+            "title": "Glass strength"
+          },
+          {
+            "title": "Sunshades"
+          }
+        ],
+        "photos": [
+          {
+            "src": "/images/storefront-dusk-800.jpg",
+            "alt": "A glass building facade at dusk, its metal framing lines catching the last purple and orange light."
+          },
+          {
+            "src": "/images/louvers-560.jpg",
+            "alt": "Close view of a glass facade with angled metal louvers running up the building."
+          }
+        ]
+      }
+    },
+    {
+      "type": "split-list",
+      "content": {
+        "heading": "What you get",
+        "items": [
+          "Concise redlines on your plans, with a stamped calculation package when your building department requires one.",
+          "Clear assumptions, schedules and early RFIs to keep the project moving.",
+          "Coordination during design, revisions for plan check comments, and answers to RFIs during construction."
+        ]
+      }
+    },
+    {
+      "type": "how-we-work-teaser",
+      "content": {
+        "heading": "How we work",
+        "href": "/services",
+        "stepTitle": "Share your plans",
+        "stepBody": "Send your preliminary drawings and we'll review the scope, ask the right questions and outline what a permit-ready package needs."
+      }
+    },
+    {
+      "type": "contact-band",
+      "content": {
+        "heading": "Ready to get started?",
+        "body": "Quick replies, clean drawings, and fair pricing.",
+        "action": {
+          "label": "Request a quote",
+          "href": "/contact-us"
+        }
+      }
+    }
+  ]
+}

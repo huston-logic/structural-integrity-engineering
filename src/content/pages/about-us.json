@@ -1,0 +1,61 @@
+{
+  "path": "/about-us",
+  "title": "About Dylan Gassmann | Structural Integrity Engineering",
+  "description": "Responsive communication, modern tools and permit-ready plans you can build on.",
+  "status": "live",
+  "blocks": [
+    {
+      "type": "page-hero",
+      "content": {
+        "title": "Structural design, simplified.",
+        "intro": "Responsive communication, modern tools and permit-ready plans you can build on.",
+        "drawing": "about"
+      }
+    },
+    {
+      "type": "statement",
+      "content": {
+        "text": "Structural Integrity Engineering is a structural engineering practice specializing in custom residential design, low-rise commercial projects and glazing and mullion engineering. We provide fast, accurate and affordable permit-ready drawings and calculations for builders, architects and homeowners in Colorado."
+      }
+    },
+    {
+      "type": "profile",
+      "content": {
+        "heading": "Meet our principal engineer",
+        "body": "Dylan Gassmann is the founder and principal engineer of Structural Integrity Engineering. Based in Colorado Springs, he brings a decade of hands-on experience in structural engineering for residential and commercial projects. He believes great engineering should move projects forward: quickly, clearly and affordably.",
+        "photo": {
+          "src": "/images/dylan-portrait.jpg",
+          "alt": "Portrait of Dylan Gassmann, principal engineer, smiling in front of a brick wall."
+        }
+      }
+    },
+    {
+      "type": "standard-and-mission",
+      "content": {
+        "standard": {
+          "heading": "One standard",
+          "line": "Licensed in Colorado and Alaska.",
+          "photo": {
+            "src": "/images/colorado-pikes-peak.jpg",
+            "alt": "A snow-dusted mountain rising above a line of evergreen trees under a pale blue sky."
+          }
+        },
+        "mission": {
+          "heading": "Our mission",
+          "body": "To ensure the integrity and performance of every structure we design, combining technical excellence with practical efficiency."
+        }
+      }
+    },
+    {
+      "type": "contact-band",
+      "content": {
+        "heading": "Ready to get started?",
+        "body": "Quick replies, clean drawings, and fair pricing.",
+        "action": {
+          "label": "Request a quote",
+          "href": "/contact-us"
+        }
+      }
+    }
+  ]
+}

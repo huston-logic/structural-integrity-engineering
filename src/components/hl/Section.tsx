@@ -15,7 +15,7 @@ type SectionProps = {
 };
 
 const tones = { dusk: "bg-dusk", deep: "bg-dusk-deep" } as const;
-const spacings = { default: "py-20 md:py-[104px]", compact: "py-16 md:py-[88px]" } as const;
+const spacings = { default: "py-20 md:py-26", compact: "py-16 md:py-22" } as const;
 
 /** A full-width band of the page with the page column inside. */
 export function Section({ children, tone = "dusk", spacing = "default", id, labelledBy, className = "" }: SectionProps) {

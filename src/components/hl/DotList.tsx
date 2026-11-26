@@ -6,7 +6,7 @@ export function DotList({ items, className = "" }: { items: readonly string[]; c
     <ul className={`space-y-3 ${className}`}>
       {items.map((item) => (
         <li key={item} className="flex gap-3">
-          <span aria-hidden="true" className="mt-[0.65em] size-[7px] shrink-0 rounded-pill bg-amber" />
+          <span aria-hidden="true" className="mt-dot size-1.75 shrink-0 rounded-pill bg-amber" />
           <span>
             <Text>{item}</Text>
           </span>

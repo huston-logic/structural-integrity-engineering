@@ -1,0 +1,78 @@
+{
+  "path": "/services/low-rise-commercial-structural-design",
+  "title": "Commercial design | Structural Integrity Engineering",
+  "description": "Permit-ready engineering for retail, office buildings and tenant improvements.",
+  "status": "live",
+  "blocks": [
+    {
+      "type": "service-hero",
+      "content": {
+        "title": "Commercial design",
+        "intro": "Permit-ready engineering for retail, office buildings and tenant improvements.",
+        "overview": "We engineer low-rise commercial projects that meet submittal requirements and install cleanly in the field. From new builds to tenant improvements, our plans put constructability, clear connection details and fast turnaround first, so schedules hold and budgets stay in control.",
+        "photo": {
+          "src": "/images/commercial-crane-900.jpg",
+          "alt": "A multi-story wood-framed building under construction, wrapped in house wrap, with a yellow tower crane above it."
+        },
+        "drawing": "commercial"
+      }
+    },
+    {
+      "type": "what-we-do",
+      "content": {
+        "heading": "What we do",
+        "items": [
+          {
+            "title": "Retail and office"
+          },
+          {
+            "title": "Tenant improvements"
+          },
+          {
+            "title": "Pre-engineered metal building (PEMB) foundations"
+          },
+          {
+            "title": "Foundations and site structures"
+          }
+        ],
+        "photos": [
+          {
+            "src": "/images/steel-frame-800.jpg",
+            "alt": "Aerial view of a steel frame building under construction, with workers on lifts and the shadows of the beams on the ground."
+          }
+        ]
+      }
+    },
+    {
+      "type": "split-list",
+      "content": {
+        "heading": "What you get",
+        "items": [
+          "Permit-ready structural and foundation plans (PDF), with a calculation package when your building department requires one.",
+          "Clear assumptions, schedules and early RFIs to keep the project moving.",
+          "Coordination with your architect or contractor from schematic design to final inspection, with timely revisions for plan check comments and RFIs."
+        ]
+      }
+    },
+    {
+      "type": "how-we-work-teaser",
+      "content": {
+        "heading": "How we work",
+        "href": "/services",
+        "stepTitle": "Share your plans",
+        "stepBody": "Send drawings, sketches or site photos. We review the scope, ask the right questions and outline what a permit-ready package needs."
+      }
+    },
+    {
+      "type": "contact-band",
+      "content": {
+        "heading": "Ready to get started?",
+        "body": "Quick replies, clean drawings, and fair pricing.",
+        "action": {
+          "label": "Request a quote",
+          "href": "/contact-us"
+        }
+      }
+    }
+  ]
+}

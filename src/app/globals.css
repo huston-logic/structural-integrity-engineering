@@ -6,6 +6,16 @@
   --ease-site: cubic-bezier(0.22, 1, 0.36, 1);
   --duration-feedback: 150ms;
   --duration-panel: 200ms;
+  --duration-underline: 500ms;
+  --ease-underline: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --duration-nudge: 150ms;
+  --ease-hover: ease-out;
+  --duration-draw: 1200ms;
+  --ease-draw: cubic-bezier(0.55, 0, 0.2, 1);
+  --duration-draw-fade: 700ms;
+  --duration-draw-push: 600ms;
+  --motion-enter-distance: 16px;
+  --duration-enter: 600ms;
 
   --default-transition-duration: var(--duration-feedback);
   --default-transition-timing-function: var(--ease-site);

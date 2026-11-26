@@ -23,7 +23,7 @@ export function Faq({ items }: FaqProps) {
                 <circle cx="10" cy="10" r="4" fill="var(--hl-amber)" className="opacity-0 group-open:opacity-100" />
               </svg>
             </summary>
-            <p className="max-w-[66ch] pb-6 text-mist">
+            <p className="max-w-answer pb-6 text-mist">
               <Text>{item.answer}</Text>
             </p>
           </details>

@@ -1,0 +1,2527 @@
+{
+  "version": 1,
+  "generatedBy": "npm run blocks:catalog",
+  "pageRules": {
+    "pageFile": "One file per page in src/content/pages/. home.json is the home page (/); every other file is named after its path (about-us.json is /about-us); for a path with two levels the / is written as -- (services--glazing.json is /services/glazing). Paths are lowercase words joined by hyphens, one or two levels deep, and each is used once.",
+    "pageKeys": [
+      {
+        "key": "path",
+        "required": true,
+        "rule": "\"/\" or a one-segment path like \"/services\". Must match the file name."
+      },
+      {
+        "key": "title",
+        "required": true,
+        "rule": "The page's search-result title, 1 to 70 characters."
+      },
+      {
+        "key": "description",
+        "required": true,
+        "rule": "The page's search-result description, 1 to 170 characters."
+      },
+      {
+        "key": "status",
+        "required": true,
+        "rule": "\"live\" or \"archived\"."
+      },
+      {
+        "key": "menu",
+        "required": false,
+        "rule": "Where the page appears in the menu: { label, order, places }."
+      },
+      {
+        "key": "blocks",
+        "required": true,
+        "rule": "The page's sections, in order: at most 20."
+      }
+    ],
+    "menuKeys": [
+      {
+        "key": "label",
+        "required": true,
+        "rule": "The words in the menu, 1 to 24 characters."
+      },
+      {
+        "key": "order",
+        "required": true,
+        "rule": "A number; lower numbers come first."
+      },
+      {
+        "key": "places",
+        "required": true,
+        "rule": "Any of \"header\", \"footer\", \"legal\"."
+      }
+    ],
+    "blockKeys": [
+      {
+        "key": "type",
+        "required": true,
+        "rule": "The name of a block in this catalog."
+      },
+      {
+        "key": "variant",
+        "required": false,
+        "rule": "One of the block's variants; the first is used when it is left out."
+      },
+      {
+        "key": "anchor",
+        "required": false,
+        "rule": "A lowercase name (letters, digits, hyphens; starts with a letter; at most 40 characters) that links can point to as /page#name. Unique on the page."
+      },
+      {
+        "key": "content",
+        "required": true,
+        "rule": "The block's fields, as listed in its entry."
+      }
+    ],
+    "status": {
+      "live": "The page is built, listed in the menu places it asks for, and in the sitemap.",
+      "archived": "The page leaves the build, the menu and the sitemap. The file and its content stay, and setting it back to live restores it. A link to an archived page fails the check."
+    },
+    "menu": {
+      "places": [
+        "header",
+        "footer",
+        "legal"
+      ],
+      "maxHeaderLinks": 6,
+      "rule": "A page appears in the menu only if it has a menu entry. At most 6 live pages may be in the header."
+    },
+    "firstBlock": "The first block must be a block whose position is \"first\" (the hero). It carries the page's one H1, so a page has exactly one.",
+    "focalAnimation": "At most one block per page may carry a signature (focal) animation.",
+    "text": "Text is plain. Only **bold** and [[placeholder]] marks are allowed. No HTML tags, no HTML entities, no markdown links and no control characters (line breaks, tabs, hidden characters).",
+    "links": {
+      "allowed": [
+        "An internal path (/name) or a path with an anchor (/name#anchor) that points to a live page, and to an anchor that exists on it.",
+        "An https:// address.",
+        "A mailto: address.",
+        "A tel: number.",
+        "\"@booking\": the site's booking link (the scheduler when set, otherwise /contact-us#book)."
+      ],
+      "never": [
+        "javascript:",
+        "data:",
+        "http:",
+        "//host"
+      ]
+    },
+    "images": {
+      "folder": "/images/",
+      "formats": [
+        "jpg",
+        "png",
+        "webp"
+      ],
+      "rule": "An image is { src, alt }. The file must exist under /images/ and be a jpg, png or webp. The alt text must really describe the picture, so it can't be empty or only a generic word.",
+      "genericAltWords": [
+        "image",
+        "img",
+        "photo",
+        "picture",
+        "graphic",
+        "icon",
+        "logo",
+        "alt",
+        "alt text",
+        "todo",
+        "tbd",
+        "untitled",
+        "placeholder"
+      ]
+    },
+    "video": {
+      "providers": [
+        "YouTube",
+        "Vimeo"
+      ],
+      "rule": "A video address must be from YouTube or Vimeo. The player is rebuilt from the video's id, not from the address that was pasted. Allowed player origins: https://www.youtube-nocookie.com, https://player.vimeo.com.",
+      "examples": [
+        "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+        "https://vimeo.com/76979871"
+      ]
+    },
+    "reservedPaths": [
+      "/blocks",
+      "/api",
+      "/contact-us/thanks",
+      "/og.png",
+      "/icon.svg",
+      "/sitemap.xml",
+      "/robots.txt",
+      "/404",
+      "/index",
+      "/_not-found",
+      "/_next"
+    ],
+    "requiredLivePages": [
+      "/",
+      "/contact-us"
+    ],
+    "limits": {
+      "maxBlocksPerPage": 20,
+      "titleMax": 70,
+      "descriptionMax": 170
+    }
+  },
+  "blocks": [
+    {
+      "type": "hero",
+      "title": "Hero",
+      "description": "The top of a page: a small line above, the page headline, a short introduction and, if wanted, one button.",
+      "source": "library",
+      "variants": [
+        {
+          "name": "default",
+          "description": "Left-aligned, with a soft glow in the top-right corner.",
+          "default": true
+        }
+      ],
+      "placement": {
+        "position": "first",
+        "maxPerPage": 1,
+        "rhythm": "hero",
+        "joinsHero": false
+      },
+      "motion": {
+        "entrance": "none",
+        "reason": "The first block is the first paint, so it shows at once and never waits on motion.",
+        "signature": null
+      },
+      "fixedAnchor": null,
+      "interactive": null,
+      "fields": [
+        {
+          "name": "eyebrow",
+          "kind": "text",
+          "label": "Small line above the headline",
+          "required": false,
+          "max": 60
+        },
+        {
+          "name": "title",
+          "kind": "text",
+          "label": "Headline",
+          "help": "The page's one main heading.",
+          "required": true,
+          "max": 90
+        },
+        {
+          "name": "intro",
+          "kind": "text",
+          "label": "Introduction",
+          "required": false,
+          "max": 320
+        },
+        {
+          "name": "action",
+          "kind": "action",
+          "label": "Button",
+          "required": false,
+          "labelMax": 40
+        }
+      ],
+      "example": {
+        "eyebrow": "A short line that sets the scene",
+        "title": "A headline that says what this page is about",
+        "intro": "One or two sentences that say more about the page.",
+        "action": {
+          "label": "A label that says what the button does",
+          "href": "@booking"
+        }
+      }
+    },
+    {
+      "type": "highlights",
+      "title": "Highlights",
+      "description": "A heading and a set of short ideas, each with a title and a few lines of text. Good for services, reasons or features.",
+      "source": "library",
+      "variants": [
+        {
+          "name": "two-column",
+          "description": "The ideas sit in two columns (one column on phones), with soft dividers.",
+          "default": true
+        },
+        {
+          "name": "three-column",
+          "description": "The ideas sit in three columns on wide screens (with three or more ideas), two on tablets, one on phones.",
+          "default": false
+        }
+      ],
+      "placement": {
+        "position": "any",
+        "maxPerPage": 3,
+        "rhythm": "section",
+        "joinsHero": false
+      },
+      "motion": {
+        "entrance": "default",
+        "reason": null,
+        "signature": null
+      },
+      "fixedAnchor": null,
+      "interactive": null,
+      "fields": [
+        {
+          "name": "heading",
+          "kind": "text",
+          "label": "Heading",
+          "required": true,
+          "max": 90
+        },
+        {
+          "name": "items",
+          "kind": "list",
+          "label": "Ideas",
+          "required": true,
+          "items": {
+            "min": 2,
+            "max": 9
+          },
+          "of": {
+            "kind": "object",
+            "label": "Idea",
+            "required": true,
+            "fields": [
+              {
+                "name": "title",
+                "kind": "text",
+                "label": "Title",
+                "required": true,
+                "max": 70
+              },
+              {
+                "name": "body",
+                "kind": "text",
+                "label": "Text",
+                "required": true,
+                "max": 280
+              }
+            ]
+          }
+        }
+      ],
+      "example": {
+        "heading": "A short heading that says what this section covers",
+        "items": [
+          {
+            "title": "A short title for the first idea",
+            "body": "A sentence or two that explains the first idea in plain words."
+          },
+          {
+            "title": "A short title for the second idea",
+            "body": "A sentence or two that explains the second idea in plain words."
+          },
+          {
+            "title": "A short title for the third idea",
+            "body": "A sentence or two that explains the third idea in plain words."
+          }
+        ]
+      }
+    },
+    {
+      "type": "prose",
+      "title": "Text section",
+      "description": "A heading with a few paragraphs under it. Good for a story, a background or a longer explanation.",
+      "source": "library",
+      "variants": [
+        {
+          "name": "default",
+          "description": "Paragraphs in a comfortable reading width.",
+          "default": true
+        }
+      ],
+      "placement": {
+        "position": "any",
+        "maxPerPage": 4,
+        "rhythm": "section",
+        "joinsHero": true
+      },
+      "motion": {
+        "entrance": "default",
+        "reason": null,
+        "signature": null
+      },
+      "fixedAnchor": null,
+      "interactive": null,
+      "fields": [
+        {
+          "name": "heading",
+          "kind": "text",
+          "label": "Heading",
+          "required": true,
+          "max": 90
+        },
+        {
+          "name": "paragraphs",
+          "kind": "list",
+          "label": "Paragraphs",
+          "required": true,
+          "items": {
+            "min": 1,
+            "max": 8
+          },
+          "of": {
+            "kind": "text",
+            "label": "Paragraph",
+            "required": true,
+            "max": 900
+          }
+        }
+      ],
+      "example": {
+        "heading": "A short heading that says what this section covers",
+        "paragraphs": [
+          "A paragraph of plain text that describes itself.",
+          "A second paragraph, also plain text, that continues the thought."
+        ]
+      }
+    },
+    {
+      "type": "faq",
+      "title": "Questions and answers",
+      "description": "A heading and a list of questions that open to show their answers.",
+      "source": "library",
+      "variants": [
+        {
+          "name": "default",
+          "description": "Questions open and close one by one; works without JavaScript.",
+          "default": true
+        }
+      ],
+      "placement": {
+        "position": "any",
+        "maxPerPage": 1,
+        "rhythm": "section",
+        "joinsHero": false
+      },
+      "motion": {
+        "entrance": "default",
+        "reason": null,
+        "signature": null
+      },
+      "fixedAnchor": null,
+      "interactive": null,
+      "fields": [
+        {
+          "name": "heading",
+          "kind": "text",
+          "label": "Heading",
+          "required": true,
+          "max": 90
+        },
+        {
+          "name": "items",
+          "kind": "list",
+          "label": "Questions",
+          "required": true,
+          "items": {
+            "min": 1,
+            "max": 12
+          },
+          "of": {
+            "kind": "object",
+            "label": "Question",
+            "required": true,
+            "fields": [
+              {
+                "name": "question",
+                "kind": "text",
+                "label": "Question",
+                "required": true,
+                "max": 140
+              },
+              {
+                "name": "answer",
+                "kind": "text",
+                "label": "Answer",
+                "required": true,
+                "max": 900
+              }
+            ]
+          }
+        }
+      ],
+      "example": {
+        "heading": "A short heading that introduces the questions",
+        "items": [
+          {
+            "question": "A question a visitor might ask?",
+            "answer": "A plain answer that describes itself."
+          },
+          {
+            "question": "Another question a visitor might ask?",
+            "answer": "A second plain answer."
+          }
+        ]
+      }
+    },
+    {
+      "type": "closing-cta",
+      "title": "Closing call to action",
+      "description": "The last block on a page: a heading, a line of text and one button that says what to do next.",
+      "source": "library",
+      "variants": [
+        {
+          "name": "default",
+          "description": "Left-aligned, with a soft glow that blends it into the page.",
+          "default": true
+        }
+      ],
+      "placement": {
+        "position": "last",
+        "maxPerPage": 1,
+        "rhythm": "section",
+        "joinsHero": false
+      },
+      "motion": {
+        "entrance": "default",
+        "reason": null,
+        "signature": null
+      },
+      "fixedAnchor": null,
+      "interactive": null,
+      "fields": [
+        {
+          "name": "heading",
+          "kind": "text",
+          "label": "Heading",
+          "required": true,
+          "max": 90
+        },
+        {
+          "name": "body",
+          "kind": "text",
+          "label": "Text",
+          "required": false,
+          "max": 280
+        },
+        {
+          "name": "action",
+          "kind": "action",
+          "label": "Button",
+          "required": true,
+          "labelMax": 40
+        },
+        {
+          "name": "note",
+          "kind": "text",
+          "label": "Small note under the button",
+          "required": false,
+          "max": 160
+        }
+      ],
+      "example": {
+        "heading": "A short heading that invites the next step",
+        "body": "One or two plain sentences that say what happens next.",
+        "action": {
+          "label": "A label that says what the button does",
+          "href": "/contact-us"
+        },
+        "note": "A small reassuring line"
+      }
+    },
+    {
+      "type": "contact-form",
+      "title": "Contact form",
+      "description": "A booking column next to the site's contact form. The form itself is wired to the site's own settings.",
+      "source": "library",
+      "variants": [
+        {
+          "name": "default",
+          "description": "The booking column on the left, the form on the right (stacked on phones).",
+          "default": true
+        }
+      ],
+      "placement": {
+        "position": "any",
+        "maxPerPage": 1,
+        "rhythm": "compact",
+        "joinsHero": true
+      },
+      "motion": {
+        "entrance": "none",
+        "reason": "People type here, so the form stays still and is usable the moment it appears.",
+        "signature": null
+      },
+      "fixedAnchor": "book",
+      "interactive": null,
+      "fields": [
+        {
+          "name": "heading",
+          "kind": "text",
+          "label": "Booking heading",
+          "required": true,
+          "max": 60
+        },
+        {
+          "name": "body",
+          "kind": "text",
+          "label": "Booking text",
+          "required": true,
+          "max": 400
+        },
+        {
+          "name": "buttonLabel",
+          "kind": "text",
+          "label": "Booking button label",
+          "required": true,
+          "max": 40
+        },
+        {
+          "name": "unsetNote",
+          "kind": "text",
+          "label": "Note shown while no booking link is set",
+          "help": "Visitors see this instead of a working button until the site's booking link is set up.",
+          "required": true,
+          "max": 120
+        }
+      ],
+      "example": {
+        "heading": "A short heading about booking a time",
+        "body": "A sentence or two that says what a booking is for.",
+        "buttonLabel": "A label that says what the button does",
+        "unsetNote": "A note that says the booking link is not set up yet"
+      }
+    },
+    {
+      "type": "steps",
+      "title": "Numbered steps",
+      "description": "A heading and a short numbered list that says what happens, step by step. It can end with an email line.",
+      "source": "library",
+      "variants": [
+        {
+          "name": "default",
+          "description": "Numbers in green on the left, text in a comfortable reading width.",
+          "default": true
+        }
+      ],
+      "placement": {
+        "position": "any",
+        "maxPerPage": 2,
+        "rhythm": "compact",
+        "joinsHero": false
+      },
+      "motion": {
+        "entrance": "default",
+        "reason": null,
+        "signature": null
+      },
+      "fixedAnchor": null,
+      "interactive": null,
+      "fields": [
+        {
+          "name": "heading",
+          "kind": "text",
+          "label": "Heading",
+          "required": true,
+          "max": 90
+        },
+        {
+          "name": "steps",
+          "kind": "list",
+          "label": "Steps",
+          "required": true,
+          "items": {
+            "min": 2,
+            "max": 6
+          },
+          "of": {
+            "kind": "object",
+            "label": "Step",
+            "required": true,
+            "fields": [
+              {
+                "name": "lead",
+                "kind": "text",
+                "label": "Bold opening words",
+                "required": true,
+                "max": 80
+              },
+              {
+                "name": "body",
+                "kind": "text",
+                "label": "Text",
+                "required": true,
+                "max": 400
+              }
+            ]
+          }
+        },
+        {
+          "name": "emailLabel",
+          "kind": "text",
+          "label": "Words before the email address",
+          "help": "When given, the line shows the site's email address after these words.",
+          "required": false,
+          "max": 80
+        }
+      ],
+      "example": {
+        "heading": "A short heading that says what happens next",
+        "steps": [
+          {
+            "lead": "The first step.",
+            "body": "A sentence that describes the first step."
+          },
+          {
+            "lead": "The second step.",
+            "body": "A sentence that describes the second step."
+          }
+        ]
+      }
+    },
+    {
+      "type": "legal-sections",
+      "title": "Policy sections",
+      "description": "A run of titled sections for a policy or terms page, with an optional line at the end such as a last-updated date.",
+      "source": "library",
+      "variants": [
+        {
+          "name": "default",
+          "description": "Sections one after another in a comfortable reading width.",
+          "default": true
+        }
+      ],
+      "placement": {
+        "position": "any",
+        "maxPerPage": 1,
+        "rhythm": "section",
+        "joinsHero": true
+      },
+      "motion": {
+        "entrance": "default",
+        "reason": null,
+        "signature": null
+      },
+      "fixedAnchor": null,
+      "interactive": null,
+      "fields": [
+        {
+          "name": "sections",
+          "kind": "list",
+          "label": "Sections",
+          "required": true,
+          "items": {
+            "min": 1,
+            "max": 20
+          },
+          "of": {
+            "kind": "object",
+            "label": "Section",
+            "required": true,
+            "fields": [
+              {
+                "name": "heading",
+                "kind": "text",
+                "label": "Section title",
+                "required": true,
+                "max": 90
+              },
+              {
+                "name": "body",
+                "kind": "text",
+                "label": "Section text",
+                "required": true,
+                "max": 3000
+              }
+            ]
+          }
+        },
+        {
+          "name": "footnote",
+          "kind": "text",
+          "label": "Line at the end",
+          "required": false,
+          "max": 160
+        }
+      ],
+      "example": {
+        "sections": [
+          {
+            "heading": "A short title for the first section",
+            "body": "Plain text that describes what this section covers."
+          },
+          {
+            "heading": "A short title for the second section",
+            "body": "More plain text for the second section."
+          }
+        ],
+        "footnote": "A short line at the end of the page"
+      }
+    },
+    {
+      "type": "video",
+      "title": "Video",
+      "description": "One video from YouTube or Vimeo, with a title and a short caption. It plays on the page when a visitor presses play.",
+      "source": "library",
+      "variants": [
+        {
+          "name": "wide",
+          "description": "As wide as the page column.",
+          "default": true
+        },
+        {
+          "name": "inset",
+          "description": "Narrower and centered, the width of a reading column.",
+          "default": false
+        }
+      ],
+      "placement": {
+        "position": "any",
+        "maxPerPage": 4,
+        "rhythm": "section",
+        "joinsHero": false
+      },
+      "motion": {
+        "entrance": "default",
+        "reason": null,
+        "signature": null
+      },
+      "fixedAnchor": null,
+      "interactive": "The play button swaps in the player only when it is pressed, so nothing loads from YouTube or Vimeo before that.",
+      "fields": [
+        {
+          "name": "url",
+          "kind": "video",
+          "label": "Video address",
+          "help": "A YouTube or Vimeo address.",
+          "required": true
+        },
+        {
+          "name": "title",
+          "kind": "text",
+          "label": "Title",
+          "required": true,
+          "max": 80
+        },
+        {
+          "name": "caption",
+          "kind": "text",
+          "label": "Caption",
+          "required": false,
+          "max": 200
+        },
+        {
+          "name": "poster",
+          "kind": "image",
+          "label": "Cover picture",
+          "help": "Shown before play. Without one the video shows a plain dark panel.",
+          "required": false
+        }
+      ],
+      "example": {
+        "url": "https://www.youtube.com/watch?v=aqz-KE-bpKQ",
+        "title": "A short title that says what the video shows",
+        "caption": "A sentence that says what to expect before pressing play."
+      }
+    },
+    {
+      "type": "video-grid",
+      "title": "Video grid",
+      "description": "Two to six videos from YouTube or Vimeo side by side, each with a title and a short caption.",
+      "source": "library",
+      "variants": [
+        {
+          "name": "two-column",
+          "description": "The videos sit in two columns (one column on phones).",
+          "default": true
+        },
+        {
+          "name": "three-column",
+          "description": "The videos sit in three columns on wide screens (with three or more videos), two on tablets, one on phones.",
+          "default": false
+        }
+      ],
+      "placement": {
+        "position": "any",
+        "maxPerPage": 2,
+        "rhythm": "section",
+        "joinsHero": false
+      },
+      "motion": {
+        "entrance": "default",
+        "reason": null,
+        "signature": null
+      },
+      "fixedAnchor": null,
+      "interactive": "The play button swaps in the player only when it is pressed, so nothing loads from YouTube or Vimeo before that.",
+      "fields": [
+        {
+          "name": "heading",
+          "kind": "text",
+          "label": "Heading",
+          "help": "Names the group of videos for everyone, including screen reader users.",
+          "required": true,
+          "max": 90
+        },
+        {
+          "name": "videos",
+          "kind": "list",
+          "label": "Videos",
+          "required": true,
+          "items": {
+            "min": 2,
+            "max": 6
+          },
+          "of": {
+            "kind": "object",
+            "label": "Video",
+            "required": true,
+            "fields": [
+              {
+                "name": "url",
+                "kind": "video",
+                "label": "Video address",
+                "help": "A YouTube or Vimeo address.",
+                "required": true
+              },
+              {
+                "name": "title",
+                "kind": "text",
+                "label": "Title",
+                "required": true,
+                "max": 80
+              },
+              {
+                "name": "caption",
+                "kind": "text",
+                "label": "Caption",
+                "required": false,
+                "max": 200
+              },
+              {
+                "name": "poster",
+                "kind": "image",
+                "label": "Cover picture",
+                "required": false
+              }
+            ]
+          }
+        }
+      ],
+      "example": {
+        "heading": "A short heading that introduces the videos",
+        "videos": [
+          {
+            "url": "https://www.youtube.com/watch?v=aqz-KE-bpKQ",
+            "title": "A short title for the first video",
+            "caption": "A sentence about the first video."
+          },
+          {
+            "url": "https://vimeo.com/1084537",
+            "title": "A short title for the second video",
+            "caption": "A sentence about the second video."
+          },
+          {
+            "url": "https://youtu.be/aqz-KE-bpKQ",
+            "title": "A short title for the third video",
+            "caption": "A sentence about the third video."
+          }
+        ]
+      }
+    },
+    {
+      "type": "home-hero",
+      "title": "Home hero",
+      "description": "The home page's first screen: a centered headline, a line under it and a button, in the sky of a dusk photo with an amber line drawing on the house.",
+      "source": "site",
+      "variants": [
+        {
+          "name": "default",
+          "description": "Centered text over the photo's sky; the line drawing draws itself, then holds still.",
+          "default": true
+        }
+      ],
+      "placement": {
+        "position": "first",
+        "maxPerPage": 1,
+        "rhythm": "none",
+        "joinsHero": false
+      },
+      "motion": {
+        "entrance": "none",
+        "reason": "This site's sections reveal themselves with CSS (reveal and reveal-zoom in hl.css), so a second entrance would double it.",
+        "signature": null
+      },
+      "fixedAnchor": null,
+      "interactive": null,
+      "fields": [
+        {
+          "name": "title",
+          "kind": "text",
+          "label": "Headline",
+          "help": "The page's one main heading.",
+          "required": true,
+          "max": 60
+        },
+        {
+          "name": "intro",
+          "kind": "text",
+          "label": "Line under the headline",
+          "required": true,
+          "max": 200
+        },
+        {
+          "name": "action",
+          "kind": "action",
+          "label": "Button",
+          "required": true,
+          "labelMax": 30
+        },
+        {
+          "name": "photo",
+          "kind": "image",
+          "label": "Photo",
+          "help": "The dusk house photo. The line drawing is drawn for this picture, so keep it.",
+          "required": true
+        },
+        {
+          "name": "labels",
+          "kind": "object",
+          "label": "Labels on the drawing",
+          "required": true,
+          "fields": [
+            {
+              "name": "cantilever",
+              "kind": "text",
+              "label": "Cantilever",
+              "required": true,
+              "max": 24
+            },
+            {
+              "name": "clearSpan",
+              "kind": "text",
+              "label": "Clear span",
+              "required": true,
+              "max": 24
+            },
+            {
+              "name": "wind",
+              "kind": "text",
+              "label": "Wind",
+              "required": true,
+              "max": 24
+            }
+          ]
+        }
+      ],
+      "example": {
+        "title": "Strength you can build on.",
+        "intro": "Structural engineering for homes, low-rise commercial buildings and glazing systems in Colorado.",
+        "action": {
+          "label": "Request a quote",
+          "href": "/contact-us"
+        },
+        "photo": {
+          "src": "/images/dusk-home.jpg",
+          "alt": "A modern two-story house with a white upper floor, wood soffits and glass walls, lit from inside at dusk above a snowy slope."
+        },
+        "labels": {
+          "cantilever": "Cantilever",
+          "clearSpan": "Clear span",
+          "wind": "Wind"
+        }
+      }
+    },
+    {
+      "type": "photo-hero",
+      "title": "Photo hero",
+      "description": "A page top with the headline and a line on the left and a photo on the right that carries the page's amber line drawing.",
+      "source": "site",
+      "variants": [
+        {
+          "name": "default",
+          "description": "Text and photo side by side from 1024 px wide, stacked on phones.",
+          "default": true
+        }
+      ],
+      "placement": {
+        "position": "first",
+        "maxPerPage": 1,
+        "rhythm": "none",
+        "joinsHero": false
+      },
+      "motion": {
+        "entrance": "none",
+        "reason": "This site's sections reveal themselves with CSS (reveal and reveal-zoom in hl.css), so a second entrance would double it.",
+        "signature": null
+      },
+      "fixedAnchor": null,
+      "interactive": null,
+      "fields": [
+        {
+          "name": "title",
+          "kind": "text",
+          "label": "Headline",
+          "help": "The page's one main heading.",
+          "required": true,
+          "max": 60
+        },
+        {
+          "name": "intro",
+          "kind": "text",
+          "label": "Line under the headline",
+          "required": true,
+          "max": 200
+        },
+        {
+          "name": "photo",
+          "kind": "image",
+          "label": "Photo",
+          "help": "A new photo needs a line in src/content/photos.ts.",
+          "required": true
+        },
+        {
+          "name": "drawing",
+          "kind": "choice",
+          "label": "Line drawing",
+          "required": true,
+          "options": [
+            "services"
+          ]
+        }
+      ],
+      "example": {
+        "title": "Structural engineering services",
+        "intro": "Fast, accurate, permit-ready plans for homes, low-rise commercial buildings and glazing systems.",
+        "photo": {
+          "src": "/images/engineer-plans.jpg",
+          "alt": "An engineer in a hard hat points at a floor plan pinned to a concrete column inside an unfinished building."
+        },
+        "drawing": "services"
+      }
+    },
+    {
+      "type": "service-hero",
+      "title": "Service page hero",
+      "description": "The top of a service page: the headline and a line, the overview paragraph, and a hero photo that carries the page's amber line drawing.",
+      "source": "site",
+      "variants": [
+        {
+          "name": "default",
+          "description": "Phones: headline, photo, overview. From 1024 px wide: text on the left, photo beside it.",
+          "default": true
+        }
+      ],
+      "placement": {
+        "position": "first",
+        "maxPerPage": 1,
+        "rhythm": "none",
+        "joinsHero": false
+      },
+      "motion": {
+        "entrance": "none",
+        "reason": "This site's sections reveal themselves with CSS (reveal and reveal-zoom in hl.css), so a second entrance would double it.",
+        "signature": null
+      },
+      "fixedAnchor": null,
+      "interactive": null,
+      "fields": [
+        {
+          "name": "title",
+          "kind": "text",
+          "label": "Headline",
+          "help": "The page's one main heading.",
+          "required": true,
+          "max": 50
+        },
+        {
+          "name": "intro",
+          "kind": "text",
+          "label": "Line under the headline",
+          "required": true,
+          "max": 200
+        },
+        {
+          "name": "overview",
+          "kind": "text",
+          "label": "Overview paragraph",
+          "required": true,
+          "max": 500
+        },
+        {
+          "name": "photo",
+          "kind": "image",
+          "label": "Hero photo",
+          "help": "A 3:2 photo. A new photo needs a line in src/content/photos.ts.",
+          "required": true
+        },
+        {
+          "name": "drawing",
+          "kind": "choice",
+          "label": "Line drawing",
+          "required": true,
+          "options": [
+            "residential",
+            "commercial",
+            "glazing"
+          ]
+        }
+      ],
+      "example": {
+        "title": "Residential structural design",
+        "intro": "Permit-ready plans for custom homes, remodels, additions, decks and foundations. Fast, accurate and affordable.",
+        "overview": "We engineer residential structures to pass plan check and build cleanly in the field. From removing a load-bearing wall to a new custom home, the goal is simple: move your project forward quickly and correctly.",
+        "photo": {
+          "src": "/images/framing-wood-900.jpg",
+          "alt": "Looking up at a wood roof frame of rafters and beams against a blue sky with clouds."
+        },
+        "drawing": "residential"
+      }
+    },
+    {
+      "type": "page-hero",
+      "title": "Page hero",
+      "description": "A plain page top on dusk: the headline and a line, with an amber line drawing beside them if the page has one.",
+      "source": "site",
+      "variants": [
+        {
+          "name": "default",
+          "description": "Left-aligned text; the drawing sits under it on phones and beside it from 1024 px wide.",
+          "default": true
+        }
+      ],
+      "placement": {
+        "position": "first",
+        "maxPerPage": 1,
+        "rhythm": "none",
+        "joinsHero": false
+      },
+      "motion": {
+        "entrance": "none",
+        "reason": "This site's sections reveal themselves with CSS (reveal and reveal-zoom in hl.css), so a second entrance would double it.",
+        "signature": null
+      },
+      "fixedAnchor": null,
+      "interactive": null,
+      "fields": [
+        {
+          "name": "title",
+          "kind": "text",
+          "label": "Headline",
+          "help": "The page's one main heading.",
+          "required": true,
+          "max": 60
+        },
+        {
+          "name": "intro",
+          "kind": "text",
+          "label": "Line under the headline",
+          "required": false,
+          "max": 240
+        },
+        {
+          "name": "drawing",
+          "kind": "choice",
+          "label": "Line drawing",
+          "help": "Leave out for a page with no drawing.",
+          "required": false,
+          "options": [
+            "about"
+          ]
+        }
+      ],
+      "example": {
+        "title": "Structural design, simplified.",
+        "intro": "Responsive communication, modern tools and permit-ready plans you can build on.",
+        "drawing": "about"
+      }
+    },
+    {
+      "type": "contact-hero-form",
+      "title": "Contact page",
+      "description": "The whole contact page: the headline and a line with the direct email and phone, and the six-field form beside them. The form is wired to the site's own settings.",
+      "source": "site",
+      "variants": [
+        {
+          "name": "default",
+          "description": "From 900 px wide the text stays in the left column while the form fills the right; on phones they stack.",
+          "default": true
+        }
+      ],
+      "placement": {
+        "position": "first",
+        "maxPerPage": 1,
+        "rhythm": "none",
+        "joinsHero": false
+      },
+      "motion": {
+        "entrance": "none",
+        "reason": "This site's sections reveal themselves with CSS (reveal and reveal-zoom in hl.css), so a second entrance would double it.",
+        "signature": null
+      },
+      "fixedAnchor": null,
+      "interactive": null,
+      "fields": [
+        {
+          "name": "title",
+          "kind": "text",
+          "label": "Headline",
+          "help": "The page's one main heading.",
+          "required": true,
+          "max": 40
+        },
+        {
+          "name": "intro",
+          "kind": "text",
+          "label": "Line under the headline",
+          "required": true,
+          "max": 240
+        }
+      ],
+      "example": {
+        "title": "Let's get in touch.",
+        "intro": "We're here to help you move forward with clarity and confidence. Send us your plans or questions and we'll respond as fast as we can."
+      }
+    },
+    {
+      "type": "conditions",
+      "title": "Design conditions",
+      "description": "A deep band with a heading and a line, then up to six short items in columns, each under a rule with its own amber glyph.",
+      "source": "site",
+      "variants": [
+        {
+          "name": "default",
+          "description": "Four columns from 900 px wide (two on phones); each item rises into view.",
+          "default": true
+        }
+      ],
+      "placement": {
+        "position": "any",
+        "maxPerPage": 1,
+        "rhythm": "none",
+        "joinsHero": false
+      },
+      "motion": {
+        "entrance": "none",
+        "reason": "This site's sections reveal themselves with CSS (reveal and reveal-zoom in hl.css), so a second entrance would double it.",
+        "signature": null
+      },
+      "fixedAnchor": null,
+      "interactive": null,
+      "fields": [
+        {
+          "name": "heading",
+          "kind": "text",
+          "label": "Heading",
+          "required": true,
+          "max": 60
+        },
+        {
+          "name": "intro",
+          "kind": "text",
+          "label": "Line beside the heading",
+          "required": true,
+          "max": 200
+        },
+        {
+          "name": "items",
+          "kind": "list",
+          "label": "Conditions",
+          "required": true,
+          "items": {
+            "min": 2,
+            "max": 6
+          },
+          "of": {
+            "kind": "object",
+            "label": "Condition",
+            "required": true,
+            "fields": [
+              {
+                "name": "glyph",
+                "kind": "choice",
+                "label": "Glyph",
+                "help": "The amber line picture drawn above the title.",
+                "required": true,
+                "options": [
+                  "snow",
+                  "wind",
+                  "seismic",
+                  "temperature"
+                ]
+              },
+              {
+                "name": "title",
+                "kind": "text",
+                "label": "Title",
+                "required": true,
+                "max": 40
+              },
+              {
+                "name": "body",
+                "kind": "text",
+                "label": "Text",
+                "required": true,
+                "max": 140
+              }
+            ]
+          }
+        }
+      ],
+      "example": {
+        "heading": "Built for every condition",
+        "intro": "In Colorado, our experience with cold climates, wind and seismic conditions means every project is built to last.",
+        "items": [
+          {
+            "glyph": "snow",
+            "title": "Heavy snow",
+            "body": "Roof framing, beams and connections sized for heavy snow loads."
+          },
+          {
+            "glyph": "wind",
+            "title": "High wind",
+            "body": "Lateral systems and uplift connections checked against the wind at your site."
+          },
+          {
+            "glyph": "seismic",
+            "title": "Seismic activity",
+            "body": "Shear walls, hold-downs and foundations that work together when the ground moves."
+          },
+          {
+            "glyph": "temperature",
+            "title": "Temperature swings",
+            "body": "Details that allow for movement through extreme temperature shifts."
+          }
+        ]
+      }
+    },
+    {
+      "type": "service-cards",
+      "title": "Photo cards",
+      "description": "A heading with a line beside it, then up to six cards: a tall photo, a title that links to a page and a short text.",
+      "source": "site",
+      "variants": [
+        {
+          "name": "default",
+          "description": "Three columns from 900 px wide; the whole card is the link. The photos ease in as they cross the screen.",
+          "default": true
+        }
+      ],
+      "placement": {
+        "position": "any",
+        "maxPerPage": 1,
+        "rhythm": "none",
+        "joinsHero": false
+      },
+      "motion": {
+        "entrance": "none",
+        "reason": "This site's sections reveal themselves with CSS (reveal and reveal-zoom in hl.css), so a second entrance would double it.",
+        "signature": null
+      },
+      "fixedAnchor": null,
+      "interactive": null,
+      "fields": [
+        {
+          "name": "heading",
+          "kind": "text",
+          "label": "Heading",
+          "required": true,
+          "max": 60
+        },
+        {
+          "name": "intro",
+          "kind": "text",
+          "label": "Line beside the heading",
+          "required": true,
+          "max": 240
+        },
+        {
+          "name": "items",
+          "kind": "list",
+          "label": "Cards",
+          "required": true,
+          "items": {
+            "min": 2,
+            "max": 6
+          },
+          "of": {
+            "kind": "object",
+            "label": "Card",
+            "required": true,
+            "fields": [
+              {
+                "name": "title",
+                "kind": "text",
+                "label": "Title",
+                "required": true,
+                "max": 40
+              },
+              {
+                "name": "body",
+                "kind": "text",
+                "label": "Text",
+                "required": true,
+                "max": 220
+              },
+              {
+                "name": "href",
+                "kind": "link",
+                "label": "Page the card opens",
+                "required": true
+              },
+              {
+                "name": "photo",
+                "kind": "image",
+                "label": "Photo",
+                "help": "A 4:5 crop. A new photo needs a line in src/content/photos.ts.",
+                "required": true
+              }
+            ]
+          }
+        }
+      ],
+      "example": {
+        "heading": "What we design",
+        "intro": "We partner with architects, builders and homeowners to keep projects moving with clear drawings, responsive communication and clean calculations.",
+        "items": [
+          {
+            "title": "Residential",
+            "body": "Structural and foundation designs for custom homes, master plans, remodels, additions and decks, tailored for permitting and construction.",
+            "href": "/services/residential-structural-design",
+            "photo": {
+              "src": "/images/chalet-snow-card.jpg",
+              "alt": "A stone and log house with a car parked at the end of a deep snow drift in the driveway."
+            }
+          },
+          {
+            "title": "Low-rise commercial",
+            "body": "Structural and foundation designs for retail, office and tenant improvements, tailored for permitting and construction.",
+            "href": "/services/low-rise-commercial-structural-design",
+            "photo": {
+              "src": "/images/commercial-crane-card.jpg",
+              "alt": "A multi-story wood-framed building under construction, wrapped in house wrap, with a yellow tower crane above it."
+            }
+          },
+          {
+            "title": "Glazing and mullion",
+            "body": "Redlines and structural calculations for glazing, mullion, facade, storefront, curtainwall and sunshade systems.",
+            "href": "/services/glazing-and-mullion-engineering",
+            "photo": {
+              "src": "/images/curtain-wall-card.jpg",
+              "alt": "Looking up at the glass curtain wall of a tall building, with the sky and clouds reflected in the panels."
+            }
+          }
+        ]
+      }
+    },
+    {
+      "type": "service-choices",
+      "title": "Service choices",
+      "description": "A deep band with a heading and up to six linked cards, each a photo, a title and a short text.",
+      "source": "site",
+      "variants": [
+        {
+          "name": "default",
+          "description": "Three columns from 768 px wide; the photos ease in as they cross the screen.",
+          "default": true
+        }
+      ],
+      "placement": {
+        "position": "any",
+        "maxPerPage": 1,
+        "rhythm": "none",
+        "joinsHero": false
+      },
+      "motion": {
+        "entrance": "none",
+        "reason": "This site's sections reveal themselves with CSS (reveal and reveal-zoom in hl.css), so a second entrance would double it.",
+        "signature": null
+      },
+      "fixedAnchor": null,
+      "interactive": null,
+      "fields": [
+        {
+          "name": "heading",
+          "kind": "text",
+          "label": "Heading",
+          "required": true,
+          "max": 60
+        },
+        {
+          "name": "items",
+          "kind": "list",
+          "label": "Choices",
+          "required": true,
+          "items": {
+            "min": 2,
+            "max": 6
+          },
+          "of": {
+            "kind": "object",
+            "label": "Choice",
+            "required": true,
+            "fields": [
+              {
+                "name": "title",
+                "kind": "text",
+                "label": "Title",
+                "required": true,
+                "max": 50
+              },
+              {
+                "name": "body",
+                "kind": "text",
+                "label": "Text",
+                "required": true,
+                "max": 200
+              },
+              {
+                "name": "href",
+                "kind": "link",
+                "label": "Page the card opens",
+                "required": true
+              },
+              {
+                "name": "photo",
+                "kind": "text",
+                "label": "Photo file",
+                "help": "A path under /images/, such as /images/chalet-snow-640.jpg. Decoration beside the title, so it has no alt text. A new photo needs a line in src/content/photos.ts.",
+                "required": true,
+                "max": 120
+              }
+            ]
+          }
+        }
+      ],
+      "example": {
+        "heading": "Choose your service",
+        "items": [
+          {
+            "title": "Residential structural design",
+            "body": "Custom homes, remodels and additions, decks, foundations, retaining walls, lateral checks.",
+            "href": "/services/residential-structural-design",
+            "photo": "/images/chalet-snow-640.jpg"
+          },
+          {
+            "title": "Low-rise commercial",
+            "body": "Small retail and office, tenant improvement scopes, framing and lateral design, connection details, permit coordination.",
+            "href": "/services/low-rise-commercial-structural-design",
+            "photo": "/images/commercial-crane-640.jpg"
+          },
+          {
+            "title": "Glazing and mullion engineering",
+            "body": "Storefronts, mullion spans and deflection, anchorage, thermal movement; shop drawings and calculations.",
+            "href": "/services/glazing-and-mullion-engineering",
+            "photo": "/images/curtain-wall-640.jpg"
+          }
+        ]
+      }
+    },
+    {
+      "type": "figures-and-reasons",
+      "title": "Figures and reasons",
+      "description": "One deep band: big amber figures that count up as they scroll into view, then a heading and a grid of short reasons.",
+      "source": "site",
+      "variants": [
+        {
+          "name": "default",
+          "description": "Figures in columns from 900 px wide; reasons in two columns with fading dividers, no boxes.",
+          "default": true
+        }
+      ],
+      "placement": {
+        "position": "any",
+        "maxPerPage": 1,
+        "rhythm": "none",
+        "joinsHero": false
+      },
+      "motion": {
+        "entrance": "none",
+        "reason": "This site's sections reveal themselves with CSS (reveal and reveal-zoom in hl.css), so a second entrance would double it.",
+        "signature": null
+      },
+      "fixedAnchor": null,
+      "interactive": null,
+      "fields": [
+        {
+          "name": "figures",
+          "kind": "list",
+          "label": "Figures",
+          "required": true,
+          "items": {
+            "min": 2,
+            "max": 3
+          },
+          "of": {
+            "kind": "object",
+            "label": "Figure",
+            "required": true,
+            "fields": [
+              {
+                "name": "value",
+                "kind": "text",
+                "label": "Number",
+                "help": "Digits only, such as 48. It counts up from 0 on screen; the real number is always in the page.",
+                "required": true,
+                "max": 4
+              },
+              {
+                "name": "unit",
+                "kind": "text",
+                "label": "Word beside the number",
+                "required": true,
+                "max": 20
+              },
+              {
+                "name": "body",
+                "kind": "text",
+                "label": "Line under the number",
+                "required": true,
+                "max": 120
+              }
+            ]
+          }
+        },
+        {
+          "name": "heading",
+          "kind": "text",
+          "label": "Heading above the reasons",
+          "required": true,
+          "max": 60
+        },
+        {
+          "name": "items",
+          "kind": "list",
+          "label": "Reasons",
+          "required": true,
+          "items": {
+            "min": 2,
+            "max": 6
+          },
+          "of": {
+            "kind": "object",
+            "label": "Reason",
+            "required": true,
+            "fields": [
+              {
+                "name": "title",
+                "kind": "text",
+                "label": "Title",
+                "required": true,
+                "max": 40
+              },
+              {
+                "name": "body",
+                "kind": "text",
+                "label": "Text",
+                "required": true,
+                "max": 200
+              }
+            ]
+          }
+        }
+      ],
+      "example": {
+        "figures": [
+          {
+            "value": "48",
+            "unit": "hours",
+            "body": "to a clear proposal with deliverables, pricing and schedule"
+          },
+          {
+            "value": "10",
+            "unit": "years",
+            "body": "of hands-on structural engineering"
+          }
+        ],
+        "heading": "Why builders call us back",
+        "items": [
+          {
+            "title": "Fast and responsive",
+            "body": "Questions don't sit unanswered. We respond to RFIs quickly to keep the project moving."
+          },
+          {
+            "title": "Permit-ready packages",
+            "body": "Clear drawings and stamped calculations that satisfy the submittal requirements."
+          }
+        ]
+      }
+    },
+    {
+      "type": "split-list",
+      "title": "Heading and dot list",
+      "description": "A heading in a narrow left column with a list of short points beside it, each with an amber dot.",
+      "source": "site",
+      "variants": [
+        {
+          "name": "dusk",
+          "description": "On the page's dusk color.",
+          "default": true
+        },
+        {
+          "name": "deep",
+          "description": "On the deeper band color.",
+          "default": false
+        }
+      ],
+      "placement": {
+        "position": "any",
+        "maxPerPage": 3,
+        "rhythm": "none",
+        "joinsHero": false
+      },
+      "motion": {
+        "entrance": "none",
+        "reason": "This site's sections reveal themselves with CSS (reveal and reveal-zoom in hl.css), so a second entrance would double it.",
+        "signature": null
+      },
+      "fixedAnchor": null,
+      "interactive": null,
+      "fields": [
+        {
+          "name": "heading",
+          "kind": "text",
+          "label": "Heading",
+          "required": true,
+          "max": 40
+        },
+        {
+          "name": "items",
+          "kind": "list",
+          "label": "Points",
+          "required": true,
+          "items": {
+            "min": 1,
+            "max": 10
+          },
+          "of": {
+            "kind": "text",
+            "label": "Point",
+            "required": true,
+            "max": 240
+          }
+        }
+      ],
+      "example": {
+        "heading": "Who we serve",
+        "items": [
+          "Architects looking for coordinated structural sets that fit the design intent.",
+          "Homeowners who need reliable engineering for remodels, additions or new homes.",
+          "Builders and contractors who value quick responses, clear drawings and practical field solutions."
+        ]
+      }
+    },
+    {
+      "type": "split-text",
+      "title": "Heading and paragraph",
+      "description": "A heading in a narrow left column with one paragraph beside it, on the deeper band color.",
+      "source": "site",
+      "variants": [
+        {
+          "name": "default",
+          "description": "A compact deep band; the heading stacks above the paragraph on phones.",
+          "default": true
+        }
+      ],
+      "placement": {
+        "position": "any",
+        "maxPerPage": 2,
+        "rhythm": "none",
+        "joinsHero": false
+      },
+      "motion": {
+        "entrance": "none",
+        "reason": "This site's sections reveal themselves with CSS (reveal and reveal-zoom in hl.css), so a second entrance would double it.",
+        "signature": null
+      },
+      "fixedAnchor": null,
+      "interactive": null,
+      "fields": [
+        {
+          "name": "heading",
+          "kind": "text",
+          "label": "Heading",
+          "required": true,
+          "max": 40
+        },
+        {
+          "name": "body",
+          "kind": "text",
+          "label": "Paragraph",
+          "required": true,
+          "max": 700
+        }
+      ],
+      "example": {
+        "heading": "Tools and codes",
+        "body": "All work is produced in AutoCAD and Revit for clean coordination with architects and general contractors. We design to IBC and ASCE 7 loads, as the project and jurisdiction require."
+      }
+    },
+    {
+      "type": "how-we-work",
+      "title": "Numbered steps",
+      "description": "A heading and a numbered list of steps in two columns, then a second heading with a paragraph under a divider.",
+      "source": "site",
+      "variants": [
+        {
+          "name": "default",
+          "description": "Steps in two columns with fading dividers; the number is amber.",
+          "default": true
+        }
+      ],
+      "placement": {
+        "position": "any",
+        "maxPerPage": 1,
+        "rhythm": "none",
+        "joinsHero": false
+      },
+      "motion": {
+        "entrance": "none",
+        "reason": "This site's sections reveal themselves with CSS (reveal and reveal-zoom in hl.css), so a second entrance would double it.",
+        "signature": null
+      },
+      "fixedAnchor": null,
+      "interactive": null,
+      "fields": [
+        {
+          "name": "heading",
+          "kind": "text",
+          "label": "Heading",
+          "required": true,
+          "max": 40
+        },
+        {
+          "name": "steps",
+          "kind": "list",
+          "label": "Steps",
+          "required": true,
+          "items": {
+            "min": 2,
+            "max": 8
+          },
+          "of": {
+            "kind": "object",
+            "label": "Step",
+            "required": true,
+            "fields": [
+              {
+                "name": "title",
+                "kind": "text",
+                "label": "Title",
+                "required": true,
+                "max": 50
+              },
+              {
+                "name": "body",
+                "kind": "text",
+                "label": "Text",
+                "required": true,
+                "max": 240
+              }
+            ]
+          }
+        },
+        {
+          "name": "where",
+          "kind": "object",
+          "label": "Closing note under the steps",
+          "required": true,
+          "fields": [
+            {
+              "name": "heading",
+              "kind": "text",
+              "label": "Heading",
+              "required": true,
+              "max": 40
+            },
+            {
+              "name": "body",
+              "kind": "text",
+              "label": "Paragraph",
+              "required": true,
+              "max": 320
+            }
+          ]
+        }
+      ],
+      "example": {
+        "heading": "How we work",
+        "steps": [
+          {
+            "title": "Share your plans",
+            "body": "Send drawings, sketches or site photos. We review the scope and ask the right questions."
+          },
+          {
+            "title": "Scope and quote in 48 hours",
+            "body": "Within two business days you get a clear proposal with deliverables, pricing and schedule."
+          }
+        ],
+        "where": {
+          "heading": "Where we work",
+          "body": "Currently serving Colorado. Need help in another state? We'll get licensed quickly and handle local requirements."
+        }
+      }
+    },
+    {
+      "type": "split-faq",
+      "title": "Questions beside a heading",
+      "description": "A heading in a narrow left column with questions that open to show their answers beside it.",
+      "source": "site",
+      "variants": [
+        {
+          "name": "default",
+          "description": "Questions open and close one by one; works without JavaScript.",
+          "default": true
+        }
+      ],
+      "placement": {
+        "position": "any",
+        "maxPerPage": 1,
+        "rhythm": "none",
+        "joinsHero": false
+      },
+      "motion": {
+        "entrance": "none",
+        "reason": "This site's sections reveal themselves with CSS (reveal and reveal-zoom in hl.css), so a second entrance would double it.",
+        "signature": null
+      },
+      "fixedAnchor": null,
+      "interactive": null,
+      "fields": [
+        {
+          "name": "heading",
+          "kind": "text",
+          "label": "Heading",
+          "required": true,
+          "max": 60
+        },
+        {
+          "name": "items",
+          "kind": "list",
+          "label": "Questions",
+          "required": true,
+          "items": {
+            "min": 1,
+            "max": 12
+          },
+          "of": {
+            "kind": "object",
+            "label": "Question",
+            "required": true,
+            "fields": [
+              {
+                "name": "question",
+                "kind": "text",
+                "label": "Question",
+                "required": true,
+                "max": 140
+              },
+              {
+                "name": "answer",
+                "kind": "text",
+                "label": "Answer",
+                "required": true,
+                "max": 500
+              }
+            ]
+          }
+        }
+      ],
+      "example": {
+        "heading": "Glazing questions",
+        "items": [
+          {
+            "question": "What do you need to start?",
+            "answer": "System type, elevations and spans, project location or design pressures, and any specified deflection limits."
+          },
+          {
+            "question": "Do you stamp drawings?",
+            "answer": "We stamp calculations and drawings in Colorado. For other states, we'll arrange licensure on request."
+          }
+        ]
+      }
+    },
+    {
+      "type": "what-we-do",
+      "title": "What we do",
+      "description": "A deep band with a heading and a ruled list of the work, each with an optional line of detail, and one or two photos beside it.",
+      "source": "site",
+      "variants": [
+        {
+          "name": "default",
+          "description": "The list on the left, the photos staying in view beside it from 1024 px wide.",
+          "default": true
+        }
+      ],
+      "placement": {
+        "position": "any",
+        "maxPerPage": 1,
+        "rhythm": "none",
+        "joinsHero": false
+      },
+      "motion": {
+        "entrance": "none",
+        "reason": "This site's sections reveal themselves with CSS (reveal and reveal-zoom in hl.css), so a second entrance would double it.",
+        "signature": null
+      },
+      "fixedAnchor": null,
+      "interactive": null,
+      "fields": [
+        {
+          "name": "heading",
+          "kind": "text",
+          "label": "Heading",
+          "required": true,
+          "max": 40
+        },
+        {
+          "name": "items",
+          "kind": "list",
+          "label": "Work",
+          "required": true,
+          "items": {
+            "min": 1,
+            "max": 10
+          },
+          "of": {
+            "kind": "object",
+            "label": "Kind of work",
+            "required": true,
+            "fields": [
+              {
+                "name": "title",
+                "kind": "text",
+                "label": "Title",
+                "required": true,
+                "max": 70
+              },
+              {
+                "name": "body",
+                "kind": "text",
+                "label": "Detail",
+                "help": "Leave out for a list of names alone; the titles then show larger.",
+                "required": false,
+                "max": 200
+              }
+            ]
+          }
+        },
+        {
+          "name": "photos",
+          "kind": "list",
+          "label": "Photos",
+          "required": true,
+          "items": {
+            "min": 1,
+            "max": 2
+          },
+          "of": {
+            "kind": "image",
+            "label": "Photo",
+            "help": "A new photo needs a line in src/content/photos.ts.",
+            "required": true
+          }
+        }
+      ],
+      "example": {
+        "heading": "What we do",
+        "items": [
+          {
+            "title": "Custom and luxury homes",
+            "body": "Framing and lateral plans that work with the design; gravity, wind and seismic calculations."
+          },
+          {
+            "title": "Foundations",
+            "body": "Spread footings, drilled piers and caissons, micropiles, helical piers."
+          }
+        ],
+        "photos": [
+          {
+            "src": "/images/remodel-framing-640.jpg",
+            "alt": "Wood wall studs in an interior under construction, with sheathing and a window opening visible behind them."
+          },
+          {
+            "src": "/images/rebar-800.jpg",
+            "alt": "Steel reinforcing bars bent into a cage, seen from below against a pale sky beside a concrete wall."
+          }
+        ]
+      }
+    },
+    {
+      "type": "how-we-work-teaser",
+      "title": "How we work, short",
+      "description": "A heading that links to the full steps, with the first step written out beside it.",
+      "source": "site",
+      "variants": [
+        {
+          "name": "default",
+          "description": "A compact deep band; the heading stacks above the step on phones.",
+          "default": true
+        }
+      ],
+      "placement": {
+        "position": "any",
+        "maxPerPage": 1,
+        "rhythm": "none",
+        "joinsHero": false
+      },
+      "motion": {
+        "entrance": "none",
+        "reason": "This site's sections reveal themselves with CSS (reveal and reveal-zoom in hl.css), so a second entrance would double it.",
+        "signature": null
+      },
+      "fixedAnchor": null,
+      "interactive": null,
+      "fields": [
+        {
+          "name": "heading",
+          "kind": "text",
+          "label": "Heading (a link)",
+          "required": true,
+          "max": 40
+        },
+        {
+          "name": "href",
+          "kind": "link",
+          "label": "Page the heading opens",
+          "required": true
+        },
+        {
+          "name": "stepTitle",
+          "kind": "text",
+          "label": "Step title",
+          "required": true,
+          "max": 50
+        },
+        {
+          "name": "stepBody",
+          "kind": "text",
+          "label": "Step text",
+          "required": true,
+          "max": 300
+        }
+      ],
+      "example": {
+        "heading": "How we work",
+        "href": "/services",
+        "stepTitle": "Share your plans",
+        "stepBody": "Send drawings, sketches or site photos. We review the scope, ask the right questions and outline what a permit-ready package needs."
+      }
+    },
+    {
+      "type": "statement",
+      "title": "Statement",
+      "description": "One large paragraph on a deep band: a single statement of what the practice is.",
+      "source": "site",
+      "variants": [
+        {
+          "name": "default",
+          "description": "Large text in a narrow column.",
+          "default": true
+        }
+      ],
+      "placement": {
+        "position": "any",
+        "maxPerPage": 1,
+        "rhythm": "none",
+        "joinsHero": false
+      },
+      "motion": {
+        "entrance": "none",
+        "reason": "This site's sections reveal themselves with CSS (reveal and reveal-zoom in hl.css), so a second entrance would double it.",
+        "signature": null
+      },
+      "fixedAnchor": null,
+      "interactive": null,
+      "fields": [
+        {
+          "name": "text",
+          "kind": "text",
+          "label": "Statement",
+          "required": true,
+          "max": 500
+        }
+      ],
+      "example": {
+        "text": "Structural Integrity Engineering is a structural engineering practice specializing in custom residential design, low-rise commercial projects and glazing and mullion engineering."
+      }
+    },
+    {
+      "type": "profile",
+      "title": "Profile",
+      "description": "A portrait photo beside a heading and a paragraph about a person.",
+      "source": "site",
+      "variants": [
+        {
+          "name": "default",
+          "description": "Photo on the left from 1024 px wide, above the text on phones.",
+          "default": true
+        }
+      ],
+      "placement": {
+        "position": "any",
+        "maxPerPage": 1,
+        "rhythm": "none",
+        "joinsHero": false
+      },
+      "motion": {
+        "entrance": "none",
+        "reason": "This site's sections reveal themselves with CSS (reveal and reveal-zoom in hl.css), so a second entrance would double it.",
+        "signature": null
+      },
+      "fixedAnchor": null,
+      "interactive": null,
+      "fields": [
+        {
+          "name": "heading",
+          "kind": "text",
+          "label": "Heading",
+          "required": true,
+          "max": 60
+        },
+        {
+          "name": "body",
+          "kind": "text",
+          "label": "Paragraph",
+          "required": true,
+          "max": 600
+        },
+        {
+          "name": "photo",
+          "kind": "image",
+          "label": "Portrait",
+          "help": "A new photo needs a line in src/content/photos.ts.",
+          "required": true
+        }
+      ],
+      "example": {
+        "heading": "Meet our principal engineer",
+        "body": "Dylan Gassmann is the founder and principal engineer of Structural Integrity Engineering. Based in Colorado Springs, he brings a decade of hands-on experience in structural engineering for residential and commercial projects.",
+        "photo": {
+          "src": "/images/dylan-portrait.jpg",
+          "alt": "Portrait of Dylan Gassmann, principal engineer, smiling in front of a brick wall."
+        }
+      }
+    },
+    {
+      "type": "standard-and-mission",
+      "title": "Standard and mission",
+      "description": "One deep band: a heading over a wide photo with a line of licensing under it, then a divider and the mission.",
+      "source": "site",
+      "variants": [
+        {
+          "name": "default",
+          "description": "The photo eases in as it crosses the screen.",
+          "default": true
+        }
+      ],
+      "placement": {
+        "position": "any",
+        "maxPerPage": 1,
+        "rhythm": "none",
+        "joinsHero": false
+      },
+      "motion": {
+        "entrance": "none",
+        "reason": "This site's sections reveal themselves with CSS (reveal and reveal-zoom in hl.css), so a second entrance would double it.",
+        "signature": null
+      },
+      "fixedAnchor": null,
+      "interactive": null,
+      "fields": [
+        {
+          "name": "standard",
+          "kind": "object",
+          "label": "Standard",
+          "required": true,
+          "fields": [
+            {
+              "name": "heading",
+              "kind": "text",
+              "label": "Heading",
+              "required": true,
+              "max": 40
+            },
+            {
+              "name": "line",
+              "kind": "text",
+              "label": "Line under the photo",
+              "required": true,
+              "max": 100
+            },
+            {
+              "name": "photo",
+              "kind": "image",
+              "label": "Wide photo",
+              "help": "A 3:2 photo. A new photo needs a line in src/content/photos.ts.",
+              "required": true
+            }
+          ]
+        },
+        {
+          "name": "mission",
+          "kind": "object",
+          "label": "Mission",
+          "required": true,
+          "fields": [
+            {
+              "name": "heading",
+              "kind": "text",
+              "label": "Heading",
+              "required": true,
+              "max": 40
+            },
+            {
+              "name": "body",
+              "kind": "text",
+              "label": "Paragraph",
+              "required": true,
+              "max": 300
+            }
+          ]
+        }
+      ],
+      "example": {
+        "standard": {
+          "heading": "One standard",
+          "line": "Licensed in Colorado and Alaska.",
+          "photo": {
+            "src": "/images/colorado-pikes-peak.jpg",
+            "alt": "A snow-dusted mountain rising above a line of evergreen trees under a pale blue sky."
+          }
+        },
+        "mission": {
+          "heading": "Our mission",
+          "body": "To ensure the integrity and performance of every structure we design, combining technical excellence with practical efficiency."
+        }
+      }
+    },
+    {
+      "type": "policy-sections",
+      "title": "Policy sections",
+      "description": "Plain headed sections of text in a narrow reading column, then a closing line such as the date the policy was last updated.",
+      "source": "site",
+      "variants": [
+        {
+          "name": "default",
+          "description": "One column, about 64 characters wide.",
+          "default": true
+        }
+      ],
+      "placement": {
+        "position": "any",
+        "maxPerPage": 1,
+        "rhythm": "none",
+        "joinsHero": false
+      },
+      "motion": {
+        "entrance": "none",
+        "reason": "This site's sections reveal themselves with CSS (reveal and reveal-zoom in hl.css), so a second entrance would double it.",
+        "signature": null
+      },
+      "fixedAnchor": null,
+      "interactive": null,
+      "fields": [
+        {
+          "name": "sections",
+          "kind": "list",
+          "label": "Sections",
+          "required": true,
+          "items": {
+            "min": 1,
+            "max": 14
+          },
+          "of": {
+            "kind": "object",
+            "label": "Section",
+            "required": true,
+            "fields": [
+              {
+                "name": "heading",
+                "kind": "text",
+                "label": "Heading",
+                "required": true,
+                "max": 60
+              },
+              {
+                "name": "body",
+                "kind": "text",
+                "label": "Text",
+                "required": true,
+                "max": 900
+              }
+            ]
+          }
+        },
+        {
+          "name": "footnote",
+          "kind": "text",
+          "label": "Closing line",
+          "required": false,
+          "max": 120
+        }
+      ],
+      "example": {
+        "sections": [
+          {
+            "heading": "How we use it",
+            "body": "To answer your request and work with you on your project. We do not sell it, and we do not use it for advertising."
+          },
+          {
+            "heading": "How long we keep it",
+            "body": "For as long as we need it to answer you and work on your project."
+          }
+        ],
+        "footnote": "Last updated November 24, 2026."
+      }
+    },
+    {
+      "type": "contact-band",
+      "title": "Contact band",
+      "description": "The band that ends a page: a centered headline, a line, the Request a quote button, then the phone number and email from the site settings.",
+      "source": "site",
+      "variants": [
+        {
+          "name": "default",
+          "description": "Centered on dusk. The photo behind it, if any, is set in src/content/shared.ts.",
+          "default": true
+        }
+      ],
+      "placement": {
+        "position": "last",
+        "maxPerPage": 1,
+        "rhythm": "none",
+        "joinsHero": false
+      },
+      "motion": {
+        "entrance": "none",
+        "reason": "This site's sections reveal themselves with CSS (reveal and reveal-zoom in hl.css), so a second entrance would double it.",
+        "signature": null
+      },
+      "fixedAnchor": null,
+      "interactive": null,
+      "fields": [
+        {
+          "name": "heading",
+          "kind": "text",
+          "label": "Heading",
+          "required": true,
+          "max": 60
+        },
+        {
+          "name": "body",
+          "kind": "text",
+          "label": "Line under the heading",
+          "required": true,
+          "max": 160
+        },
+        {
+          "name": "action",
+          "kind": "action",
+          "label": "Button",
+          "required": true,
+          "labelMax": 30
+        }
+      ],
+      "example": {
+        "heading": "Ready to get started?",
+        "body": "Quick replies, clean drawings, and fair pricing.",
+        "action": {
+          "label": "Request a quote",
+          "href": "/contact-us"
+        }
+      }
+    }
+  ]
+}

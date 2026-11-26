@@ -1,0 +1,132 @@
+{
+  "path": "/",
+  "title": "Structural Integrity Engineering",
+  "description": "Structural engineering for homes, low-rise commercial buildings and glazing systems in Colorado.",
+  "status": "live",
+  "blocks": [
+    {
+      "type": "home-hero",
+      "content": {
+        "title": "Strength you can build on.",
+        "intro": "Structural engineering for homes, low-rise commercial buildings and glazing systems in Colorado.",
+        "action": {
+          "label": "Request a quote",
+          "href": "/contact-us"
+        },
+        "photo": {
+          "src": "/images/dusk-home.jpg",
+          "alt": "A modern two-story house with a white upper floor, wood soffits and glass walls, lit from inside at dusk above a snowy slope."
+        },
+        "labels": {
+          "cantilever": "Cantilever",
+          "clearSpan": "Clear span",
+          "wind": "Wind"
+        }
+      }
+    },
+    {
+      "type": "conditions",
+      "content": {
+        "heading": "Built for every condition",
+        "intro": "In Colorado, our experience with cold climates, wind and seismic conditions means every project is built to last.",
+        "items": [
+          {
+            "glyph": "snow",
+            "title": "Heavy snow",
+            "body": "Roof framing, beams and connections sized for heavy snow loads."
+          },
+          {
+            "glyph": "wind",
+            "title": "High wind",
+            "body": "Lateral systems and uplift connections checked against the wind at your site."
+          },
+          {
+            "glyph": "seismic",
+            "title": "Seismic activity",
+            "body": "Shear walls, hold-downs and foundations that work together when the ground moves."
+          },
+          {
+            "glyph": "temperature",
+            "title": "Temperature swings",
+            "body": "Details that allow for movement through extreme temperature shifts."
+          }
+        ]
+      }
+    },
+    {
+      "type": "service-cards",
+      "content": {
+        "heading": "What we design",
+        "intro": "We partner with architects, builders and homeowners to keep projects moving with clear drawings, responsive communication and clean calculations.",
+        "items": [
+          {
+            "title": "Residential",
+            "body": "Structural and foundation designs for custom homes, master plans, remodels, additions and decks, tailored for permitting and construction.",
+            "href": "/services/residential-structural-design",
+            "photo": {
+              "src": "/images/chalet-snow-card.jpg",
+              "alt": "A stone and log house with a car parked at the end of a deep snow drift in the driveway."
+            }
+          },
+          {
+            "title": "Low-rise commercial",
+            "body": "Structural and foundation designs for retail, office and tenant improvements, tailored for permitting and construction.",
+            "href": "/services/low-rise-commercial-structural-design",
+            "photo": {
+              "src": "/images/commercial-crane-card.jpg",
+              "alt": "A multi-story wood-framed building under construction, wrapped in house wrap, with a yellow tower crane above it."
+            }
+          },
+          {
+            "title": "Glazing and mullion",
+            "body": "Redlines and structural calculations for glazing, mullion, facade, storefront, curtainwall and sunshade systems.",
+            "href": "/services/glazing-and-mullion-engineering",
+            "photo": {
+              "src": "/images/curtain-wall-card.jpg",
+              "alt": "Looking up at the glass curtain wall of a tall building, with the sky and clouds reflected in the panels."
+            }
+          }
+        ]
+      }
+    },
+    {
+      "type": "figures-and-reasons",
+      "content": {
+        "figures": [
+          {
+            "value": "48",
+            "unit": "hours",
+            "body": "to a clear proposal with deliverables, pricing and schedule"
+          },
+          {
+            "value": "10",
+            "unit": "years",
+            "body": "of hands-on structural engineering"
+          }
+        ],
+        "heading": "Why builders call us back",
+        "items": [
+          {
+            "title": "Fast and responsive",
+            "body": "Questions don't sit unanswered. We respond to RFIs quickly to keep the project moving."
+          },
+          {
+            "title": "Permit-ready packages",
+            "body": "Clear drawings and stamped calculations that satisfy the submittal requirements."
+          }
+        ]
+      }
+    },
+    {
+      "type": "contact-band",
+      "content": {
+        "heading": "Ready to get started?",
+        "body": "Quick replies, clean drawings, and fair pricing.",
+        "action": {
+          "label": "Request a quote",
+          "href": "/contact-us"
+        }
+      }
+    }
+  ]
+}
