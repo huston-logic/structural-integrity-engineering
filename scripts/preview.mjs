@@ -76,7 +76,9 @@ export function startPreviewServer({ outDir = defaultOutDir, port = defaultPort 
     res.writeHead(status, {
       ...headerBlocks["/*"],
       "content-type": types[extname(target)] ?? "application/octet-stream",
-      ...(gzip ? { "content-encoding": "gzip", vary: "Accept-Encoding" } : undefined),
+      // Vary on every compressible file, gzipped or not, as Cloudflare does (a cache must not hand the plain copy to a gzip browser).
+      ...(compressible.has(extname(target)) ? { vary: "Accept-Encoding" } : undefined),
+      ...(gzip ? { "content-encoding": "gzip" } : undefined),
       ...(file ? headerBlocks[pathname] : undefined),
     });
     res.end(gzip ? gzipSync(readFileSync(target)) : readFileSync(target));
