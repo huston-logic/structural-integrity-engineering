@@ -117,8 +117,8 @@ Native details/summary; mist ring that gains an amber dot when open.
 Tokens: `--ease-site`, `--duration-feedback` (150ms), `--duration-panel` (200ms) in `globals.css`.
 - The home hero's line drawing is the one focal animation (`HeroDrawing`, `.hl-draw`, `.hl-draw-fade`, `.hl-draw-push`):
   the roof, floor and columns draw in from 0.4s, the dimension lines fade in at 2s, the wind arrows push in at 2.4s and
-  the labels appear at 2.7s. Each keyframe starts hidden with `backwards` fill, so the finished drawing is the resting
-  state.
+  the labels appear at 2.7s. The lines start hidden through `@starting-style` and a transition draws them; the other
+  parts are keyframes that start hidden with `backwards` fill. The finished drawing is the resting state.
 - Inner pages get one drawing each (`PageDrawing`, added 2026-11-24 at Grant's request): a label-free line drawing that
   draws itself when the page loads, in the home hero's own timing (`hl-draw`, `hl-draw-fade`), then holds still. The
   three service pages and /services lay theirs over the hero photo (a house gable, a braced bay, a mullion with its

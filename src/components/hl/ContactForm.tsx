@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useRef, useState, type SyntheticEvent } from "react";
+import { THANKS_PATH } from "@/blocks/schema";
 import { noteForm } from "@/content/contact";
 import { contactFields, honeypot, type ContactFieldSpec } from "@/content/contact-fields";
 import { providers } from "@/content/providers";
@@ -39,8 +40,11 @@ function ErrorLine({ id, message }: { id: string; message?: string }) {
  * in browser storage. Every failure keeps the visitor's answers. No `action`, and `method="post"`, so without JavaScript
  * nothing is sent.
  */
-/** `name` names the form for screen readers; the default is the deck's button label. Only the block showcase, which shows two forms, passes another. */
-export function ContactForm({ name = noteForm.formLabel }: { name?: string } = {}) {
+/**
+ * `name` names the form for screen readers; the default is the deck's button label. `idPrefix` starts every field id.
+ * Only the block showcase, which shows two forms, passes others, so its two forms have no id in common.
+ */
+export function ContactForm({ name = noteForm.formLabel, idPrefix = "cf" }: { name?: string; idPrefix?: string } = {}) {
   const router = useRouter();
   const [values, setValues] = useState<Record<string, string>>({});
   const [errors, setErrors] = useState<Errors>({});
@@ -60,7 +64,7 @@ export function ContactForm({ name = noteForm.formLabel }: { name?: string } = {
     for (const field of fields) next[field] = noteForm.errors[field];
     setErrors(next);
     const first = contactFields.find((f) => next[f.key]);
-    if (first) formRef.current?.querySelector<HTMLElement>(`#cf-${first.key}`)?.focus();
+    if (first) formRef.current?.querySelector<HTMLElement>(`#${idPrefix}-${first.key}`)?.focus();
   }
 
   function fail(error: SendError) {
@@ -108,7 +112,7 @@ export function ContactForm({ name = noteForm.formLabel }: { name?: string } = {
     const body = (await response.json().catch(() => null)) as { ok?: boolean; error?: string; fields?: unknown } | null;
 
     if (response.ok && body?.ok === true) {
-      router.push("/contact-us/thanks");
+      router.push(THANKS_PATH);
       return;
     }
     if (response.status === 400 && body?.error === "invalid" && Array.isArray(body.fields)) {
@@ -124,7 +128,7 @@ export function ContactForm({ name = noteForm.formLabel }: { name?: string } = {
   }
 
   function renderField(spec: ContactFieldSpec) {
-    const id = `cf-${spec.key}`;
+    const id = `${idPrefix}-${spec.key}`;
     const error = errors[spec.key];
     const shared = {
       id,
@@ -166,8 +170,8 @@ export function ContactForm({ name = noteForm.formLabel }: { name?: string } = {
 
         {/* Spam trap: hidden from people and screen readers, out of the tab order. A filled value is refused. */}
         <div aria-hidden="true" className="sr-only">
-          <label htmlFor="cf-fax">{honeypot.label}</label>
-          <input id="cf-fax" name={honeypot.name} type="text" tabIndex={-1} autoComplete="off" defaultValue="" />
+          <label htmlFor={`${idPrefix}-fax`}>{honeypot.label}</label>
+          <input id={`${idPrefix}-fax`}name={honeypot.name} type="text" tabIndex={-1} autoComplete="off" defaultValue="" />
         </div>
 
         <div>

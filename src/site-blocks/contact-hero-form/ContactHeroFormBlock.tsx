@@ -8,8 +8,12 @@ import type { contactHeroFormDefinition } from "./definition";
 export function ContactHeroFormBlock({ content, primary }: BlockProps<ContentOf<typeof contactHeroFormDefinition.fields>>) {
   return (
     <ContactHero title={content.title} intro={content.intro} headingLevel={primary ? "h1" : "h2"}>
-      {/* On the showcase page a second form sits beside the library's, so the example names itself. */}
-      <ContactForm name={primary ? noteForm.formLabel : `${noteForm.formLabel} (${content.title})`} />
+      {/* On the showcase page a second form sits beside the library's, so the example names itself and uses its own ids. */}
+      {primary ? (
+        <ContactForm />
+      ) : (
+        <ContactForm name={`${noteForm.formLabel} (${content.title})`} idPrefix="cf-example" />
+      )}
     </ContactHero>
   );
 }
