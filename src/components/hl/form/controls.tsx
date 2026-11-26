@@ -78,6 +78,7 @@ function ChipRow({
   onSelect,
   error,
   describedBy,
+  errorId,
   children,
 }: {
   field: FormField;
@@ -87,6 +88,7 @@ function ChipRow({
   onSelect: (value: string) => void;
   error?: string;
   describedBy?: string;
+  errorId: string;
   children: ReactNode;
 }) {
   return (
@@ -101,6 +103,9 @@ function ChipRow({
               value={option.value}
               checked={selected === option.value}
               onChange={() => onSelect(option.value)}
+              /* Focus lands on the first radio after a failed submit; not every screen reader reads the group's
+                 description then, so each radio names the error too (tests/a11y/form-block.spec.ts checks it). */
+              aria-describedby={error ? errorId : undefined}
               className="peer sr-only"
             />
             <span
@@ -147,7 +152,7 @@ export function FieldView({ field, ids, label, error, rich, placeholder, oneLine
 
   if (field.type === "dropdown" && field.display === "buttons" && chips) {
     return (
-      <ChipRow field={field} legend={label} options={chips.options} selected={chips.selected} onSelect={chips.onSelect} error={error} describedBy={described}>
+      <ChipRow field={field} legend={label} options={chips.options} selected={chips.selected} onSelect={chips.onSelect} error={error} describedBy={described} errorId={ids.error}>
         {help}
         {line}
       </ChipRow>
