@@ -3,8 +3,8 @@
 Clients will ask for website changes in plain words, and an AI will make each change on its own branch. These two tools
 judge the **files** a branch changed, not what anyone says they did. They are plain Node scripts with no new dependencies.
 
-- **Change scope check** (`npm run check:scope`): sorts a change into tier 1 or tier 3, flags risky tier 1 changes, and
-  enforces the image (type, size, hidden data, alt text) and placeholder rules.
+- **Change scope check** (`npm run check:scope`): sorts a change into tier 1 or tier 3, runs the content check on the page
+  files, and enforces the image (type, size, hidden data, alt text) and placeholder rules.
 - **Strip images** (`npm run strip:images`): removes hidden camera and location data from the images a branch adds or
   changes, so the image rules can pass.
 - **Change report** (`npm run report:changes`): before and after screenshots of the pages a change touches, at phone and
@@ -16,14 +16,15 @@ The rules live in one file: [`scripts/change-scope-rules.mjs`](../scripts/change
 
 | Tier | What it is | What the check does |
 | --- | --- | --- |
-| **1** | Content: copy in `src/content/<name>.ts` (plain data only, see below), photos in `public/images/`, a brand-new page built from blocks the site already has, the page list (`src/lib/routes.ts`) and the menu (`src/content/nav.ts`) | Passes. Risky tier 1 changes are **flagged** (below) |
-| **3** | Everything else: `worker/`, `public/_headers`, `wrangler.jsonc`, `site.config.ts`, `package.json` and the lockfile, `.github/`, `.claude/`, `src/components/`, and any other file | Fails (exit code 1) and lists each file with a plain reason |
+| **1** | Content: page files `src/content/pages/<name>.json` that pass the content check at the head commit, photos in `public/images/`, and plain-data content modules in `src/content/` (for example `contact.ts` and `nav.ts`, see below) | Passes. Content problems **block** on `change/` branches (see below) |
+| **3** | Everything else: `worker/`, `public/_headers`, `wrangler.jsonc`, `site.config.ts`, the wiring modules in `src/content/` (`site.ts`, `providers.ts`, `auto-reply.ts`, `contact-fields.ts`), `src/lib/` (including `routes.ts`), every file under `src/app/`, `src/blocks/` and `src/site-blocks/` (a block's design is code), `package.json` and the lockfile, `.github/`, `.claude/`, `src/components/`, deleting or renaming a page file, and any other file | Fails (exit code 1) and lists each file with a plain reason |
 
 (Tier 2, "ask first", is about a vague request and is handled by the agent, not by files, so the scope check does not know it.)
 
-Three modules in `src/content/` are wiring, not copy, so they are tier 3: `site.ts`, `providers.ts` and `auto-reply.ts`. Files
-with a dot in the name (`*.test.ts`, `*.d.ts`) and files in sub-folders are tier 3 too. Symbolic links, submodules and file
-type changes are tier 3 at any path, and so is deleting `routes.ts` or `nav.ts`.
+Four modules in `src/content/` are wiring, not copy, so they are tier 3: `site.ts`, `providers.ts`, `auto-reply.ts` and
+`contact-fields.ts`. Files with a dot in the name (`*.test.ts`, `*.d.ts`) and files in sub-folders are tier 3 too (the page
+files in `src/content/pages/` are the one exception, see below). Symbolic links, submodules and file type changes are tier 3
+at any path, and so is deleting `routes.ts` or `nav.ts`.
 
 **Tier 1 `.ts` files must be plain data.** A content module runs at build time (and `contact-fields.ts` also runs inside the
 contact Worker, which holds the email and Turnstile secrets), so "it only changes text" is not enough. The file is parsed
@@ -33,41 +34,38 @@ type-only imports, type declarations, and `const` values built from literals, ar
 `fetch`, `require`, `.constructor`, computed or `dangerouslySetInnerHTML`/`__proto__` keys, `using` declarations, syntax errors and any
 other statement make it tier 3. A NUL byte does too.
 
-A **new page** is tier 1 only when its file is exactly `src/app/(site)/<name>/page.tsx` (lowercase, one folder deep) and it
-passes both a text check and the parser:
+A new page is a new JSON file, so there is no page code to judge. The plain-data parser still checks the `.ts` content modules.
 
-- imports only `next`, `@/lib/metadata`, content modules and components that **already exist** on the base branch (the
-  parser reads real import and export statements, so spacing tricks do not hide one);
-- calls `pageMetadata(`;
-- contains none of `"use client"`, `dangerouslySetInnerHTML`, `<script`, `<iframe`, `fetch(`, `process.env`, `eval(`, `import(`;
-- fits a strict **allowlist grammar**, not a list of banned words (a banned-word list can never be complete: a property name
-  built at run time reaches the `Function` constructor without containing any banned word). A new page is JSX plus content
-  values: only imports, `const` values, functions and type declarations at the top level; inside functions only `const` and
-  `return`; expressions made of literals, **names declared or imported in the page** (so no ambient globals such as `Object`, `JSON` or `parseInt`),
-  property access, indexing by a number, arrays and objects with fixed keys,
-  `+ - && || ?? ===` style operators and `?:`; calls only to **imported or same-page helpers** and to `.map`, `.filter`,
-  `.flatMap` (exactly one inline arrow function as the argument), `.slice` and `.join` (plain numbers or text) and `.concat`, never on an
-  object literal; `import type` is the only way to import from `next`; destructuring may not pull out `constructor`, `prototype`, `call`, `apply`, `bind` or an array method name, and an object key may not be
-  named like an array method (so a plain object cannot be turned into a way to call arbitrary functions); JSX tags only from a list of
-  safe HTML tags or components the page imports; attribute values that are strings or plain expressions (a link attribute
-  may not be built with `+` or a template); no spread attributes, no computed keys, no `new`, no templates with `${}`, no
-  `async`, no `if` or loops, no assignment. The readable banned-word reasons (`require`, `process`, `globalThis`, `fetch`,
-  `.constructor`, `<script>`, `<form>`, `javascript:` and so on) still come first, so the message names the problem;
-- parses without a syntax error (the build uses a different parser, so a tolerated error could be read differently).
+A page file (`src/content/pages/<name>.json`) is tier 1 when it passes the content check at the head commit, whether it is new or edited. Deleting or renaming a page file is tier 3: pages are archived, not deleted (set `"status": "archived"`).
 
-Editing an **existing** page file is tier 3. Deleting a page is tier 1 but flagged.
+There is no longer a list of flagged changes. Prices, contact details, legal text, new links, page changes and file size
+are the client's own business, so they pass without a flag. Bad links (`javascript:`, `data:`, `http:`, and links to a
+missing or archived page) are content-check failures instead, so they block on a `change/` branch.
 
-## Flagged for Grant (still passes, always reported)
+## Content problems (blocking on change branches)
 
-Checked on lines added and removed, so changing or deleting a price is flagged too:
+The content check reads every page file and the image list from git at the commit being judged, so its verdict matches
+what will be built. It checks:
 
-- a dollar amount (`$900`, `500 USD`, `12 dollars`);
-- a contact detail or booking link: an email address, `mailto:` or `tel:`, a US-style or international phone number, or a
-  link on a known scheduler host (Calendly, Cal.com and similar, with or without `https://`; the list is in the rules file);
-- any new `https://` link (added lines only), or a `javascript:` or `data:` link;
-- a removed page, a route removed from `src/lib/routes.ts`, or a new page that is not added to `src/lib/routes.ts`;
-- any change to `src/content/privacy.ts` or `src/content/contact-fields.ts`;
-- a change over **300 changed lines** or over **10 files**.
+- the page keys, the path (one level deep, `/name`), that the file name matches the path, unique paths, title and
+  description lengths, the status (`live` or `archived`), and the menu (labels, places, at most six header items);
+- every block type is known, and the variant is one that block has;
+- anchors are unique and well formed; content keys are known; required keys are present; types and limits hold (for
+  example, a FAQ with too many questions);
+- text is plain text. Only the marks `**bold**` and `[[placeholder]]` count. No HTML tags, entities, markdown links or
+  control characters;
+- links are an internal path to a live page (with an anchor that exists on it, if one is given), `https://`, `mailto:`,
+  `tel:`, or the site's booking link. Nothing else;
+- images are under `/images/`, exist, are jpg, png or webp, and have real alt text;
+- video links are from the YouTube or Vimeo allow-list;
+- placement: a page starts with a block that may come first, no block goes over its maximum per page, and a page has at
+  most one focal (signature) animation.
+
+Each message names the file, the block number and the field, in plain words. For example:
+`services.json, block 3 (faq): "items" has 9 questions; this block takes at most 8.`
+
+The same check runs in `npm run check:content` (part of `npm run check:fast`) and inside `npm run build`, so a bad page
+also fails the build.
 
 ## Image rules (blocking on change branches)
 
@@ -113,6 +111,8 @@ accepts only these two shapes:
 { src: "/images/team/sam.jpg", alt: "Sam at the front desk" }    // in a content file: any key may hold the path, the key must be alt
 ```
 
+In a page file (`src/content/pages/<name>.json`) the same use is written with JSON keys: `{ "src": "/images/team/sam.jpg", "alt": "Sam at the front desk" }`. Uses in `.ts`, `.tsx` and page files all count.
+
 It fails when the image is used nowhere, when a use has no `alt`, when the alt text is empty, a `[[placeholder]]`, a file
 name or camera name (`IMG_1234`, `DSC00123`), a word that says nothing (`image`, `photo`, `picture`, `graphic`, `icon`, `logo`,
 `alt text`, `todo`, `tbd`, `untitled`, `placeholder`, with or without "a", "the", "of" or a plural; the list is
@@ -130,7 +130,7 @@ who decides how to mark it.
 
 ## Leftover placeholders (blocking on change branches)
 
-Any new `[[placeholder]]` on a line the change **adds** in `src/content/` or `src/app/`. A placeholder that was already on a
+Any new `[[placeholder]]` on a line the change **adds** in `src/content/` (page files included) or `src/app/`. A placeholder that was already on a
 line the change edited is not new (each added one cancels against a removed one with the same text), and the launch gate (`npm run check:placeholders`, which lists every placeholder in the repo) is unchanged.
 
 ## Running it
@@ -160,8 +160,15 @@ npm run report:changes
 Writes `change-report/report.md` and `change-report/<page>/{before,after}-{phone,desktop}.png` (the folder is git-ignored).
 "After" is your `out/` build. "Before" is built for you in a temporary git worktree from the point the branch split from
 `main` (`npm ci` and `npm run build`, a minute or two, removed afterwards); pass `--base-out <dir>` to reuse a build you
-already have. It photographs only the pages the change touches, found by following imports from the changed files (a change
-that reaches the shared layout, or that it cannot trace, photographs every page). Widths: phone 390 × 844, desktop 1440 × 900.
+already have. It photographs only the pages the change touches. A page file maps to its own page. A change to a block in
+`src/blocks/library/<type>/` or a site's own block in `src/site-blocks/<type>/` maps to every page that uses that block, plus
+the block showcase (`/blocks`); so do the blocks whose folders import that file (video-grid imports the video player). Other
+block code (anything else under `src/blocks/`, or directly in `src/site-blocks/` such as `definitions.ts`) reaches every page.
+Any other file is traced by its imports. Tracing stops at a block's own folder, so a component that only one block uses
+photographs the pages that use that block, plus `/blocks`, not every page. A change to the shared layout, or
+one that cannot be traced, photographs every page. Files under `worker/`, test files (`*.test.ts`, `*.test.mjs`), `docs/`,
+`scripts/`, `tests/` and Markdown files cannot change how a page looks, so they photograph nothing. A page going from live to archived
+is shown as "page archived" with no after picture, and going back to live as "page restored" with no before picture. Widths: phone 390 × 844, desktop 1440 × 900.
 It needs Chromium from Playwright (already a dev dependency) and falls back to an installed Google Chrome.
 
 It needs `npm ci` first, because the code check uses the `typescript` dev dependency.
@@ -175,14 +182,14 @@ cannot write workflows) run on pull requests. They are **not** required checks y
 required only after 5 clean runs and a deliberate-failure proof PR, and only after the ruleset is changed first.
 
 The jobs already run everything described here (the hidden-data and alt text checks live inside `check-change-scope.mjs`,
-and the script tests run with the `scripts/*.test.mjs` glob), so adding them needed no further workflow change.
+and the script tests run with the `scripts/*.test.mjs` glob), so adding them needed no further workflow change. The `check` job runs `npm run check`, which includes `check:content`, and the build reads the page
+files through the same check, so a bad page also fails CI.
 
 ## Using it in a client repo
 
 Copy `scripts/change-scope-rules.mjs`, `scripts/change-scope-code.mjs`, `scripts/check-change-scope.mjs`, `scripts/change-report.mjs`,
 `scripts/image-metadata.mjs`, `scripts/image-alt.mjs`, `scripts/strip-image-metadata.mjs`, `scripts/image-fixtures.mjs`, every `*.test.mjs` beside them,
-`scripts/preview.mjs` and the four `package.json` scripts (`check:scope`, `report:changes`, `strip:images`, `test:scripts`) from the template. Adjust the rules file for that site: any
-extra page-building file that should stay off limits, and the size limits. Name the agent's branches `change/<short-name>`.
+`scripts/preview.mjs` and the six `package.json` scripts (`check:scope`, `report:changes`, `strip:images`, `test:scripts`, `check:content`, `check:design`) from the template. Adjust the rules file for that site: any extra file that should stay off limits, and the size limits. The page and block pieces are a separate copy: the whole `src/blocks/` and `src/site-blocks/` folders, `src/lib/page-files.ts`, `src/lib/pages.ts`, `src/content/pages/`, and `scripts/check-content.mjs`, `scripts/check-design.mjs` and `scripts/design-rules.mjs`. The steps are in [`docs/CONVERT-TO-BLOCKS.md`](CONVERT-TO-BLOCKS.md). Name the agent's branches `change/<short-name>`.
 
 ## Known limits
 
@@ -190,7 +197,7 @@ extra page-building file that should stay off limits, and the size limits. Name 
   check judges files, not claims, but it trusts the actor it guards to pick that branch name. Until the ruleset enforces it
   (for example CODEOWNERS on tier 3 paths, or a required check that needs an owner label), the agent's workflow must create
   `change/` branches itself and nobody should open a client change from another branch.
-- **The code checks are static analysis, one layer among several.** They reject code in tier 1 files and in new pages by
+- **The code checks are static analysis, one layer among several.** They reject code in tier 1 `.ts` files by
   reading the parse tree, which is far harder to dodge than text search, but they cannot prove a file is harmless. The other
   layers are the required checks (including CodeQL), the preview Grant looks at, and the rule that Claude cannot merge.
 - **Images are checked by their first bytes, their size and a scan for markup**, not decoded. A hostile file that is a valid
@@ -208,7 +215,7 @@ extra page-building file that should stay off limits, and the size limits. Name 
   one rotation-only block. A file stripped of a flag it needed to look right would need to be re-encoded, which this tool
   never does.
 - **Alt text is checked for being there and for saying something, not for being true.** `"A smiling woman"` passes for any
-  photo. Grant reads the alt text in the change report. Only uses in `.ts` and `.tsx` files under `src/` count (an image used
+  photo. Grant reads the alt text in the change report. Only uses in `.ts`, `.tsx` and page `.json` files under `src/` count (an image used
   only as a CSS background has nowhere to hold alt text, so it fails as "not used"). A use whose alt text sits in a variable,
   or in another file than the one holding the path, fails and has to be written out beside the image. The path must be
   written exactly (`"/images/a.jpg"`), with no query string such as `?v=2`.
@@ -218,11 +225,6 @@ extra page-building file that should stay off limits, and the size limits. Name 
 - **Marker-level parsing, not full decoding.** The three file readers walk a file's segments or chunks and refuse a file whose
   structure is damaged (a cut-short upload, a length that runs off the end). They do not check that the compressed picture
   inside is valid; the browser does that.
-- **A new page could still hang or crash the build** (for example an endless recursion). That is a denial of service, not code
-  execution; the CI timeout and the preview Grant looks at are what stop it.
-- **A link built from text pieces** (`"java".concat("script:...")` in a `href`) is not caught by the check; React 19 refuses to render
-  `javascript:` links, and browsers block `data:` navigation, which is what stops it.
-- **Spelled-out prices** ("five hundred dollars") and other currencies are not flagged.
 - **The report's "after" is whatever is in `out/`**; rebuild before running it.
 
 ## What this does not do

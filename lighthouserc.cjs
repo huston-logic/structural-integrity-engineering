@@ -4,15 +4,15 @@
 // LHCI config files must be CommonJS. Node >= 22.18 loads the TypeScript route list natively; keep src/lib/routes.ts
 // free of imports and TypeScript-only syntax so this keeps working.
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const { indexableRoutes } = require("./src/lib/routes.ts");
+const { indexableRoutes, showcaseRoute } = require("./src/lib/routes.ts");
 
 const origin = "http://localhost:4822";
 
 module.exports = {
   ci: {
     collect: {
-      // Indexable pages only: a noindex page cannot pass the SEO "is crawlable" audit and the 404 page returns an error status.
-      url: indexableRoutes.map((route) => origin + route),
+      // The indexable pages plus the block showcase (noindex, so it has its own assertions below). The 404 page returns an error status.
+      url: [...indexableRoutes, showcaseRoute].map((route) => origin + route),
       numberOfRuns: 3,
       startServerCommand: "npm run preview",
       // preview.mjs prints "Previewing ./out at ..."; the default pattern ("listen|ready") would never match.
@@ -26,12 +26,28 @@ module.exports = {
     },
     assert: {
       // median of the 3 runs; LHCI's default ("optimistic") would pass if any single run passed.
-      assertions: {
-        "categories:accessibility": ["error", { minScore: 0.95, aggregationMethod: "median" }],
-        "categories:best-practices": ["error", { minScore: 0.9, aggregationMethod: "median" }],
-        "categories:seo": ["error", { minScore: 0.95, aggregationMethod: "median" }],
-        "categories:performance": ["error", { minScore: 0.9, aggregationMethod: "median" }],
-      },
+      assertMatrix: [
+        {
+          // Every page except the showcase.
+          matchingUrlPattern: "^(?!.*/blocks$).*$",
+          assertions: {
+            "categories:accessibility": ["error", { minScore: 0.95, aggregationMethod: "median" }],
+            "categories:best-practices": ["error", { minScore: 0.9, aggregationMethod: "median" }],
+            "categories:seo": ["error", { minScore: 0.95, aggregationMethod: "median" }],
+            "categories:performance": ["error", { minScore: 0.9, aggregationMethod: "median" }],
+          },
+        },
+        {
+          // The showcase has no SEO assertion: it is noindex by design, so it fails Lighthouse's "is crawlable" audit.
+          // Its performance, accessibility and best-practices thresholds are the same as every other page.
+          matchingUrlPattern: "/blocks$",
+          assertions: {
+            "categories:accessibility": ["error", { minScore: 0.95, aggregationMethod: "median" }],
+            "categories:best-practices": ["error", { minScore: 0.9, aggregationMethod: "median" }],
+            "categories:performance": ["error", { minScore: 0.9, aggregationMethod: "median" }],
+          },
+        },
+      ],
     },
     upload: {
       target: "filesystem",

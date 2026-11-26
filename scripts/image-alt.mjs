@@ -6,6 +6,7 @@
 // A "use" is a string that is exactly the image's URL, found in one of two shapes:
 //   - JSX:    <img src="/images/team/sam.jpg" alt="Sam at the front desk" />   (img, Image or any component)
 //   - data:   { src: "/images/team/sam.jpg", alt: "Sam at the front desk" }   (any key may hold the path; the key must be `alt`)
+//             Page files (.json) are read the same way: { "src": "...", "alt": "..." } is a use with alt text.
 // The alt text must be written out as text (a string, a template without ${}, or two strings joined with +), because a
 // variable or a spread cannot be checked. Empty, generic ("photo"), file-name and [[placeholder]] alt text is refused.
 import ts from "typescript";
@@ -106,7 +107,7 @@ export function imageAltCheck(url, sources, rules = defaultRules) {
   const alts = [];
   let uses = 0;
   for (const { path, content } of sources) {
-    const kind = /\.tsx$/.test(path) ? ts.ScriptKind.TSX : ts.ScriptKind.TS;
+    const kind = /\.json$/.test(path) ? ts.ScriptKind.JSON : /\.tsx$/.test(path) ? ts.ScriptKind.TSX : ts.ScriptKind.TS;
     const tree = ts.createSourceFile(path, content, ts.ScriptTarget.Latest, true, kind);
     for (const literal of literalsEqualTo(url, tree)) {
       uses += 1;

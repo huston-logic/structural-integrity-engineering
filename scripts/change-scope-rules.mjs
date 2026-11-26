@@ -1,32 +1,33 @@
 // The change-scope allow-list: the ONE place that says what a client change may touch. Read by
 // scripts/check-change-scope.mjs (and, through it, scripts/change-report.mjs). Full explanation: docs/CHANGE-SCOPE.md.
 //
-// Tier 1 = content: copy, photos, a new page built from blocks the site already has, the page list and the menu.
-// Tier 3 = everything else (code, settings, security, packages, workflows). A change that touches any tier 3 file
+// Tier 1 = content: copy, photos, pages (one JSON file of blocks per page) and the menu labels.
+// Tier 3 = everything else (code, settings, security, packages, workflows, blocks). A change that touches any tier 3 file
 // stops for Grant, whatever the request said. Editing this file is itself tier 3.
 //
 // No imports and no TypeScript syntax: plain Node loads it directly.
 
 export const rules = {
   // ---- Tier 1 ---------------------------------------------------------------------------------------------------
+  /** A page file: src/content/pages/<name>.json, top level of that folder only, lowercase words joined by hyphens; one -- in the name is the / of a two-level path. */
+  pageFile: /^src\/content\/pages\/([a-z0-9]+(?:-[a-z0-9]+)*(?:--[a-z0-9]+(?:-[a-z0-9]+)*)?)\.json$/,
+  /** The folder of page files. Any *.json directly inside it is read for the content check, whatever its name. */
+  pagesDir: "src/content/pages/",
   /** Copy modules: src/content/<name>.ts, top level only, no dots in the name (so *.test.ts and *.d.ts are not copy). */
   contentFile: /^src\/content\/[A-Za-z0-9_-]+\.ts$/,
   /** Modules inside src/content that are wiring, not copy: they re-export settings, read process.env or feed the Worker. */
-  contentWiring: ["src/content/site.ts", "src/content/providers.ts", "src/content/auto-reply.ts"],
+  contentWiring: ["src/content/site.ts", "src/content/providers.ts", "src/content/auto-reply.ts", "src/content/contact-fields.ts"],
   /** Photos live here. Added, changed and deleted files are tier 1, subject to the image rules below. */
   imageDir: "public/images/",
-  /** Single files a client change may edit: the route list and the menu. */
-  tier1Files: ["src/lib/routes.ts", "src/content/nav.ts"],
-  /** A brand-new page: exactly src/app/(site)/<name>/page.tsx, one folder deep, lowercase name. */
-  pagePath: /^src\/app\/\(site\)\/([a-z0-9-]+)\/page\.tsx$/,
+  /** Single files a client change may edit besides the content modules: the menu labels. */
+  tier1Files: ["src/content/nav.ts"],
   /**
-   * Tier 1 .ts files (content modules, routes.ts, nav.ts) are code that runs at build time, so they are parsed and must
-   * be plain data: imports of sibling content modules (or type-only imports), type declarations and `const` values built
-   * from literals, arrays and objects. No calls, functions, classes or other statements.
+   * Tier 1 .ts files (content modules, nav.ts) are code that runs at build time, so they are parsed and must be plain data:
+   * imports of sibling content modules (or type-only imports), type declarations and `const` values built from literals,
+   * arrays and objects. No calls, functions, classes or other statements. A page file is JSON, so it runs nothing; the
+   * content check (src/blocks/validate.ts) judges it instead.
    */
-  /** What a new page may import: next (for the Metadata type), src/content modules, @/lib/metadata and components that already exist. */
-  pageImports: { exact: ["next", "@/lib/metadata"], contentPrefix: "@/content/", componentPrefix: "@/components/" },
-  /** Names no tier 1 file or new page may use. Static analysis is best effort; CodeQL and the preview are the other layers. */
+  /** Names no tier 1 file may use. Static analysis is best effort; CodeQL and the preview are the other layers. */
   denyIdentifiers: [
     "eval", "Function", "setTimeout", "setInterval", "setImmediate", "queueMicrotask", "require", "process", "globalThis",
     "global", "window", "self", "document", "navigator", "location", "localStorage", "sessionStorage", "indexedDB", "fetch",
@@ -37,25 +38,8 @@ export const rules = {
   denyProperties: ["constructor", "__proto__", "prototype"],
   /** Method names that turn any function value into a generic call primitive. Denied when READ (x.call) or destructured, not as data keys. */
   denyMethodReads: ["call", "apply", "bind", "__lookupGetter__", "__lookupSetter__", "__defineGetter__", "__defineSetter__"],
-  /** JSX tags a new page may not use. */
-  denyJsxTags: ["script", "Script", "iframe", "object", "embed", "style", "base", "link", "meta", "form"],
-  /** A new page must use the shared metadata helper... */
-  pageRequires: ["pageMetadata("],
-  /** ...and must not contain any of these (client code, raw HTML, network calls, secrets, dynamic code). */
-  pageForbidden: ['"use client"', "'use client'", "dangerouslySetInnerHTML", "<script", "<iframe", "fetch(", "process.env", "eval(", "import("],
-
-  // ---- Flags: the change still passes, but Grant is told -------------------------------------------------------------
-  /** Dollar amounts: a $ followed by a digit, or a number followed by USD or dollars. */
-  dollarPatterns: [/\$\s?\d/, /\b\d[\d,]*(?:\.\d+)?\s?(?:USD|dollars?)\b/i],
-  /** Contact details: email addresses, mailto:/tel: links, US-style and international (+...) phone numbers. */
-  contactPatterns: [/[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}/, /\b(?:mailto|tel):/i, /(?:\+?1[\s.-]?)?\(?\b\d{3}\)?[\s.-]\d{3}[\s.-]\d{4}\b/, /\+\d[\d\s().-]{8,}\d/],
-  /** Booking links: a link (with or without https://) on one of these hosts. */
-  schedulerHosts: ["calendly.com", "cal.com", "savvycal.com", "tidycal.com", "acuityscheduling.com", "youcanbook.me", "zcal.co", "calendar.app.google"],
-  /** Files whose every change is flagged (legal text and the contact form's questions). */
-  sensitiveFiles: ["src/content/privacy.ts", "src/content/contact-fields.ts"],
-  /** Size limits. A change over either one is flagged. */
-  maxChangedLines: 300,
-  maxFiles: 10,
+  /** Why deleting (or renaming) a page file is tier 3. */
+  archiveReason: 'pages are archived, not deleted: set its status to "archived" instead',
 
   // ---- Image rules (blocking on change branches) -------------------------------------------------------------------
   /** Extension, with the first bytes the file must start with. SVG is never allowed: it can carry code. */
@@ -92,8 +76,10 @@ export const rules = {
     [/^\.github\//, "the CI workflows"],
     [/^\.claude\//, "the Claude hooks and agents"],
     [/^src\/components\//, "a shared component"],
-    [/^src\/content\/(site|providers|auto-reply)\.ts$/, "site wiring, not copy"],
-    [/^src\/app\/\(site\)\/[^/]+\/page\.tsx$/, "an existing page (only brand-new pages are allowed)"],
+    [/^src\/blocks\/|^src\/site-blocks\//, "a block's design (code)"],
+    [/^src\/lib\//, "site code"],
+    [/^src\/content\/(site|providers|auto-reply|contact-fields)\.ts$/, "site wiring, not copy"],
+    [/^src\/content\/pages\//, "not a page file: a page is src/content/pages/<name>.json, lowercase words joined by hyphens (-- for a /), directly in that folder"],
     [/./, "not on the client-change allow-list"],
   ],
 };

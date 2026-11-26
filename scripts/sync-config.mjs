@@ -9,6 +9,9 @@ import { pathToFileURL } from "node:url";
 const root = new URL("..", import.meta.url).pathname;
 const { siteConfig: c } = await import(pathToFileURL(join(root, "site.config.ts")).href);
 
+// The video sites the video blocks may embed (the single allowlist in src/blocks/embeds.ts).
+const { embedOrigins } = await import(pathToFileURL(join(root, "src/blocks/embeds.ts")).href);
+
 const unique = (list) => [...new Set(list)];
 const kebab = (key) => key.replace(/([a-z0-9])([A-Z0-9])/g, "$1-$2").toLowerCase();
 
@@ -65,7 +68,8 @@ function headers() {
     ...c.csp.extraScriptSrc,
   ]);
   const connect = unique(["'self'", ...(insights ? ["https://cloudflareinsights.com"] : []), ...c.csp.extraConnectSrc]);
-  const frame = unique(["https://challenges.cloudflare.com", ...c.csp.extraFrameSrc]);
+  const frame = unique(["https://challenges.cloudflare.com", ...embedOrigins, ...c.csp.extraFrameSrc]);
+  const autoplay = `autoplay=(${embedOrigins.map((origin) => `"${origin}"`).join(" ")})`;
   const csp = [
     "default-src 'self'",
     `script-src ${script.join(" ")}`,
@@ -88,6 +92,8 @@ function headers() {
 # when a scheduler or form provider is added.
 # https://challenges.cloudflare.com (script-src, frame-src): Cloudflare Turnstile on the contact form.
 # https://static.cloudflareinsights.com (script-src) and https://cloudflareinsights.com (connect-src): Cloudflare Web Analytics.
+# https://www.youtube-nocookie.com and https://player.vimeo.com (frame-src, and autoplay in Permissions-Policy): the video blocks
+# swap in a player from these two sites when a visitor presses play; the list is embedOrigins in src/blocks/embeds.ts.
 # The form posts to the same-origin Worker (/api/contact), so form-action stays 'self'.
 # These headers apply to static files only; the Worker sets its own headers on /api/* responses.
 
@@ -96,7 +102,7 @@ function headers() {
   X-Content-Type-Options: nosniff
   X-Frame-Options: DENY
   Referrer-Policy: strict-origin-when-cross-origin
-  Permissions-Policy: accelerometer=(), autoplay=(), camera=(), display-capture=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=(), interest-cohort=()
+  Permissions-Policy: accelerometer=(), ${autoplay}, camera=(), display-capture=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=(), interest-cohort=()
   Cross-Origin-Opener-Policy: same-origin
   Cross-Origin-Resource-Policy: same-origin
   Strict-Transport-Security: max-age=31536000; includeSubDomains

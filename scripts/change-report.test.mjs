@@ -5,26 +5,33 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { rules } from "./change-scope-rules.mjs";
 import { evaluateChange, formatReport } from "./check-change-scope.mjs";
-import { affectedPages, buildReportMarkdown, extractOptions, findImporters, routeForPageFile, slugForRoute } from "./change-report.mjs";
+import { affectedPages, buildReportMarkdown, extractOptions, findImporters, pageInfoFromTexts, routeForPageFile, slugForRoute } from "./change-report.mjs";
 
-const allRoutes = ["/", "/services", "/about-us", "/contact-us", "/privacy", "/contact-us/thanks"];
+const allRoutes = ["/", "/services", "/about", "/contact", "/privacy", "/contact/thanks", "/blocks"];
 const pageRoutes = {
   "src/app/(site)/page.tsx": "/",
   "src/app/(site)/services/page.tsx": "/services",
-  "src/app/(site)/about-us/page.tsx": "/about-us",
-  "src/app/(site)/contact-us/page.tsx": "/contact-us",
+  "src/app/(site)/about/page.tsx": "/about",
+  "src/app/(site)/contact/page.tsx": "/contact",
   "src/app/(site)/privacy/page.tsx": "/privacy",
-  "src/app/(site)/contact-us/thanks/page.tsx": "/contact-us/thanks",
+  "src/app/(site)/contact/thanks/page.tsx": "/contact/thanks",
 };
 const sources = {
   "src/app/(site)/page.tsx": 'import { homeHero } from "@/content/home";\nimport { Hero } from "@/components/hl/Hero";',
-  "src/app/(site)/about-us/page.tsx": "import { aboutBody } from '@/content/about';\nimport { Button } from \"@/components/hl/Button\";",
+  "src/app/(site)/about/page.tsx": "import { aboutBody } from '@/content/about';\nimport { Button } from \"@/components/hl/Button\";",
   "src/app/(site)/services/page.tsx": 'import { servicesHero } from "@/content/services";\nimport { Button } from "@/components/hl/Button";',
-  "src/app/(site)/contact-us/page.tsx": 'import { contactHero } from "@/content/contact";',
+  "src/app/(site)/contact/page.tsx": 'import { contactHero } from "@/content/contact";',
   "src/app/(site)/privacy/page.tsx": 'import { privacy } from "@/content/privacy";',
-  "src/app/(site)/contact-us/thanks/page.tsx": 'import { thanks } from "@/content/contact";',
+  "src/app/(site)/contact/thanks/page.tsx": 'import { thanks } from "@/content/contact";',
   "src/app/(site)/layout.tsx": 'import { SiteChrome } from "@/components/layout/SiteChrome";',
-  "src/components/layout/SiteChrome.tsx": 'import { nav } from "@/content/nav";',
+  "src/components/layout/SiteChrome.tsx": 'import { nav } from "@/content/nav";\nimport { Footer } from "./Footer";',
+  "src/components/layout/Footer.tsx": "export function Footer() {}",
+  "src/components/hl/Accordion.tsx": "export function Accordion() {}",
+  "src/blocks/library/faq/Faq.tsx": 'import { Accordion } from "@/components/hl/Accordion";',
+  "src/blocks/library/video/VideoFacade.tsx": 'import { Play } from "@/components/hl/Play";',
+  "src/blocks/library/video-grid/VideoGridBlock.tsx": 'import { VideoFacade } from "../video/VideoFacade";',
+  "src/components/hl/Play.tsx": "export function Play() {}",
+  "src/site-blocks/hero/Hero.tsx": "export function Hero() {}",
   "src/components/hl/Button.tsx": "export function Button() {}",
   "src/components/hl/Hero.tsx": 'import { homeBackdrop } from "@/content/home-art";',
   "src/content/home.ts": 'export const homeHero = { image: "/images/home/hero.jpg" };',
@@ -35,22 +42,30 @@ const sources = {
   "src/content/providers.ts": "export const providers = {};",
 };
 const change = (...entries) => entries.map(([status, path]) => ({ status, path }));
-const pages = (files) => affectedPages({ files, sources, pageRoutes, allRoutes });
+const live = (...types) => ({ status: "live", types });
+const archived = (...types) => ({ status: "archived", types });
+const pagesBefore = { "/": live("hero", "highlights"), "/about": live("hero", "prose", "closing-cta"), "/services": live("hero", "faq"), "/privacy": live("hero", "legal-sections"), "/contact": live("hero", "contact-form") };
+const pages = (files, pagesHead = pagesBefore, pagesBase = pagesBefore) => affectedPages({ files, sources, pageRoutes, allRoutes, pagesHead, pagesBase });
 const routes = (files) => pages(files).map((p) => p.route);
 
 test("routeForPageFile and slugForRoute", () => {
-  assert.equal(routeForPageFile("src/app/(site)/page.tsx"), "/");
-  assert.equal(routeForPageFile("src/app/(site)/faq/page.tsx"), "/faq");
-  assert.equal(routeForPageFile("src/app/(site)/contact-us/thanks/page.tsx"), "/contact-us/thanks");
-  assert.equal(routeForPageFile("src/app/(site)/layout.tsx"), null);
-  assert.equal(routeForPageFile("src/app/not-found.tsx"), null);
+  assert.equal(routeForPageFile("src/content/pages/home.json"), "/");
+  assert.equal(routeForPageFile("src/content/pages/about.json"), "/about");
+  assert.equal(routeForPageFile("src/content/pages/our-team.json"), "/our-team");
+  assert.equal(routeForPageFile("src/content/pages/services--glazing-and-mullion.json"), "/services/glazing-and-mullion");
+  assert.equal(routeForPageFile("src/content/pages/services--a--b.json"), null);
+  assert.equal(routeForPageFile("src/content/pages/sub/about.json"), null);
+  assert.equal(routeForPageFile("src/content/pages/about.draft.json"), null);
+  assert.equal(routeForPageFile("src/content/contact.ts"), null);
+  assert.equal(routeForPageFile("src/app/(site)/page.tsx"), null);
   assert.equal(slugForRoute("/"), "home");
-  assert.equal(slugForRoute("/contact-us/thanks"), "contact-us-thanks");
-  assert.equal(slugForRoute("/about-us"), "about-us");
+  assert.equal(slugForRoute("/contact/thanks"), "contact-thanks");
+  assert.equal(slugForRoute("/about"), "about");
+  assert.equal(slugForRoute("/services/glazing"), "services-glazing");
 });
 
 test("findImporters finds alias, relative and image-path references", () => {
-  assert.deepEqual(findImporters("src/content/about.ts", sources), ["src/app/(site)/about-us/page.tsx"]);
+  assert.deepEqual(findImporters("src/content/about.ts", sources), ["src/app/(site)/about/page.tsx"]);
   assert.deepEqual(findImporters("src/content/home.ts", sources).sort(), ["src/app/(site)/page.tsx", "src/content/home-art.ts"].sort());
   assert.deepEqual(findImporters("public/images/about/portrait.webp", sources), ["src/content/about.ts"]);
   assert.deepEqual(findImporters("public/images/unused.jpg", sources), []);
@@ -58,7 +73,7 @@ test("findImporters finds alias, relative and image-path references", () => {
 });
 
 test("a content change touches only the pages that use it", () => {
-  assert.deepEqual(routes(change(["M", "src/content/about.ts"])), ["/about-us"]);
+  assert.deepEqual(routes(change(["M", "src/content/about.ts"])), ["/about"]);
   assert.deepEqual(routes(change(["M", "src/content/services.ts"])), ["/services"]);
 });
 
@@ -66,16 +81,108 @@ test("content used through other modules reaches the pages that import those", (
   // home.ts is imported by the home page and by home-art.ts, which the Hero component imports; the home page imports Hero.
   assert.deepEqual(routes(change(["M", "src/content/home.ts"])), ["/"]);
   // contact.ts is imported by the contact and thanks pages directly.
-  assert.deepEqual(routes(change(["M", "src/content/contact.ts"])), ["/contact-us", "/contact-us/thanks"]);
+  assert.deepEqual(routes(change(["M", "src/content/contact.ts"])), ["/contact", "/contact/thanks"]);
 });
 
 test("a change that reaches the shared layout touches every page", () => {
   assert.deepEqual(routes(change(["M", "src/content/nav.ts"])), [...allRoutes].sort());
 });
 
+test("a page file maps to its own route, the home page file to /", () => {
+  assert.deepEqual(pages(change(["M", "src/content/pages/about.json"])).map((p) => [p.route, p.before, p.after, p.reason]), [["/about", true, true, "src/content/pages/about.json changed"]]);
+  assert.deepEqual(routes(change(["M", "src/content/pages/home.json"])), ["/"]);
+  assert.deepEqual(routes(change(["M", "src/content/pages/home.json"], ["M", "src/content/pages/services.json"])), ["/", "/services"]);
+});
+
+test("a new page file is photographed on both sides: the base build says whether the page was there (a 404 is skipped)", () => {
+  const head = { ...pagesBefore, "/our-team": live("hero", "closing-cta") };
+  const [page] = pages(change(["A", "src/content/pages/our-team.json"]), head, pagesBefore);
+  assert.deepEqual([page.route, page.slug, page.before, page.after, page.reason], ["/our-team", "our-team", true, true, "new page file"]);
+});
+
+test("converting a site to blocks: a page that was code at the base and is a page file now gets a before and an after", () => {
+  const head = { "/": live("hero"), "/about": live("hero", "prose") };
+  const converted = pages(change(["A", "src/content/pages/home.json"], ["A", "src/content/pages/about.json"]), head, {});
+  assert.deepEqual(converted.map((p) => [p.route, p.before, p.after]), [["/", true, true], ["/about", true, true]]);
+});
+
+test("a page that goes from live to archived is a page archived: a before only", () => {
+  const head = { ...pagesBefore, "/about": archived("hero", "prose", "closing-cta") };
+  const [page] = pages(change(["M", "src/content/pages/about.json"]), head, pagesBefore);
+  assert.deepEqual([page.route, page.before, page.after, page.reason], ["/about", true, false, "page archived"]);
+});
+
+test("a page that goes from archived to live is a page restored: an after only", () => {
+  const base = { ...pagesBefore, "/about": archived("hero") };
+  const [page] = pages(change(["M", "src/content/pages/about.json"]), pagesBefore, base);
+  assert.deepEqual([page.route, page.before, page.after, page.reason], ["/about", false, true, "page restored"]);
+});
+
+test("editing a page that stays archived shows nothing; a new archived page file is only looked for in the base build", () => {
+  const archivedBoth = { ...pagesBefore, "/about": archived("hero") };
+  assert.deepEqual(pages(change(["M", "src/content/pages/about.json"]), archivedBoth, archivedBoth), []);
+  const added = pages(change(["A", "src/content/pages/old.json"]), { ...pagesBefore, "/old": archived("hero") }, pagesBefore);
+  assert.deepEqual(added.map((p) => [p.route, p.before, p.after]), [["/old", true, false]], "only the base build is asked, and it skips a 404");
+});
+
+test("a block's library folder reaches every page that uses that block type, plus the showcase", () => {
+  assert.deepEqual(routes(change(["M", "src/blocks/library/faq/Faq.tsx"])), ["/blocks", "/services"]);
+  assert.deepEqual(routes(change(["M", "src/blocks/library/hero/definition.ts"])), ["/", "/about", "/blocks", "/contact", "/privacy", "/services"]);
+  assert.deepEqual(routes(change(["M", "src/blocks/library/video/Video.tsx"])), ["/blocks"], "no page uses video yet");
+});
+
+test("a page that used the block only before the change is still photographed", () => {
+  const head = { ...pagesBefore, "/services": live("hero") };
+  assert.deepEqual(pages(change(["M", "src/blocks/library/faq/Faq.tsx"]), head, pagesBefore).map((p) => p.route), ["/blocks", "/services"]);
+});
+
+test("any other file under src/blocks or src/site-blocks reaches every page", () => {
+  for (const path of ["src/blocks/BlockRenderer.tsx", "src/blocks/schema.ts", "src/blocks/components.tsx", "src/site-blocks/definitions.ts", "src/site-blocks/components.tsx"]) {
+    assert.deepEqual(routes(change(["M", path])), [...allRoutes].sort(), path);
+  }
+});
+
+test("a component used only by the FAQ block maps to pages using faq and /blocks", () => {
+  assert.deepEqual(routes(change(["M", "src/components/hl/Accordion.tsx"])), ["/blocks", "/services"]);
+});
+
+const withVideoGrid = { ...pagesBefore, "/about": live("hero", "video-grid") };
+const routesWith = (files) => pages(files, withVideoGrid, withVideoGrid).map((p) => p.route);
+
+test("a change to video/VideoFacade.tsx reaches pages using video-grid too", () => {
+  assert.deepEqual(routesWith(change(["M", "src/blocks/library/video/VideoFacade.tsx"])), ["/about", "/blocks"]);
+});
+
+test("a component imported only by video/ reaches video-grid pages too", () => {
+  assert.deepEqual(routesWith(change(["M", "src/components/hl/Play.tsx"])), ["/about", "/blocks"]);
+});
+
+test("a direct edit under src/site-blocks/<type>/ maps like a library block", () => {
+  const head = { ...pagesBefore, "/about": live("prose") };
+  assert.deepEqual(pages(change(["M", "src/site-blocks/hero/Hero.tsx"]), head, head).map((p) => p.route), ["/", "/blocks", "/contact", "/privacy", "/services"]);
+});
+
+test("a layout component still reaches every page", () => {
+  assert.deepEqual(routes(change(["M", "src/components/layout/Footer.tsx"])), [...allRoutes].sort());
+});
+
+test("worker/ changes photograph nothing", () => {
+  assert.deepEqual(routes(change(["M", "worker/contact.ts"], ["M", "worker/editor/tools.ts"], ["M", "src/lib/first-name.test.ts"], ["M", "scripts/finish-build.test.mjs"])), []);
+});
+
+test("pageInfoFromTexts reads status and block types from page file texts, skipping files that are not JSON", () => {
+  const info = pageInfoFromTexts([
+    { file: "home.json", text: JSON.stringify({ path: "/", status: "live", blocks: [{ type: "hero" }, { type: "hero" }, { type: "faq" }] }) },
+    { file: "about.json", text: JSON.stringify({ status: "archived", blocks: [{ type: "prose" }] }) },
+    { file: "broken.json", text: "{" },
+    { file: "list.json", text: "[]" },
+  ]);
+  assert.deepEqual(info, { "/": { status: "live", types: ["hero", "faq"] }, "/about": { status: "archived", types: ["prose"] } });
+});
+
 test("a photo is traced to the pages that show it; an unreferenced one touches every page", () => {
-  assert.deepEqual(routes(change(["A", "public/images/about/portrait.webp"])), ["/about-us"]);
-  assert.deepEqual(routes(change(["M", "public/images/about/portrait.webp"])), ["/about-us"]);
+  assert.deepEqual(routes(change(["A", "public/images/about/portrait.webp"])), ["/about"]);
+  assert.deepEqual(routes(change(["M", "public/images/about/portrait.webp"])), ["/about"]);
   assert.deepEqual(routes(change(["A", "public/images/unused.jpg"])), [...allRoutes].sort());
 });
 
@@ -84,17 +191,16 @@ test("files that cannot be traced touch every page, and files with no visual eff
   assert.deepEqual(routes(change(["M", "docs/STATUS.md"], ["M", "scripts/preview.mjs"], ["M", ".github/workflows/ci.yml"], ["M", "tests/a11y/x.ts"], ["M", "README.md"], ["M", "src/lib/routes.ts"])), []);
 });
 
-test("a new page has an after only, a deleted page a before only", () => {
-  const added = pages(change(["A", "src/app/(site)/faq/page.tsx"], ["M", "src/lib/routes.ts"]));
-  const faq = added.find((p) => p.route === "/faq");
-  assert.deepEqual([faq.before, faq.after], [false, true]);
-  const deleted = pages(change(["D", "src/app/(site)/privacy/page.tsx"]));
-  assert.deepEqual(deleted.map((p) => [p.route, p.before, p.after]), [["/privacy", true, false]]);
+test("a deleted page file has a before only", () => {
+  const head = { ...pagesBefore };
+  delete head["/privacy"];
+  const deleted = pages(change(["D", "src/content/pages/privacy.json"]), head, pagesBefore);
+  assert.deepEqual(deleted.map((p) => [p.route, p.before, p.after, p.reason]), [["/privacy", true, false, "page deleted"]]);
 });
 
 test("every page carries its slug and the reason it was picked", () => {
   const [about] = pages(change(["M", "src/content/about.ts"]));
-  assert.equal(about.slug, "about-us");
+  assert.equal(about.slug, "about");
   assert.match(about.reason, /src\/content\/about\.ts/);
 });
 
@@ -113,19 +219,19 @@ test("the markdown report lists the scope result and a before and after for each
     base: "origin/main",
     head: "HEAD",
     pages: [
-      { route: "/about-us", slug: "about-us", before: true, after: true, reason: "src/content/about.ts changed" },
+      { route: "/about", slug: "about", before: true, after: true, reason: "src/content/about.ts changed" },
       { route: "/faq", slug: "faq", before: false, after: true, reason: "new page" },
     ],
     viewports: [{ name: "phone", width: 390, height: 844 }, { name: "desktop", width: 1440, height: 900 }],
   });
   assert.match(md, /^# Change report/);
   assert.match(md, /Tier 1: this change only touches content/);
-  assert.match(md, /### \/about-us/);
-  assert.match(md, /!\[before, phone\]\(about-us\/before-phone\.png\)/);
-  assert.match(md, /!\[after, desktop\]\(about-us\/after-desktop\.png\)/);
+  assert.match(md, /### \/about/);
+  assert.match(md, /!\[before, phone\]\(about\/before-phone\.png\)/);
+  assert.match(md, /!\[after, desktop\]\(about\/after-desktop\.png\)/);
   assert.match(md, /### \/faq/);
   assert.doesNotMatch(md, /faq\/before-/);
-  assert.match(md, /new page, no before/i);
+  assert.match(md, /not live before/i);
   assert.match(md, /390 × 844/);
 });
 
@@ -136,7 +242,6 @@ test("a photo change puts its alt text and its problems in the report, and photo
   const result = evaluateChange(
     {
       files: [photo("public/images/home/hero.jpg", jpegHead), photo("public/images/home/leak.jpg", jpegHead, { metadata: { removed: ["EXIF (camera and location data)"] } })],
-      existsAtBase: () => false,
       imageRefs: { "public/images/home/hero.jpg": used },
     },
     rules,
