@@ -9,12 +9,19 @@ import { AGENCY_NAME } from "./words.ts";
 
 const ITEM_PREFIX = "item:";
 const SETTINGS_PREFIX = "settings:";
+const FORM_PREFIX = "form:";
 
 /** Pages, items and settings under one map of keys, so upload references can be resolved in all of them at once. */
-export function combineDocuments(pages: ReadonlyMap<string, unknown>, items: ReadonlyMap<string, unknown>, settings: ReadonlyMap<string, unknown>): Map<string, unknown> {
+export function combineDocuments(
+  pages: ReadonlyMap<string, unknown>,
+  items: ReadonlyMap<string, unknown>,
+  settings: ReadonlyMap<string, unknown>,
+  forms: ReadonlyMap<string, unknown> = new Map(),
+): Map<string, unknown> {
   const out = new Map<string, unknown>(pages);
   for (const [key, value] of items) out.set(`${ITEM_PREFIX}${key}`, value);
   for (const [key, value] of settings) out.set(`${SETTINGS_PREFIX}${key}`, value);
+  for (const [key, value] of forms) out.set(`${FORM_PREFIX}${key}`, value);
   return out;
 }
 
@@ -22,24 +29,30 @@ export interface SplitDocuments {
   pages: Map<string, unknown>;
   items: Map<string, unknown>;
   settings: Map<string, unknown>;
+  forms: Map<string, unknown>;
 }
 
 export function splitDocuments(combined: ReadonlyMap<string, unknown>): SplitDocuments {
-  const out: SplitDocuments = { pages: new Map(), items: new Map(), settings: new Map() };
+  const out: SplitDocuments = { pages: new Map(), items: new Map(), settings: new Map(), forms: new Map() };
   for (const [key, value] of combined) {
     if (key.startsWith(ITEM_PREFIX)) out.items.set(key.slice(ITEM_PREFIX.length), value);
     else if (key.startsWith(SETTINGS_PREFIX)) out.settings.set(key.slice(SETTINGS_PREFIX.length), value);
+    else if (key.startsWith(FORM_PREFIX)) out.forms.set(key.slice(FORM_PREFIX.length), value);
     else out.pages.set(key, value);
   }
   return out;
 }
 
 /** The keys of combineDocuments for what a change touched. */
-export const touchedKeys = (pages: readonly string[], items: readonly string[], settings: readonly string[]): string[] => [
+export const touchedKeys = (pages: readonly string[], items: readonly string[], settings: readonly string[], forms: readonly string[] = []): string[] => [
   ...pages,
   ...items.map((key) => `${ITEM_PREFIX}${key}`),
   ...settings.map((key) => `${SETTINGS_PREFIX}${key}`),
+  ...forms.map((key) => `${FORM_PREFIX}${key}`),
 ];
+
+/** How a form's id reads in a refusal about placeholders. */
+export const formLabel = (id: string): string => `Form ${id}`;
 
 /** How an item or settings key reads to the owner in a refusal about placeholders. */
 export const documentLabel = (key: string): string => (key.includes("/") ? `Item ${key}` : `The ${key} settings`);
@@ -75,8 +88,9 @@ export function finishLogo(settings: ReadonlyMap<string, unknown>, uploads: read
 export const touchesBrand = (files: readonly { path: string }[]): boolean => files.some((file) => file.path === "src/content/brand.json");
 
 /** Whether the items or settings a proposal was made against have changed on the site since. Old proposals without the record skip it. */
-export function documentsMoved(snapshot: Snapshot, proposal: { collectionsTree?: string; settingsShas?: Record<string, string> }): boolean {
+export function documentsMoved(snapshot: Snapshot, proposal: { collectionsTree?: string; formsTree?: string; settingsShas?: Record<string, string> }): boolean {
   if (proposal.collectionsTree !== undefined && snapshot.collectionsTree !== proposal.collectionsTree) return true;
+  if (proposal.formsTree !== undefined && snapshot.formsTree !== proposal.formsTree) return true;
   const shas = proposal.settingsShas;
   return shas !== undefined && SETTINGS_NAMES.some((name: SettingsName) => shas[name] !== undefined && snapshot.settingsShas[name] !== shas[name]);
 }

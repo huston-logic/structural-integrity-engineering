@@ -19,6 +19,7 @@ import { registry } from "../src/blocks/definitions.ts";
 import { validatePages as realValidatePages } from "../src/blocks/validate.ts";
 import { validateSite as realValidateSite, SITE_SETTINGS_NAMES } from "../src/collections/site-validate.ts";
 import { COLLECTION_KINDS, SLUG_RE } from "../src/collections/schema.ts";
+import { registryIds, registrySource } from "../src/forms/registry.ts";
 import { brandFiles } from "./config-rules.mjs";
 import { imageAltCheck } from "./image-alt.mjs";
 import { inspectMetadata } from "./image-metadata.mjs";
@@ -71,6 +72,8 @@ const isPageFile = (path, rules) => rules.pageFile.test(path);
 const isItemFile = (path, rules) => rules.itemFile.test(path);
 const isSettingsFile = (path, rules) => rules.settingsFiles.includes(path);
 const isGeneratedFile = (path, rules) => rules.generatedFiles.includes(path);
+const isFormFile = (path, rules) => rules.formFile.test(path);
+const isRegistryFile = (path, rules) => path === rules.registryFile;
 
 const isCodeFile = (path, rules) => (rules.contentFile.test(path) && !rules.contentWiring.includes(path)) || rules.tier1Files.includes(path);
 
@@ -135,7 +138,7 @@ export function gatherChange({ base, head, git, rules = defaultRules }) {
     }
     // --text: git must not hide the added lines of a file it thinks is binary (for example, one that contains a NUL byte).
     Object.assign(file, parseHunkLines(git(["diff", "-U0", "--no-renames", "--text", range, "--", path])));
-    const needsContent = file.status !== "D" && !special && (isCodeFile(path, rules) || isGeneratedFile(path, rules));
+    const needsContent = file.status !== "D" && !special && (isCodeFile(path, rules) || isGeneratedFile(path, rules) || isRegistryFile(path, rules));
     if (needsContent) file.content = String(git(["show", `${head}:${path}`]));
     return file;
   });
@@ -151,7 +154,7 @@ export function gatherChange({ base, head, git, rules = defaultRules }) {
     (f) =>
       !SPECIAL_MODES.includes(f.mode) &&
       ["A", "M"].includes(f.status) &&
-      (isItemFile(f.path, rules) || isSettingsFile(f.path, rules) || isGeneratedFile(f.path, rules)),
+      (isItemFile(f.path, rules) || isSettingsFile(f.path, rules) || isGeneratedFile(f.path, rules) || isFormFile(f.path, rules) || isRegistryFile(f.path, rules)),
   );
   if (!touchesPages && !touchesSite) return { files, imageRefs, fileRefs };
   return {
@@ -210,7 +213,20 @@ function readSiteAt(head, git, rules) {
       return { kind: match[1], slug: match[2], data, ...(error !== undefined ? { error } : {}) };
     });
   const present = new Set(String(git(["ls-tree", "--name-only", "-z", head, "--", ...rules.settingsFiles])).split("\0").filter(Boolean));
-  const site = { items, settingsErrors: {} };
+  const forms = listAt(head, rules.formDir, git)
+    .filter((path) => path.startsWith(rules.formDir) && !path.slice(rules.formDir.length).includes("/") && path.endsWith(".json"))
+    .sort()
+    .map((path) => {
+      const { data, error } = parseJsonText(git(["show", `${head}:${path}`]));
+      return { id: path.slice(rules.formDir.length, -".json".length), data, ...(error !== undefined ? { error } : {}) };
+    });
+  const site = { items, forms, settingsErrors: {} };
+  // The ids the committed registry lists (not what it should list): the content check compares them with the form files.
+  const registryPresent = String(git(["ls-tree", "--name-only", "-z", head, "--", rules.registryFile])).split("\0").filter(Boolean).length > 0;
+  if (registryPresent) {
+    const text = String(git(["show", `${head}:${rules.registryFile}`]));
+    site.registryIds = registryIds(text);
+  }
   for (const name of SITE_SETTINGS_NAMES) {
     const path = `src/content/${name}.json`;
     if (!present.has(path)) {
@@ -240,6 +256,11 @@ function generatedMatches(file, site) {
   }
 }
 
+/** True when the registry at the head commit is exactly what the head's form files generate. */
+function registryMatches(file, site) {
+  return Array.isArray(site.forms) && typeof file.content === "string" && file.content === registrySource(site.forms.map((form) => form.id));
+}
+
 function itemProblem(path, rules) {
   const [, kind, slug] = rules.itemFile.exec(path);
   if (!COLLECTION_KINDS.includes(kind)) return `"${kind}" is not a collection. The collections are: ${COLLECTION_KINDS.join(", ")}`;
@@ -262,6 +283,12 @@ function classify(file, rules, site) {
   }
   if (path.startsWith(rules.imageDir)) return { ok: true };
   if (path.startsWith(rules.fileDir)) return rules.pdfFile.test(path) ? { ok: true } : { ok: false, reason: rules.fileNameReason };
+  if (path === rules.contactFormFile) return { ok: false, reason: tier3Reason(path, rules) };
+  if (isFormFile(path, rules)) return status === "D" ? { ok: false, reason: rules.formArchiveReason } : { ok: true };
+  if (isRegistryFile(path, rules)) {
+    if (status === "D") return { ok: false, reason: rules.registryMismatchReason };
+    return registryMatches(file, site ?? {}) ? { ok: true } : { ok: false, reason: rules.registryMismatchReason };
+  }
   if (isPageFile(path, rules)) return status === "D" ? { ok: false, reason: rules.archiveReason } : { ok: true };
   if (isItemFile(path, rules)) {
     if (status === "D") return { ok: false, reason: rules.itemArchiveReason };
@@ -366,7 +393,7 @@ export function evaluateChange(
     const presentFiles = new Set(headFiles);
     const repo = { imageExists: (src) => present.has(`public${src}`), fileExists: (href) => presentFiles.has(`public${href}`) };
     // With the items and settings read, the whole site is judged; without them (a test with fake pages) only the pages are.
-    const problems = site ? validateSite({ pages, ...site }, registry, repo) : validate(pages, registry, repo);
+    const problems = site ? validateSite({ pages, forms: [], ...site }, registry, repo, { formSettings: siteConfig.forms, ...(site.registryIds !== undefined ? { registryIds: site.registryIds } : {}) }) : validate(pages, registry, repo);
     for (const problem of problems) result.contentProblems.push(safe(problem));
   }
   if (result.outside.length > 0) result.tier = 3;

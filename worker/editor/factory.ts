@@ -41,6 +41,7 @@ export function buildEditor(config: WorkerConfig, env: EditorEnv, deps: { fetch?
     registry,
     // This site's thanks page links only to "/", which must always be live, so there is nothing to check (SITE-DIFFERENCES D5).
     thanksLinks: [],
+    formSettings: config.forms,
     now,
     ...(store ? { uploads: store } : {}),
     ...(deps.fetch ? { fetch: deps.fetch } : {}),

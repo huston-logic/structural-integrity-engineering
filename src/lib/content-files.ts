@@ -5,6 +5,8 @@ import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { ITEM_DIR } from "../collections/schema.ts";
 import type { ItemFile } from "../collections/schema.ts";
+import { FORM_DIR } from "../forms/schema.ts";
+import type { FormFile } from "../forms/schema.ts";
 
 import type { SettingsName } from "../settings/names.ts";
 
@@ -58,4 +60,19 @@ export function readSettingsFiles(root: string = process.cwd()): Record<Settings
     return existsSync(path) ? readJson(path) : { data: undefined };
   };
   return { business: read("business"), brand: read("brand"), notice: read("notice") };
+}
+
+/** Every form file (src/content/forms/<id>.json), sorted by id. A missing folder gives []. A bad file carries an `error`. */
+export function readFormFiles(root: string = process.cwd()): FormFile[] {
+  const base = join(root, FORM_DIR);
+  let names: string[];
+  try {
+    names = readdirSync(base).filter((name) => name.endsWith(".json")).sort(byName);
+  } catch {
+    return [];
+  }
+  return names.map((name) => {
+    const { data, error } = readJson(join(base, name));
+    return { id: name.slice(0, -".json".length), data, ...(error !== undefined ? { error } : {}) };
+  });
 }

@@ -55,6 +55,8 @@ Ask for any of these in plain words.
   the header and footer and on any page with a business details section. Works today.
 - **Put up a site notice**: one short line at the top of every page, with an optional link and an optional last day.
   Take it down whenever you like. Works today.
+- **New forms.** Ask for a form, such as a quote request or a sign-up, with the fields you need, and place it on a page. Works today.
+- **File-download forms.** A visitor leaves their email address to get a PDF you uploaded. Works today.
 
 ### The check on every change
 
@@ -79,6 +81,7 @@ Each section below is one block you can place on a page. The list says what each
 - **Questions and answers**: A heading and a list of questions that open to show their answers.
 - **Closing call to action**: The last block on a page: a heading, a line of text and one button that says what to do next.
 - **Contact form**: A booking column next to the site's contact form. The form itself is wired to the site's own settings.
+- **Form**: One of the site's forms (a quote request, a download sign-up) in a panel, with an optional heading and a sentence above or beside it. The form's fields, button and thank-you message are in its own form file. (You can choose a look: **stacked**, the heading and intro above the form panel, in one centred column; **beside**, the heading and intro on the left, the form panel on the right, stacked on phones.)
 - **Numbered steps**: A heading and a short numbered list that says what happens, step by step. It can end with an email line.
 - **Policy sections**: A run of titled sections for a policy or terms page, with an optional line at the end such as a last-updated date.
 - **Video**: One video from YouTube or Vimeo, with a title and a short caption. It plays on the page when a visitor presses play. (You can choose a look: **wide**, as wide as the page column; **inset**, narrower and centered, the width of a reading column.)
@@ -116,8 +119,7 @@ Each section below is one block you can place on a page. The list says what each
 
 ## Lane 2: Do it yourself once it is built
 
-- **New forms.** Coming. Not available yet.
-- **File-download forms.** Coming. A visitor leaves their email address to get a file from you.
+Nothing is in this lane right now.
 
 ## Lane 3: Huston Logic builds it
 

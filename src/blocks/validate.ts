@@ -2,6 +2,8 @@
 // file, the block number and the field. Pure (no file access): the caller passes the pages and a small view of the repo.
 // Import-free apart from its siblings, so Node scripts and Next both load it.
 import { COLLECTION_KINDS } from "../collections/schema.ts";
+import { CONTACT_FORM_ID, SHOWCASE_FORM_ID } from "../forms/schema.ts";
+import type { FormStatus } from "../forms/schema.ts";
 import { audioProviders, parseAudioUrl, parseVideoUrl, videoProviders } from "./embeds.ts";
 import {
   BODY_HEADING_LEVELS,
@@ -30,6 +32,8 @@ export type Context = {
   pages: PageIndex | null;
   /** Image src to the owner's upload name: alt text equal to that name is refused. */
   uploadNames?: ReadonlyMap<string, string>;
+  /** Form id to status: what a `form` field may name. Missing or null means the site has no forms. */
+  forms?: ReadonlyMap<string, FormStatus> | null;
 };
 export type PageFile = { file: string; data: unknown; error?: string };
 
@@ -57,7 +61,7 @@ const count = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : 
 const quoted = (names: readonly string[]) => names.map((n) => `"${n}"`).join(", ");
 
 /** Why a text value is not plain text (only **bold** and [[placeholder]] are allowed), or null. */
-function textProblem(value: string): string | null {
+export function textProblem(value: string): string | null {
   const tag = /<[A-Za-z/!][^>]*>?/.exec(value);
   if (tag) return `contains an HTML tag (${tag[0].slice(0, 20)}); only **bold** and [[placeholder]] are allowed`;
   const entity = /&(?:[A-Za-z][A-Za-z0-9]*|#\d+|#[xX][0-9A-Fa-f]+);/.exec(value);
@@ -232,6 +236,14 @@ function checkField(field: Field, value: unknown, label: string, where: string, 
       if (parseAudioUrl(value) === null) {
         say(`"${value.slice(0, 80)}" is not an address this site can play. Use ${audioProviders.map((p) => `${p.name} (like ${p.example})`).join(" or ")}.`);
       }
+      return;
+    }
+    case "form": {
+      if (typeof value !== "string") return say("must be the id of a form, written as text.");
+      if (value === CONTACT_FORM_ID) return say(`"${value}" is the contact form, which only the contact-form block shows; pick another form.`);
+      const status = ctx.forms?.get(value);
+      if (status === undefined) say(`"${value}" is not a form on this site.`);
+      else if (status !== "live") say(`"${value}" is archived; pick a live form or restore it.`);
       return;
     }
     case "date": {
@@ -459,7 +471,7 @@ export function validateRegistry(registry: readonly AnyBlockDefinition[], repo: 
       out.push(`${name}: the collection "${def.collection}" is not one of ${COLLECTION_KINDS.join(", ")}.`);
     }
     out.push(...shapeProblems(def.fields, name, ""));
-    const problems = validateContent(def, def.example, `${name}, example`, { repo, pages: null });
+    const problems = validateContent(def, def.example, `${name}, example`, { repo, pages: null, forms: new Map<string, FormStatus>([[SHOWCASE_FORM_ID, "live"]]) });
     out.push(...problems.map((line) => `${line} (the example must pass its own schema)`));
   }
   return out;
@@ -614,7 +626,7 @@ export function validatePages(
   files: readonly PageFile[],
   registry: readonly AnyBlockDefinition[],
   repo: Repo,
-  extra: { links?: readonly { where: string; href: string }[]; uploadNames?: ReadonlyMap<string, string> } = {},
+  extra: { links?: readonly { where: string; href: string }[]; uploadNames?: ReadonlyMap<string, string>; forms?: ReadonlyMap<string, FormStatus> } = {},
 ): string[] {
   const out: string[] = [];
   const defs = new Map<string, AnyBlockDefinition>();
@@ -636,7 +648,12 @@ export function validatePages(
       index.set(page.path, { status: String(page.data["status"]), anchors: anchorsOf(page.data, defs) });
     }
   }
-  const ctx: Context = { repo, pages: index, ...(extra.uploadNames !== undefined ? { uploadNames: extra.uploadNames } : {}) };
+  const ctx: Context = {
+    repo,
+    pages: index,
+    ...(extra.uploadNames !== undefined ? { uploadNames: extra.uploadNames } : {}),
+    ...(extra.forms !== undefined ? { forms: extra.forms } : {}),
+  };
 
   const fileByPath = new Map<string, string>();
   let headerLinks = 0;

@@ -6,6 +6,7 @@ import { closingCtaDefinition } from "./library/closing-cta/definition.ts";
 import { contactFormDefinition } from "./library/contact-form/definition.ts";
 import { episodeListDefinition } from "./library/episode-list/definition.ts";
 import { faqDefinition } from "./library/faq/definition.ts";
+import { formDefinition } from "./library/form/definition.ts";
 import { galleryDefinition } from "./library/gallery/definition.ts";
 import { heroDefinition } from "./library/hero/definition.ts";
 import { highlightsDefinition } from "./library/highlights/definition.ts";
@@ -29,6 +30,7 @@ export const libraryBlocks: AnyBlockDefinition[] = [
   faqDefinition,
   closingCtaDefinition,
   contactFormDefinition,
+  formDefinition,
   stepsDefinition,
   legalSectionsDefinition,
   videoDefinition,

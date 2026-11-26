@@ -4,6 +4,7 @@ import { ClosingCtaBlock } from "./library/closing-cta/ClosingCtaBlock";
 import { ContactFormBlock } from "./library/contact-form/ContactFormBlock";
 import { EpisodeListBlock } from "./library/episode-list/EpisodeListBlock";
 import { FaqBlock } from "./library/faq/FaqBlock";
+import { FormBlock } from "./library/form/FormBlock";
 import { GalleryBlock } from "./library/gallery/GalleryBlock";
 import { HeroBlock } from "./library/hero/HeroBlock";
 import { HighlightsBlock } from "./library/highlights/HighlightsBlock";
@@ -30,6 +31,7 @@ export const blockComponents: Record<string, BlockComponent> = {
   faq: FaqBlock,
   "closing-cta": ClosingCtaBlock,
   "contact-form": ContactFormBlock,
+  form: FormBlock,
   steps: StepsBlock,
   "legal-sections": LegalSectionsBlock,
   video: VideoBlock,

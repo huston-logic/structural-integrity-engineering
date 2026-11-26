@@ -37,7 +37,8 @@ export const hasUploadRef = (value: unknown): boolean => {
 };
 
 /** How a document key reads in a refusal: pages are "/path", items "item:posts/slug", settings "settings:brand". */
-const labelOf = (key: string): string => (key.startsWith("item:") ? `Item ${key.slice(5)}` : key.startsWith("settings:") ? `The ${key.slice(9)} settings` : `Page ${key}`);
+const labelOf = (key: string): string =>
+  key.startsWith("item:") ? `Item ${key.slice(5)}` : key.startsWith("settings:") ? `The ${key.slice(9)} settings` : key.startsWith("form:") ? `Form ${key.slice(5)}` : `Page ${key}`;
 
 const days = (n: number) => `${n} ${n === 1 ? "day" : "days"}`;
 

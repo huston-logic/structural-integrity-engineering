@@ -9,6 +9,8 @@
 // generated files, shared with the Worker and the build.
 import { GENERATED_BRAND_FILES } from "../src/brand/generated.ts";
 import { SITE_SETTINGS_NAMES, settingsPath } from "../src/settings/names.ts";
+import { CONTACT_FORM_ID, FORM_DIR, formFilePath } from "../src/forms/schema.ts";
+import { REGISTRY_PATH } from "../src/forms/registry.ts";
 
 export const rules = {
   // ---- Tier 1 ---------------------------------------------------------------------------------------------------
@@ -19,7 +21,8 @@ export const rules = {
   /** Copy modules: src/content/<name>.ts, top level only, no dots in the name (so *.test.ts and *.d.ts are not copy). */
   contentFile: /^src\/content\/[A-Za-z0-9_-]+\.ts$/,
   /** Modules inside src/content that are wiring, not copy: they re-export settings, read process.env or feed the Worker. */
-  contentWiring: ["src/content/site.ts", "src/content/providers.ts", "src/content/auto-reply.ts", "src/content/contact-fields.ts"],
+  // contact.ts holds the contact form's error words, which src/content/forms/contact.json repeats (docs/SITE-DIFFERENCES.md D14), so a client change must not edit one without the other: it is wiring, not copy.
+  contentWiring: ["src/content/site.ts", "src/content/providers.ts", "src/content/auto-reply.ts", "src/content/contact-fields.ts", "src/content/contact.ts"],
   /** Photos live here. Added, changed and deleted files are tier 1, subject to the image rules below. */
   imageDir: "public/images/",
   /** Single files a client change may edit besides the content modules: the menu labels. */
@@ -51,6 +54,18 @@ export const rules = {
   generatedFiles: [...GENERATED_BRAND_FILES],
   /** The settings file whose change reaches every page, and so needs a preview before the yes. */
   brandFile: "src/content/brand.json",
+  /** The folder of form files: src/content/forms/<id>.json. */
+  formDir: `${FORM_DIR}/`,
+  /** A form file: directly in the forms folder, an id of lowercase words joined by hyphens. Tier 1 when the site check passes at the head. */
+  formFile: /^src\/content\/forms\/([a-z0-9]+(?:-[a-z0-9]+)*)\.json$/,
+  /** The contact form's file wires the Worker (its fields feed the notification and the Sheet row), so it is tier 3. */
+  contactFormFile: formFilePath(CONTACT_FORM_ID),
+  /** The generated list of form files. Tier 1 only when byte-equal to what the head's form files generate. */
+  registryFile: REGISTRY_PATH,
+  /** Why deleting (or renaming) a form file is tier 3. */
+  formArchiveReason: 'forms are archived, not deleted: set its status to "archived" instead',
+  /** Why a registry that is not what the form files generate is tier 3. */
+  registryMismatchReason: "the form registry does not match the form files. Add or change a form file and run `npm run sync:config`, never edit this file by hand",
   /** Why deleting (or renaming) an item or a settings file is tier 3. */
   itemArchiveReason: 'items are archived, not deleted: set its status to "archived" instead (a settings file is never deleted)',
   /** Why a generated brand file that is not what brand.json generates is tier 3. */
@@ -105,9 +120,12 @@ export const rules = {
     [/^\.github\//, "the CI workflows"],
     [/^\.claude\//, "the Claude hooks and agents"],
     [/^src\/components\//, "a shared component"],
+    [/^src\/content\/forms\/contact\.json$/, "the contact form's wiring"],
+    [/^src\/content\/forms\//, "not a form file: a form is src/content/forms/<id>.json, an id of lowercase words joined by hyphens, directly in that folder"],
+    [/^src\/forms\//, "form rules (code)"],
     [/^src\/blocks\/|^src\/site-blocks\//, "a block's design (code)"],
     [/^src\/lib\//, "site code"],
-    [/^src\/content\/(site|providers|auto-reply|contact-fields)\.ts$/, "site wiring, not copy"],
+    [/^src\/content\/(site|providers|auto-reply|contact-fields|contact)\.ts$/, "site wiring, not copy"],
     [/^src\/content\/collections\//, "not an item file: an item is src/content/collections/<kind>/<slug>.json, with a known kind and a slug of lowercase words joined by hyphens, directly in that folder"],
     [/^src\/content\/pages\//, "not a page file: a page is src/content/pages/<name>.json, lowercase words joined by hyphens (-- for a /), directly in that folder"],
     [/./, "not on the client-change allow-list"],

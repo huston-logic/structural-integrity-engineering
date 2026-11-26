@@ -1,16 +1,17 @@
 import { pathForFile } from "../../src/blocks/schema.ts";
+import { DEFAULT_FORM_SETTINGS } from "../../src/forms/schema.ts";
 import { todayIn } from "../../src/settings/notice.ts";
 import { log } from "../env.ts";
 import { pageValueFor, uploadRepoPath } from "../uploads/paths.ts";
 import type { UploadRecord } from "../uploads/types.ts";
 import { formatSize, addedPlaceholders, buildChangeList, makeCtx, matchBlockIds } from "./change-list.ts";
 import { documentSections } from "./change-list-documents.ts";
-import { combineDocuments, documentLabel, documentsMoved, finishLogo, splitDocuments, touchedKeys, touchesBrand } from "./documents.ts";
+import { combineDocuments, documentLabel, documentsMoved, finishLogo, formLabel, splitDocuments, touchedKeys, touchesBrand } from "./documents.ts";
 import { GitHubError, toBase64, type CommitFile, type Pull } from "./github.ts";
 import { isObject } from "./json.ts";
 import { applyOperations, deepEqual, type BlockIds } from "./operations.ts";
-import { catalogResult, collectionResult, collectionsResult, guideResult, itemResult, overviewResult, pageResult, settingsResult } from "./read-tools.ts";
-import { filesFor, isCommittablePath, isPageFile, itemFilesFor, itemKeyOf, readSite, settingNameOf, settingsFilesFor, validateSet, type Pending, type Snapshot } from "./site-reader.ts";
+import { catalogResult, collectionResult, collectionsResult, formResult, formsResult, guideResult, itemResult, overviewResult, pageResult, settingsResult } from "./read-tools.ts";
+import { filesFor, formFilesFor, formKeyOf, isCommittablePath, isPageFile, itemFilesFor, itemKeyOf, readSite, settingNameOf, settingsFilesFor, validateSet, type Pending, type Snapshot } from "./site-reader.ts";
 import { BRANCH_PREFIX, changeTitle, createStatusReader, deployedReader, editorPulls, isEditorPull, statusLine, type ChangeStatus } from "./status.ts";
 import { GITHUB_DOWN, type ChangeView, type Editor, type EditorDeps, type Owner, type ProposalView, type ToolResult, type UploadView } from "./types.ts";
 import { hasUploadRef, resolveUploads, type ProposalUpload } from "./uploads.ts";
@@ -62,6 +63,8 @@ interface Proposal {
   filesTree?: string;
   /** The git tree of src/content/collections and the blob of each settings file when proposed. Absent in older drafts (the check is then skipped). */
   collectionsTree?: string;
+  /** The git tree of src/content/forms when proposed. Absent in older drafts (the check is then skipped). */
+  formsTree?: string;
   settingsShas?: Record<string, string>;
   /** The uploads this change puts on the site; their bytes are read from the inbox at preview and publish. */
   uploads: ProposalUpload[];
@@ -79,12 +82,13 @@ const defuse = (text: string): string => text.replace(/@/g, "@​");
 /** A stored draft, or null when any field the tools rely on is missing or the wrong type (treated as expired). */
 function parseProposal(value: unknown, id: string): Proposal | null {
   if (!isObject(value) || value.id !== id) return null;
-  const { kind, summary, createdAt, email, baseCommit, pagesTree, imagesTree, filesTree, collectionsTree, settingsShas, uploads, files, changeList, undoOf, withdraw, preview } = value;
+  const { kind, summary, createdAt, email, baseCommit, pagesTree, imagesTree, filesTree, collectionsTree, formsTree, settingsShas, uploads, files, changeList, undoOf, withdraw, preview } = value;
   const strings = [summary, createdAt, email, baseCommit, pagesTree, imagesTree, changeList];
   if (typeof kind !== "string" || !KINDS.includes(kind) || !strings.every((item) => typeof item === "string")) return null;
   if (!Array.isArray(files) || !files.every((file) => isObject(file) && typeof file.path === "string" && typeof file.content === "string")) return null;
   if (filesTree !== undefined && typeof filesTree !== "string") return null;
   if (collectionsTree !== undefined && typeof collectionsTree !== "string") return null;
+  if (formsTree !== undefined && typeof formsTree !== "string") return null;
   if (settingsShas !== undefined && !(isObject(settingsShas) && Object.values(settingsShas).every((sha) => typeof sha === "string"))) return null;
   if (uploads !== undefined && !(Array.isArray(uploads) && uploads.every(isProposalUpload))) return null;
   if (undoOf !== undefined && !isCount(undoOf)) return null;
@@ -143,6 +147,7 @@ function pullBody(proposal: Proposal, confirmation: string): string {
 
 export function createEditor(deps: EditorDeps): Editor {
   const { config, github, kv, assets, registry, thanksLinks, now } = deps;
+  const formSettings = deps.formSettings ?? DEFAULT_FORM_SETTINGS;
   const doFetch = deps.fetch ?? fetch;
   const makeId = deps.randomId ?? newId;
   const statuses = createStatusReader({ config, github, kv, now });
@@ -256,19 +261,35 @@ export function createEditor(deps: EditorDeps): Editor {
   function describe(
     snapshot: Snapshot,
     after: Map<string, unknown>,
-    docs: { items: Map<string, unknown>; settings: Map<string, unknown> },
-    touched: { pages: string[]; items: string[]; settings: string[] },
-    extra: { ids: BlockIds; moved?: string[]; uploads?: ProposalUpload[]; onSite?: Set<string> },
+    docs: { items: Map<string, unknown>; settings: Map<string, unknown>; forms: Map<string, unknown> },
+    touched: { pages: string[]; items: string[]; settings: string[]; forms: string[] },
+    extra: { ids: BlockIds; moved?: string[]; uploads?: ProposalUpload[]; onSite?: Set<string>; removedFromPages?: Map<string, string[]> },
   ): { files: { path: string; content: string }[]; changeList: string } {
     const uploads = extra.uploads ?? [];
     const onSite = extra.onSite ?? new Set<string>();
     const sections = documentSections(
-      { before: snapshot, after: docs, touchedItems: touched.items, touchedSettings: touched.settings, touchedPages: touched.pages, pages: after, today: today() },
+      {
+        before: snapshot,
+        after: docs,
+        touchedItems: touched.items,
+        touchedForms: touched.forms,
+        touchedSettings: touched.settings,
+        touchedPages: touched.pages,
+        pages: after,
+        today: today(),
+        formSettings,
+        ...(extra.removedFromPages ? { removedFromPages: extra.removedFromPages } : {}),
+      },
       makeCtx({ uploads, onSite }),
       registry,
     );
     return {
-      files: [...filesFor(snapshot, after, touched.pages), ...itemFilesFor(docs.items, touched.items), ...settingsFilesFor(docs.settings, touched.settings)],
+      files: [
+        ...filesFor(snapshot, after, touched.pages),
+        ...itemFilesFor(docs.items, touched.items),
+        ...formFilesFor(snapshot, docs.forms, touched.forms),
+        ...settingsFilesFor(docs.settings, touched.settings),
+      ],
       changeList: buildChangeList(snapshot.pages, after, extra.ids, registry, extra.moved ?? [], { uploads, onSite }, sections),
     };
   }
@@ -282,12 +303,14 @@ export function createEditor(deps: EditorDeps): Editor {
     const after = new Map(snapshot.pages);
     const items = new Map(snapshot.items);
     const settings = new Map(snapshot.settings);
+    const forms = new Map(snapshot.forms);
     const problems: string[] = [];
     for (const path of changed) {
       const item = itemKeyOf(path);
       const setting = settingNameOf(path);
-      if (!isPageFile(path) && item === null && setting === null) continue;
-      const name = item ?? setting ?? pathForFile(path);
+      const form = formKeyOf(path);
+      if (!isPageFile(path) && item === null && setting === null && form === null) continue;
+      const name = form !== null ? `the form ${form}` : (item ?? setting ?? pathForFile(path));
       const [current, atMerge, before] = await Promise.all([github.fileAt(snapshot.commit, path), github.fileAt(merge, path), github.fileAt(parent, path)]);
       if (current === null) continue;
       if (current !== atMerge) {
@@ -301,6 +324,7 @@ export function createEditor(deps: EditorDeps): Editor {
         }
         const restored: unknown = before === null ? { ...(JSON.parse(current) as Record<string, unknown>), status: "archived" } : JSON.parse(before);
         if (item !== null) items.set(item, restored);
+        else if (form !== null) forms.set(form, restored);
         else if (setting !== null) settings.set(setting, restored);
         else after.set(isObject(restored) && typeof restored.path === "string" ? restored.path : pathForFile(path), restored);
       } catch {
@@ -309,13 +333,13 @@ export function createEditor(deps: EditorDeps): Editor {
     }
     if (problems.length > 0) return error(problems.join("\n"), { problems });
     const differs = (was: ReadonlyMap<string, unknown>, now: ReadonlyMap<string, unknown>) => [...now.keys()].filter((key) => !deepEqual(was.get(key), now.get(key)));
-    const touched = { pages: differs(snapshot.pages, after), items: differs(snapshot.items, items), settings: differs(snapshot.settings, settings) };
-    if (touched.pages.length + touched.items.length + touched.settings.length === 0) {
+    const touched = { pages: differs(snapshot.pages, after), items: differs(snapshot.items, items), settings: differs(snapshot.settings, settings), forms: differs(snapshot.forms, forms) };
+    if (touched.pages.length + touched.items.length + touched.settings.length + touched.forms.length === 0) {
       return { text: `Change ${pull.number} has already been undone, so there is nothing to change.`, data: { change: pull.number } };
     }
-    const invalid = validateSet(snapshot, after, registry, thanksLinks, undefined, { items, settings });
+    const invalid = validateSet(snapshot, after, registry, thanksLinks, undefined, { items, settings, forms }, formSettings);
     if (invalid.length > 0) return refusal(invalid);
-    const { files, changeList } = describe(snapshot, after, { items, settings }, touched, { ids: matchBlockIds(snapshot.pages, after) });
+    const { files, changeList } = describe(snapshot, after, { items, settings, forms }, touched, { ids: matchBlockIds(snapshot.pages, after) });
     return store({
       kind: "undo",
       summary: `Undo change ${pull.number}`,
@@ -325,6 +349,7 @@ export function createEditor(deps: EditorDeps): Editor {
       imagesTree: snapshot.imagesTree,
       filesTree: snapshot.filesTree,
       collectionsTree: snapshot.collectionsTree,
+      formsTree: snapshot.formsTree,
       settingsShas: snapshot.settingsShas,
       uploads: [],
       files,
@@ -454,6 +479,14 @@ export function createEditor(deps: EditorDeps): Editor {
       return guarded(async () => itemResult(String(kind), String(slug), await readSite(github)), () => "GitHub could not be reached right now, so I can't read the item. Try again in a minute.");
     },
 
+    async forms() {
+      return guarded(async () => formsResult(await readSite(github), registry), () => "GitHub could not be reached right now, so I can't read the forms. Try again in a minute.");
+    },
+
+    async form(id) {
+      return guarded(async () => formResult(String(id), await readSite(github), registry), () => "GitHub could not be reached right now, so I can't read the form. Try again in a minute.");
+    },
+
     async settings(name) {
       return guarded(async () => settingsResult(String(name), await readSite(github)), () => "GitHub could not be reached right now, so I can't read the settings. Try again in a minute.");
     },
@@ -473,26 +506,26 @@ export function createEditor(deps: EditorDeps): Editor {
         const snapshot = await readSite(github);
         const applied = applyOperations(snapshot.pages, input.operations, snapshot);
         if (!applied.ok) return refusal(applied.problems);
-        const touched = { pages: applied.touched, items: applied.touchedItems, settings: applied.touchedSettings };
-        if (touched.pages.length + touched.items.length + touched.settings.length === 0) return refusal(["The operations change nothing on the site."]);
+        const touched = { pages: applied.touched, items: applied.touchedItems, settings: applied.touchedSettings, forms: applied.touchedForms };
+        if (touched.pages.length + touched.items.length + touched.settings.length + touched.forms.length === 0) return refusal(["The operations change nothing on the site."]);
         if (touched.settings.includes("brand") && config.workersSubdomain === null) {
           return refusal([`Brand changes need a preview first, and previews are not set up on this site yet. ${AGENCY_NAME} can make this change for you.`]);
         }
         let after = applied.after;
-        let docs = { items: applied.items, settings: applied.settings };
+        let docs = { items: applied.items, settings: applied.settings, forms: applied.forms };
         let uploads: ProposalUpload[] = [];
         let pending: Pending | undefined;
         if (hasUploadRef(input.operations)) {
           if (!inbox) return error(`${NO_UPLOADS} Ask ${AGENCY_NAME}.`);
-          const resolved = await resolveUploads(combineDocuments(applied.after, applied.items, applied.settings), touchedKeys(touched.pages, touched.items, touched.settings), inbox, now());
+          const resolved = await resolveUploads(combineDocuments(applied.after, applied.items, applied.settings, applied.forms), touchedKeys(touched.pages, touched.items, touched.settings, touched.forms), inbox, now());
           if (!resolved.ok) return refusal(resolved.problems);
           const split = splitDocuments(resolved.after);
           after = split.pages;
-          docs = { items: split.items, settings: split.settings };
+          docs = { items: split.items, settings: split.settings, forms: split.forms };
           uploads = resolved.uploads;
           const logo = finishLogo(docs.settings, uploads);
           if (logo.problems.length > 0) return refusal(logo.problems);
-          docs = { items: docs.items, settings: logo.settings };
+          docs = { items: docs.items, settings: logo.settings, forms: docs.forms };
           const values = (kind: ProposalUpload["kind"]) => new Set(uploads.filter((u) => u.kind === kind).map((u) => pageValueFor(u.path)));
           pending = { images: values("photo"), files: values("pdf"), names: resolved.names };
         }
@@ -500,11 +533,12 @@ export function createEditor(deps: EditorDeps): Editor {
           ...addedPlaceholders(snapshot.pages, after),
           ...addedPlaceholders(snapshot.items, docs.items, documentLabel),
           ...addedPlaceholders(snapshot.settings, docs.settings, documentLabel),
-          ...validateSet(snapshot, after, registry, thanksLinks, pending, docs),
+          ...addedPlaceholders(snapshot.forms, docs.forms, formLabel),
+          ...validateSet(snapshot, after, registry, thanksLinks, pending, docs, formSettings),
         ];
         if (problems.length > 0) return refusal(problems);
         const onSite = new Set([...snapshot.images, ...snapshot.files]);
-        const built = describe(snapshot, after, docs, touched, { ids: applied.ids, moved: applied.moved, uploads, onSite });
+        const built = describe(snapshot, after, docs, touched, { ids: applied.ids, moved: applied.moved, uploads, onSite, removedFromPages: applied.removedFromPages });
         return store({
           kind: "change",
           summary: input.summary.trim(),
@@ -514,6 +548,7 @@ export function createEditor(deps: EditorDeps): Editor {
           imagesTree: snapshot.imagesTree,
           filesTree: snapshot.filesTree,
           collectionsTree: snapshot.collectionsTree,
+          formsTree: snapshot.formsTree,
           settingsShas: snapshot.settingsShas,
           uploads,
           files: built.files,

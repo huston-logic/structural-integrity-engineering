@@ -103,7 +103,7 @@ function reachablePages(path, sources, pageRoutes) {
 }
 
 /** Files that cannot change how a page looks. */
-const NO_VISUAL_EFFECT = /^(?:docs|scripts|tests|\.github|\.claude|worker)\/|\.md$|\.test\.(?:ts|mjs)$|^src\/lib\/routes\.ts$/;
+const NO_VISUAL_EFFECT = /^(?:docs|scripts|tests|\.github|\.claude|worker)\/|\.md$|\.test\.(?:ts|mjs)$|^src\/lib\/routes\.ts$|^src\/forms\/registry\.generated\.ts$/;
 const BLOCK_CODE = /^src\/(?:blocks|site-blocks)\//;
 export const SHOWCASE_ROUTE = "/blocks";
 export const BLOG_ROUTE = "/blog";
@@ -114,6 +114,12 @@ const WHOLE_SITE_FILES = [...rules.settingsFiles, ...rules.generatedFiles];
 export function itemForFile(path) {
   const match = rules.itemFile.exec(path);
   return match ? { kind: match[1], slug: match[2] } : null;
+}
+
+/** The id of a form file ("src/content/forms/quote.json" is "quote"), or null. */
+export function formForFile(path) {
+  const match = rules.formFile.exec(path);
+  return match ? match[1] : null;
 }
 
 /** { [kind/slug]: status } for item files, from [{ path, text }] (the text of each item file). A file that is not valid JSON is skipped. */
@@ -154,7 +160,9 @@ export function pageInfoFromTexts(entries) {
     }
     if (typeof data !== "object" || data === null || Array.isArray(data)) continue;
     const route = typeof data.path === "string" ? data.path : pathForFile(file);
-    info[route] = { status: data.status, types: [...new Set((Array.isArray(data.blocks) ? data.blocks : []).map((block) => block?.type).filter((type) => typeof type === "string"))] };
+    const blocks = Array.isArray(data.blocks) ? data.blocks : [];
+    const forms = [...new Set(blocks.filter((block) => block?.type === "form" && typeof block.content?.form === "string").map((block) => block.content.form))];
+    info[route] = { status: data.status, types: [...new Set(blocks.map((block) => block?.type).filter((type) => typeof type === "string"))], ...(forms.length > 0 ? { forms } : {}) };
   }
   return info;
 }
@@ -182,7 +190,13 @@ export function affectedPages({ files, sources, pageRoutes = {}, allRoutes, page
     const own = routeForPageFile(path);
     const inBlock = BLOCK_FOLDER.test(path);
     const item = itemForFile(path);
-    if (item) {
+    const form = formForFile(path);
+    if (form) {
+      // A form shows on every page whose "form" block names it, now or before the change. The contact form has its own block.
+      const uses = (pages) =>
+        Object.keys(pages).filter((route) => (path === rules.contactFormFile ? pages[route].types.includes("contact-form") : pages[route].forms?.includes(form)));
+      for (const route of new Set([...uses(pagesHead), ...uses(pagesBase)])) mark(route, `${path} changed (this page shows the "${form}" form)`);
+    } else if (item) {
       // A post has its own page and the blog index; any item shows on every page that lists its collection.
       if (item.kind === "posts") {
         const key = `posts/${item.slug}`;

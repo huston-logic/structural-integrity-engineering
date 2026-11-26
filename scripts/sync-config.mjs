@@ -1,8 +1,9 @@
 // Generates the four files that cannot import site.config.ts, from site.config.ts:
-//   wrangler.jsonc, public/_headers, the :root palette in src/app/hl.css, src/lib/fonts.ts.
+//   wrangler.jsonc, public/_headers, the :root palette in src/app/hl.css, src/lib/fonts.ts;
+//   from src/content/forms/*.json: the registry the Worker bundles, src/forms/registry.generated.ts.
 // `node scripts/sync-config.mjs` writes them; `--check` regenerates in memory and exits 1 with a diff if a committed
 // file differs. It never writes anywhere else (never .claude/ or .github/).
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { configProblems, wranglerText } from "./config-rules.mjs";
@@ -12,6 +13,8 @@ const { siteConfig: c } = await import(pathToFileURL(join(root, "site.config.ts"
 
 // The video sites the video blocks may embed (the single allowlist in src/blocks/embeds.ts).
 const { embedOrigins } = await import(pathToFileURL(join(root, "src/blocks/embeds.ts")).href);
+
+const { registrySource, REGISTRY_PATH } = await import(pathToFileURL(join(root, "src/forms/registry.ts")).href);
 
 const unique = (list) => [...new Set(list)];
 const kebab = (key) => key.replace(/([a-z0-9])([A-Z0-9])/g, "$1-$2").toLowerCase();
@@ -145,11 +148,16 @@ export const fontVariables = [${set.map((role) => `${role}Font.variable`).join("
 `;
 }
 
+// One registry entry per form file, archived forms included (the Worker refuses them by status).
+const formsDir = join(root, "src/content/forms");
+const formIds = existsSync(formsDir) ? readdirSync(formsDir).filter((name) => name.endsWith(".json")).map((name) => name.slice(0, -".json".length)) : [];
+
 const generated = {
   "wrangler.jsonc": wrangler(),
   "public/_headers": headers(),
   "src/app/hl.css": hlCss(),
   "src/lib/fonts.ts": fonts(),
+  [REGISTRY_PATH]: registrySource(formIds),
 };
 
 function diff(expected, actual) {
@@ -172,12 +180,12 @@ if (process.argv.includes("--check")) {
     if (actual !== expected) drifted.push(`  - ${path}\n${diff(expected, actual)}`);
   }
   if (drifted.length > 0) {
-    console.error(`\nConfig check failed: ${drifted.length} generated file(s) differ from site.config.ts\n`);
+    console.error(`\nConfig check failed: ${drifted.length} generated file(s) differ from site.config.ts or src/content/forms/\n`);
     console.error(drifted.join("\n\n"));
     console.error("\nRun `npm run sync:config` and commit the result.\n");
     process.exit(1);
   }
-  console.log("Config check passed: generated files match site.config.ts.");
+  console.log("Config check passed: generated files match site.config.ts and src/content/forms/.");
 } else {
   for (const [path, content] of Object.entries(generated)) {
     const file = join(root, path);

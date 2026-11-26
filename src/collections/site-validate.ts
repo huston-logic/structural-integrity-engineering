@@ -4,6 +4,9 @@
 import { buildPageIndex, validatePages } from "../blocks/validate.ts";
 import type { Context, PageFile, Repo } from "../blocks/validate.ts";
 import type { AnyBlockDefinition } from "../blocks/schema.ts";
+import { DEFAULT_FORM_SETTINGS } from "../forms/schema.ts";
+import type { FormFile, FormSettings, FormStatus } from "../forms/schema.ts";
+import { formWarnings, validateForms } from "../forms/validate.ts";
 import { validateBrand } from "../settings/brand.ts";
 import { validateBusiness } from "../settings/business.ts";
 import { validateNotice } from "../settings/notice.ts";
@@ -22,6 +25,8 @@ export const POST_INDEX_BLOCK = "post-index";
 export type SiteInput = {
   pages: readonly PageFile[];
   items: readonly ItemFile[];
+  /** The form files (src/content/forms/<id>.json). Callers with none pass []. */
+  forms: readonly FormFile[];
   /** A settings file's parsed JSON. `undefined` means the file is missing. */
   business: unknown;
   /** Not used while brand is fixed (docs/SITE-DIFFERENCES.md, D11): anything here is a problem. */
@@ -31,7 +36,14 @@ export type SiteInput = {
   settingsErrors?: Partial<Record<SettingsName, string>>;
 };
 
-export type SiteExtra = { links?: readonly { where: string; href: string }[]; uploadNames?: ReadonlyMap<string, string> };
+export type SiteExtra = {
+  links?: readonly { where: string; href: string }[];
+  uploadNames?: ReadonlyMap<string, string>;
+  /** The site's form caps (`forms` in site.config.ts). Missing means the defaults. */
+  formSettings?: FormSettings;
+  /** The ids the generated registry lists; when given, it must match the form files exactly. */
+  registryIds?: readonly string[];
+};
 
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === "object" && value !== null && !Array.isArray(value);
 
@@ -46,16 +58,34 @@ function blogHasPostIndex(pages: readonly PageFile[]): boolean {
   });
 }
 
+/** Each readable form file's id and status, for the `form` block field. */
+function formStatuses(files: readonly FormFile[]): Map<string, FormStatus> {
+  const out = new Map<string, FormStatus>();
+  for (const { id, data, error } of files) {
+    if (error !== undefined || !isRecord(data)) continue;
+    out.set(id, data["status"] === "archived" ? "archived" : "live");
+  }
+  return out;
+}
+
+/** Warnings that do not stop a change: health words in forms. Printed by the content check and shown in the owner's change list. */
+export function siteWarnings(input: Pick<SiteInput, "forms">): string[] {
+  return input.forms.flatMap(({ id, data, error }) => (error === undefined ? formWarnings(id, data) : []));
+}
+
 /**
  * Judges the whole site. Problems come back as plain sentences naming the file, in this order: pages, items, settings,
  * then the rules that join them. An empty list means the site is good.
  */
 export function validateSite(input: SiteInput, registry: readonly AnyBlockDefinition[], repo: Repo, extra: SiteExtra = {}): string[] {
   const out: string[] = [];
-  out.push(...validatePages(input.pages, registry, repo, extra));
+  const forms = formStatuses(input.forms);
+  out.push(...validatePages(input.pages, registry, repo, { ...extra, forms }));
 
-  const ctx: Context = { repo, pages: buildPageIndex(input.pages, registry), ...(extra.uploadNames !== undefined ? { uploadNames: extra.uploadNames } : {}) };
+  const ctx: Context = { repo, pages: buildPageIndex(input.pages, registry), forms, ...(extra.uploadNames !== undefined ? { uploadNames: extra.uploadNames } : {}) };
   out.push(...validateItems(input.items, ctx));
+  const formContext = { fileExists: repo.fileExists, ...(extra.registryIds !== undefined ? { registryIds: extra.registryIds } : {}) };
+  out.push(...validateForms(input.forms, formContext, extra.formSettings ?? DEFAULT_FORM_SETTINGS).problems);
 
   // Brand is fixed on this site (SITE-DIFFERENCES D11): there is no brand.json, and one that appears would do nothing.
   if (BRAND_FIXED && (input.brand !== undefined || input.settingsErrors?.brand !== undefined)) {

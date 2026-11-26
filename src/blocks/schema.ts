@@ -70,6 +70,8 @@ export type ObjectField = FieldBase & Optionality & { kind: "object"; fields: Fi
 export type DateField = FieldBase & Optionality & { kind: "date" };
 /** A whole number from `min` to `max`. */
 export type NumberField = FieldBase & Optionality & { kind: "number"; min: number; max: number };
+/** The id of a live form (src/content/forms/<id>.json) other than the contact form. */
+export type FormRefField = FieldBase & Optionality & { kind: "form" };
 /** A Spotify or Apple Podcasts episode address (the audio allowlist in embeds.ts). */
 export type AudioField = FieldBase & Optionality & { kind: "audio" };
 /** A post body: a list of parts (see BodyPart). */
@@ -88,7 +90,8 @@ export type Field =
   | DateField
   | NumberField
   | AudioField
-  | BodyField;
+  | BodyField
+  | FormRefField;
 export type Fields = { readonly [name: string]: Field };
 
 /** Text with links in it: a string, or a list of strings and link objects. Text allows only **bold** and [[placeholder]]. */
@@ -110,7 +113,7 @@ type Simplify<T> = { [K in keyof T]: T[K] } & {};
 type RequiredKeys<F> = { [K in keyof F]: F[K] extends { required: false } ? never : K }[keyof F];
 type OptionalKeys<F> = { [K in keyof F]: F[K] extends { required: false } ? K : never }[keyof F];
 
-type ValueOf<T> = T extends { kind: "text" | "link" | "video" | "date" | "audio" }
+type ValueOf<T> = T extends { kind: "text" | "link" | "video" | "date" | "audio" | "form" }
   ? string
   : T extends { kind: "number" }
     ? number
