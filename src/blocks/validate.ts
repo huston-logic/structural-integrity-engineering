@@ -27,6 +27,10 @@ export const DESCRIPTION_MAX = 170;
 export const MENU_LABEL_MAX = 24;
 export const MAX_BLOCKS = 20;
 
+/** This site's menu is src/content/nav.ts, so a page file's `menu` would do nothing (docs/SITE-DIFFERENCES.md, D7). */
+export const MENU_REFUSED = (file: string): string =>
+  `${file}: "menu" cannot be used here. The menu on this site is set by Huston Logic, so remove "menu" from this page.`;
+
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === "object" && value !== null && !Array.isArray(value);
 const count = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 const quoted = (names: readonly string[]) => names.map((n) => `"${n}"`).join(", ");
@@ -445,6 +449,7 @@ export function validatePages(
     const status = data["status"];
     if (status !== undefined && status !== "live" && status !== "archived") out.push(`${file}: "status" must be "live" or "archived".`);
     if (data["menu"] !== undefined) {
+      out.push(MENU_REFUSED(file));
       checkMenu(data["menu"], file, out);
       const menu = data["menu"];
       if (status === "live" && isRecord(menu) && Array.isArray(menu["places"]) && menu["places"].includes("header")) headerLinks += 1;

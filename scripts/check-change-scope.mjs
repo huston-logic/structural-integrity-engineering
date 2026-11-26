@@ -6,11 +6,13 @@
 //
 // --strict (the default) exits 1 on a tier 3 file, a bad image, a content problem in a page file or a new [[placeholder]]. --report-only prints the same
 // report and always exits 0. --ci reads GitHub's own variables: the base comes from GITHUB_BASE_REF, and it is strict
-// only when the pull request's branch (GITHUB_HEAD_REF) starts with "change/" (any capitalisation). Exit codes: 0 pass,
+// only when the pull request's branch (GITHUB_HEAD_REF) starts with "change/" (any capitalisation) or its author
+// (pull_request.user.login in the file at GITHUB_EVENT_PATH) is the site editor's GitHub App (editor.github.botLogin). Exit codes: 0 pass,
 // 1 fail, 2 could not run.
 import { execFileSync } from "node:child_process";
-import { appendFileSync } from "node:fs";
+import { appendFileSync, readFileSync } from "node:fs";
 import { pathToFileURL } from "node:url";
+import { siteConfig } from "../site.config.ts";
 import { rules as defaultRules } from "./change-scope-rules.mjs";
 import { contentModuleProblem } from "./change-scope-code.mjs";
 import { registry } from "../src/blocks/definitions.ts";
@@ -301,7 +303,18 @@ export function formatReport(result, { mode = "strict", base, head } = {}) {
 
 // ---- command line ---------------------------------------------------------------------------------------------
 
-export function parseArgs(argv, env) {
+/** The pull request author's login from the event file GitHub Actions writes, or "" when there is none or it cannot be read. */
+function authorLogin(env) {
+  if (!env.GITHUB_EVENT_PATH) return "";
+  try {
+    const login = JSON.parse(readFileSync(env.GITHUB_EVENT_PATH, "utf8"))?.pull_request?.user?.login;
+    return typeof login === "string" ? login : "";
+  } catch {
+    return "";
+  }
+}
+
+export function parseArgs(argv, env, botLogin = siteConfig.editor.github.botLogin) {
   let base;
   let head;
   let mode;
@@ -322,7 +335,8 @@ export function parseArgs(argv, env) {
   if (ci) {
     if (!env.GITHUB_BASE_REF && base === undefined) return { skip: "Change scope check skipped: this is not a pull request, so there is nothing to compare." };
     base ??= `origin/${env.GITHUB_BASE_REF}`;
-    mode ??= /^change\//i.test(env.GITHUB_HEAD_REF ?? "") ? "strict" : "report-only";
+    const byBot = typeof botLogin === "string" && botLogin !== "" && authorLogin(env).toLowerCase() === botLogin.toLowerCase();
+    mode ??= /^change\//i.test(env.GITHUB_HEAD_REF ?? "") || byBot ? "strict" : "report-only";
   }
   return { base: base ?? "origin/main", head: head ?? "HEAD", mode: mode ?? "strict" };
 }

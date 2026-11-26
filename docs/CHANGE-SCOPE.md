@@ -193,8 +193,11 @@ Copy `scripts/change-scope-rules.mjs`, `scripts/change-scope-code.mjs`, `scripts
 
 ## Known limits
 
-- **Strict mode depends on the branch name.** `--ci` is strict only when the pull request's branch starts with `change/`. The
-  check judges files, not claims, but it trusts the actor it guards to pick that branch name. Until the ruleset enforces it
+- **Strict mode depends on the branch name or the author.** `--ci` is strict when the pull request's branch starts with
+  `change/`, and also when the pull request was opened by the site editor's GitHub App (its login is `editor.github.botLogin`
+  in `site.config.ts`, read from the pull request event). Strict only fails the job: for that to block a merge, the check must
+  also be a required check in the ruleset. The check judges files, not claims, but it trusts the actor it guards to pick that
+  branch name. Until the ruleset enforces it
   (for example CODEOWNERS on tier 3 paths, or a required check that needs an owner label), the agent's workflow must create
   `change/` branches itself and nobody should open a client change from another branch.
 - **The code checks are static analysis, one layer among several.** They reject code in tier 1 `.ts` files by

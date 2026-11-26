@@ -27,6 +27,133 @@ export function secretsFor(contact) {
   throw new Error(`site.config.ts contact.sheetWriter must be "apps-script" or "service-account", not ${JSON.stringify(contact.sheetWriter)}`);
 }
 
+// The template's own editor rate-limit id (docs/HOSTING.md).
+const TEMPLATE_EDITOR_ID = "1003";
+
+/** The paths the owner's editor adds to run_worker_first, only when editor.enabled is true. */
+export const EDITOR_PATHS = [
+  "/mcp",
+  "/owner",
+  "/owner/*",
+  "/oauth/*",
+  "/.well-known/oauth-authorization-server",
+  "/.well-known/oauth-protected-resource",
+  "/.well-known/oauth-protected-resource/*",
+];
+
+const blank = (value) => typeof value !== "string" || value.trim() === "" || PLACEHOLDER.test(value);
+
+/** Problems with the `editor` block. Nothing is checked while it is missing or disabled. */
+function editorProblems(c) {
+  const e = c.editor;
+  if (!e || e.enabled !== true) return [];
+  const problems = [];
+  const need = (path, message) => problems.push(`site.config.ts  editor.${path} ${message}`);
+
+  const emails = Array.isArray(e.ownerEmails) ? e.ownerEmails : [];
+  if (emails.length === 0) need("ownerEmails", "needs at least one owner email");
+  for (const email of emails) {
+    if (typeof email !== "string" || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      need("ownerEmails", `has a value that is not an email address: ${JSON.stringify(email)}`);
+    }
+  }
+
+  const team = e.access?.teamDomain;
+  if (typeof team !== "string" || !/^[a-z0-9-]+$/.test(team)) {
+    need("access.teamDomain", `must be the Cloudflare Access team name only (lowercase letters, digits and dashes), not ${JSON.stringify(team)}`);
+  }
+  if (blank(e.access?.aud)) need("access.aud", "must be set to the Access application's AUD tag");
+
+  for (const key of ["owner", "repo", "botLogin"]) {
+    if (blank(e.github?.[key])) need(`github.${key}`, "must be set");
+  }
+  for (const key of ["appId", "installationId"]) {
+    const value = e.github?.[key];
+    if (typeof value !== "string" || !/^[0-9]+$/.test(value)) {
+      need(`github.${key}`, `must be a whole number written as a string, not ${JSON.stringify(value)}`);
+    }
+  }
+  if (blank(e.workersSubdomain)) need("workersSubdomain", "must be set to the account's workers.dev subdomain");
+
+  for (const key of ["oauth", "editor"]) {
+    const id = e.kv?.[key];
+    if (typeof id !== "string" || !/^[0-9a-f]{32}$/.test(id)) {
+      need(`kv.${key}`, `must be a KV namespace id (32 lowercase hex characters), not ${JSON.stringify(id)}`);
+    }
+  }
+  if (!Number.isInteger(e.dailyChangeLimit) || e.dailyChangeLimit < 1) {
+    need("dailyChangeLimit", `must be a whole number of at least 1, not ${JSON.stringify(e.dailyChangeLimit)}`);
+  }
+
+  const id = e.rateLimitId;
+  if (typeof id !== "string" || !/^[0-9]+$/.test(id)) {
+    need("rateLimitId", `must be a whole number written as a string, like "2003", not ${JSON.stringify(id)}`);
+  } else {
+    const contactIds = [c.contact?.rateLimitIds?.production, c.contact?.rateLimitIds?.preview];
+    if (contactIds.includes(id)) {
+      need("rateLimitId", `is ${id}, the same as a contact form id. Bindings with the same id share counters, so pick another`);
+    }
+    const configured = typeof c.domain?.workerName === "string" && !PLACEHOLDER.test(c.domain.workerName);
+    if (configured && id === TEMPLATE_EDITOR_ID) {
+      need("rateLimitId", `is ${id}, the template's own id. Take a free number from docs/HOSTING.md and add the row there`);
+    }
+  }
+  return problems;
+}
+
+/** The text of wrangler.jsonc, generated from site.config.ts. Editor bindings appear only when editor.enabled is true. */
+export function wranglerText(c) {
+  const { limit, periodSeconds } = c.contact.rateLimit;
+  const ids = c.contact.rateLimitIds;
+  const editor = c.editor?.enabled === true ? c.editor : null;
+  const secrets = [...secretsFor(c.contact), ...(editor ? ["GITHUB_APP_PRIVATE_KEY"] : [])];
+  const rate = (name, id, lim, period) => `{ "name": "${name}", "namespace_id": "${id}", "simple": { "limit": ${lim}, "period": ${period} } }`;
+  const contactRate = (id) => rate("CONTACT_RATE_LIMIT", id, limit, periodSeconds);
+  const paths = ["/api/*", ...(editor ? EDITOR_PATHS : [])].map((p) => `"${p}"`).join(", ");
+  const kv = editor
+    ? `  // The owner's chat tools: OAuth tokens, and drafts with change times (docs/SECRETS.md).
+  "kv_namespaces": [
+    { "binding": "OAUTH_KV", "id": "${editor.kv.oauth}" },
+    { "binding": "EDITOR_KV", "id": "${editor.kv.editor}" }
+  ],
+`
+    : "";
+  const ratelimits = editor
+    ? `[
+    ${contactRate(ids.production)},
+    ${rate("EDITOR_RATE_LIMIT", editor.rateLimitId, 30, 60)}
+  ]`
+    : `[${contactRate(ids.production)}]`;
+  return `{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "${c.domain.workerName}",
+  // The Worker entry: the contact form on /api/*${editor ? " and the owner's chat tools" : ""}. Every page and file is served from ./out.
+  "main": "./worker/index.ts",
+  "compatibility_date": "2026-11-11",
+  "assets": {
+    "directory": "./out",
+    "binding": "ASSETS",
+    "not_found_handling": "404-page",
+    "run_worker_first": [${paths}]
+  },
+  "vars": { "SITE_ENV": "production" },
+  // Names only. Values are set with \`wrangler secret put\` (README, "Contact form").
+  "secrets": {
+    "required": [${secrets.map((name) => `"${name}"`).join(", ")}]
+  },
+${kv}  "ratelimits": ${ratelimits},
+  // Invocation logs would store request metadata; the Worker's own log lines hold no personal data.
+  "observability": { "enabled": true, "logs": { "invocation_logs": false } },
+  // Worker Previews (branch previews) do not inherit the settings above, so they are repeated here.
+  // Preview secrets are separate: \`wrangler preview base-config secret put\`. The editor never runs on a preview.
+  "previews": {
+    "vars": { "SITE_ENV": "preview" },
+    "ratelimits": [${contactRate(ids.preview)}]
+  }
+}
+`;
+}
+
 /** One plain line per problem; an empty array means the config passes. */
 export function configProblems(c) {
   const problems = [];
@@ -48,7 +175,7 @@ export function configProblems(c) {
   const ids = contact.rateLimitIds;
   if (!ids || typeof ids !== "object") {
     problems.push("site.config.ts  contact.rateLimitIds is missing. Set { production, preview } to two whole numbers from docs/HOSTING.md");
-    return problems;
+    return [...problems, ...editorProblems(c)];
   }
   let numeric = true;
   for (const key of ["production", "preview"]) {
@@ -73,5 +200,5 @@ export function configProblems(c) {
       }
     }
   }
-  return problems;
+  return [...problems, ...editorProblems(c)];
 }

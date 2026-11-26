@@ -1,0 +1,39 @@
+import { registry } from "../../src/blocks/definitions.ts";
+import type { WorkerConfig } from "../config.ts";
+import type { EditorEnv } from "../env.ts";
+import { createGitHub } from "./github.ts";
+import { createEditor } from "./service.ts";
+import type { Editor } from "./types.ts";
+
+/** Wires the editor from the config and the bindings. The caller has already checked `missingBindings`; a gap throws. */
+export function buildEditor(config: WorkerConfig, env: EditorEnv, deps: { fetch?: typeof fetch; now?: () => Date } = {}): Editor {
+  const { editor } = config;
+  const { github } = editor;
+  if (!env.EDITOR_KV || !env.ASSETS || !env.GITHUB_APP_PRIVATE_KEY) throw new Error("The editor's bindings are missing.");
+  if (github.owner === null || github.repo === null || github.appId === null || github.installationId === null) {
+    throw new Error("The editor's GitHub settings are missing.");
+  }
+  const now = deps.now ?? (() => new Date());
+  const githubClient = createGitHub({
+    appId: github.appId,
+    installationId: github.installationId,
+    owner: github.owner,
+    repo: github.repo,
+    branch: editor.productionBranch,
+    privateKeyPem: env.GITHUB_APP_PRIVATE_KEY,
+    userAgent: `${config.workerName}-editor`,
+    ...(deps.fetch ? { fetch: deps.fetch } : {}),
+    now: () => now().getTime(),
+  });
+  return createEditor({
+    config: editor,
+    github: githubClient,
+    kv: env.EDITOR_KV,
+    assets: env.ASSETS,
+    registry,
+    // This site's thanks page links only to "/", which must always be live, so there is nothing to check (SITE-DIFFERENCES D5).
+    thanksLinks: [],
+    now,
+    ...(deps.fetch ? { fetch: deps.fetch } : {}),
+  });
+}

@@ -148,3 +148,7 @@ first. Then stop.
 
 END OF BRIEF
 ```
+
+## Then add the site editor
+
+Once the conversion is merged and live, the owner can change the pages by chatting with their AI app. That is the site editor. It is off by default and needs its own setup: a GitHub App, a sign-in gate and a few settings. [docs/EDITING.md](EDITING.md) has the steps and a ready-to-paste message for a Claude Code session. Keep it out of the conversion pull request.

@@ -77,3 +77,36 @@ links. `src/lib/thanks-links.ts` is kept as the template has it, and the templat
 - **Screenshot tool.** `scripts/change-report.mjs` launches Chromium in software rendering and decodes every photo
   before the shot. With the GPU, two shots of the same build differed by up to 47 of 255 in places, so the pixel gate could
   not say "identical" for this site. Bring this back to the template.
+
+## D7. A page file cannot have a `menu`
+
+- **What:** the template's page files may carry a `menu` entry (label, order, places). On this site the menu is
+  `src/content/nav.ts` (D3), so a `menu` on a page file would do nothing and look as if it worked. The validator
+  (`validatePages` in `src/blocks/validate.ts`) now refuses it, with `MENU_REFUSED`: "The menu on this site is set by
+  Huston Logic, so remove "menu" from this page." The site editor runs the same validator, so a chat change that sets a
+  menu comes back as a problem in the change list, and nothing is changed. The existing menu shape checks still run.
+- **Why:** the owner must not be told a page is in the menu when it is not.
+- **Where:** `MENU_REFUSED` and the line that uses it in `src/blocks/validate.ts`; the "Change the menu" item in Lane 3 of
+  `docs/EDITING-LANES.md`; tests in `scripts/check-content.test.mjs` and `worker/editor/site-differences.test.ts`. The
+  editor's own code and tools still mention menus (`worker/editor/change-list.ts`, `read-tools.ts`, `tool-schemas.ts`);
+  they were left as the template has them, so their wording is wrong for this site only for a menu that is refused anyway.
+  The editor's test pages (`worker/editor/test-support.ts`) and the scope-check fixtures have no `menu`.
+- **Re-apply on a port:** the refusal in `validate.ts`; keep `menu` out of this site's page files and test fixtures.
+
+## D8. The owner page wears Dusk
+
+- **What:** the owner page and sign-in page (`worker/editor/owner-page.ts`) take ten colors named for the template's
+  palette (`white`, `ink`, `green` ...). This site's palette is Dusk, so `worker/editor/theme.ts` (`ownerTheme`) maps
+  Dusk onto those ten roles; `worker/index.ts` and `tests/a11y/owner-page.spec.ts` call it. Dusk has no red that reads on
+  a light page, so the warning color is left empty and the page uses its own dark rust.
+- **Re-apply on a port:** keep `theme.ts` and its two callers; do not pass `siteConfig.theme.colors` straight in.
+
+## D9. The site editor is off, and its factory checks no thanks links
+
+- `editor.enabled` is `false` in `site.config.ts`, with no owner email, Access team, GitHub App id, KV id or workers.dev
+  subdomain. `editor.github.owner` and `.repo` name this repo. `editor.rateLimitId` is `2203`, reserved in
+  `docs/HOSTING.md`; no binding uses it until the editor is on.
+- `worker/editor/factory.ts` passes no thanks-page links to the validator (see D5), and so does not import
+  `src/content/contact.ts`, which imports `site.ts`; the Worker must never import `site.ts`.
+- The editor's test fixtures use `CONTACT_PATH` and `fileForPath` (D1, D2); `worker/editor/site-differences.test.ts` tests
+  reading and proposing a change to a two-level page.

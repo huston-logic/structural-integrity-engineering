@@ -14,6 +14,15 @@ export interface ContactEnv {
   CONTACT_RATE_LIMIT?: RateLimit;
 }
 
+/** Bindings the owner's chat tools add. All optional: they exist only when `editor.enabled` is true (wrangler.jsonc). */
+export interface EditorEnv extends ContactEnv {
+  OAUTH_KV?: KVNamespace;
+  EDITOR_KV?: KVNamespace;
+  EDITOR_RATE_LIMIT?: RateLimit;
+  ASSETS?: Fetcher;
+  GITHUB_APP_PRIVATE_KEY?: string;
+}
+
 /** Whether the submission reached its destination. "skipped" means it was deliberately not sent (a preview never posts to the real app). */
 export type SaveStatus = "saved" | "failed" | "skipped";
 

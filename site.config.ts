@@ -80,6 +80,34 @@ export const siteConfig = {
     // `npm run check:config` rejects them on a real site.
     rateLimitIds: { production: "2201", preview: "2202" },
   },
+  /**
+   * The owner's chat tools (docs/EDITING.md). Off by default: while `enabled` is false the Worker answers only /api/*
+   * and wrangler.jsonc gets none of the editor bindings. Owner-only file: a chat change can never add an owner.
+   */
+  editor: {
+    enabled: false,
+    /** Who may sign in. Lower-cased when compared. Removing someone takes effect at the next deploy. */
+    ownerEmails: [] as string[],
+    /** Cloudflare Access: the team name only (for <team>.cloudflareaccess.com) and the Access app's AUD tag. Not secrets. */
+    access: { teamDomain: null as string | null, aud: null as string | null },
+    /** The GitHub App installed on this site's repo only. appId and installationId are digits written as strings. */
+    github: {
+      owner: "huston-logic" as string | null,
+      repo: "structural-integrity-engineering" as string | null,
+      appId: null as string | null,
+      installationId: null as string | null,
+      botLogin: null as string | null,
+    },
+    /** The account's workers.dev subdomain, used to compute preview links. */
+    workersSubdomain: null as string | null,
+    dailyChangeLimit: 10,
+    /** A whole number written as a string, unique in the Cloudflare account (docs/HOSTING.md). 2203 is reserved for this site. */
+    rateLimitId: "2203",
+    /** KV namespace ids (32 hex characters): OAuth tokens, and drafts with change times. */
+    kv: { oauth: null as string | null, editor: null as string | null },
+    /** Pull request checks that never count when judging whether a change is stuck. */
+    ignoredChecks: ["change-report", "change-scope", "Workers Builds"] as string[],
+  },
   theme: {
     // Option G, "Dusk" (docs/STYLE-GUIDE.md §2). Each key becomes `--hl-<key>` in src/app/hl.css and a Tailwind color
     // (`bg-dusk`, `text-snow`, `border-rule` ...). Contrast on dusk: snow 9.2:1, mist 6.8:1, amber 5.5:1, error 6.0:1;

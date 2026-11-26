@@ -1,4 +1,4 @@
-# Secrets and settings for the contact form
+# Secrets and settings for the contact form and the site editor
 
 Every secret and public setting the contact form uses, in one place. **Names and places only, never values.** The site owner sets
 every secret personally, in their own Terminal or in the Cloudflare and Google dashboards. Claude, CI and the repo never see them,
@@ -28,6 +28,7 @@ After changing `destination` or `sheetWriter`, run `npm run sync:config` and com
 | `SHEET_WEBHOOK_SECRET` | The shared secret the Worker sends and the Apps Script checks. Make it long and random. Must equal the Script Property `SHEET_SECRET`. | `sheet` with `apps-script` | `npx wrangler secret put SHEET_WEBHOOK_SECRET` | `npx wrangler preview base-config secret put SHEET_WEBHOOK_SECRET` |
 | `GOOGLE_SERVICE_ACCOUNT_KEY` | The whole service-account JSON key file. | `sheet` with `service-account` | `npx wrangler secret put GOOGLE_SERVICE_ACCOUNT_KEY < path/to/key.json` | `npx wrangler preview base-config secret put GOOGLE_SERVICE_ACCOUNT_KEY < path/to/key.json` |
 | `GOOGLE_SHEET_ID` | The Sheet ID (between `/d/` and `/edit` in its URL). | `sheet` with `service-account` | `npx wrangler secret put GOOGLE_SHEET_ID` | `npx wrangler preview base-config secret put GOOGLE_SHEET_ID` |
+| `GITHUB_APP_PRIVATE_KEY` | The private key file (`.pem`) of the site's GitHub App, for the site editor. | Only when `editor.enabled` is true | `npx wrangler secret put GITHUB_APP_PRIVATE_KEY < path/to/key.pem` | Never: the editor is off on previews |
 
 `INTAKE_SECRET` is also set on the Pipeline app copy, with the same value. The Worker never sends it to a browser.
 
@@ -68,6 +69,8 @@ If you rename a tab in `site.config.ts`, set the matching property here and rena
 | `contact.rateLimitIds` | `{ production, preview }`, two whole numbers written as strings, unique per site in its Cloudflare account. Register them in `docs/HOSTING.md`. | `site.config.ts`, then `npm run sync:config` |
 | `contact.destination`, `contact.pipelineUrl` | Where a submission is saved: `"sheet"` (default) or `"pipeline"`. `pipelineUrl` is the Pipeline app copy's `https` address, needed for `"pipeline"`. | `site.config.ts` |
 
+The site editor's other settings are not secrets. The App ID, the installation id, the Access team name and AUD tag, the KV namespace ids and the rate-limit id live in the `editor` block of `site.config.ts`. Setup is in [docs/EDITING.md](EDITING.md).
+
 `NEXT_PUBLIC_*` variables are readable by anyone who visits the site. Never put a secret in one.
 
 ## Local testing values (published by Cloudflare, not secrets)
@@ -89,5 +92,6 @@ and writes no row, so the other secrets can be dummy values such as `x`.
   If a command would stage one, stop.
 - Service-account key files (`*.json` downloaded from Google Cloud), API keys, the Apps Script web-app URL, or the shared secret.
   The web-app URL is treated as a secret because anyone holding it and the shared secret can write rows.
+- The GitHub App private key file (`*.pem`) downloaded from GitHub. Delete it once `GITHUB_APP_PRIVATE_KEY` is set.
 - Real values in any doc, test, comment or pull request. Tests use obviously fake values and a mocked `fetch`.
 - Anything sensitive in a `NEXT_PUBLIC_*` variable.

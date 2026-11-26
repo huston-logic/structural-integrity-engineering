@@ -2,6 +2,7 @@ import { contactFields, fieldLabel } from "../src/content/contact-fields.ts";
 import type { ContactSubmission } from "../src/lib/contact-validation.ts";
 import type { Destination, WorkerConfig } from "./config.ts";
 import type { Mode, SaveStatus } from "./env.ts";
+import { escapeHtml } from "./html.ts";
 
 /** The most characters the Pipeline app accepts in `message`. */
 const PIPELINE_MESSAGE_MAX = 5000;
@@ -55,10 +56,6 @@ export function autoReplyEmail(config: WorkerConfig, s: ContactSubmission, mode:
 
   const subject = mode === "production" ? autoReply.subject : `[Preview → would go to ${s.email}] ${autoReply.subject}`;
   return { subject, text, html };
-}
-
-function escapeHtml(value: string): string {
-  return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 }
 
 /**
