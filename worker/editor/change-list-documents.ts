@@ -9,14 +9,23 @@ import { BUSINESS_LABELS } from "../../src/settings/business.ts";
 import { NOTICE_LABELS } from "../../src/settings/notice.ts";
 import { collectionFor } from "../../src/collections/definitions.ts";
 import type { CollectionDefinition } from "../../src/collections/schema.ts";
-import { type Ctx, type Entry, diffValue, leaves, photoText, quote, render, text } from "./change-list.ts";
+import { siteWarnings } from "../../src/collections/site-validate.ts";
+import { DEFAULT_FORM_SETTINGS, type FormDefinition, type FormSettings } from "../../src/forms/schema.ts";
+import { dataKindLabel, newDataKinds } from "../../src/forms/sensitive.ts";
+import { parseForm } from "../../src/forms/validate.ts";
+import { type Ctx, type Entry, diffValue, formatSize, leaves, photoText, quote, render, text } from "./change-list.ts";
 import { isObject } from "./json.ts";
 import { deepEqual } from "./operations.ts";
 
 export interface DocumentChange {
-  before: { items: ReadonlyMap<string, unknown>; settings: ReadonlyMap<string, unknown> };
-  after: { items: ReadonlyMap<string, unknown>; settings: ReadonlyMap<string, unknown> };
+  before: { items: ReadonlyMap<string, unknown>; settings: ReadonlyMap<string, unknown>; forms?: ReadonlyMap<string, unknown> };
+  after: { items: ReadonlyMap<string, unknown>; settings: ReadonlyMap<string, unknown>; forms?: ReadonlyMap<string, unknown> };
   touchedItems: readonly string[];
+  /** The forms this change adds or changes, by id. */
+  touchedForms?: readonly string[];
+  /** For each archived form, the pages whose form sections the change removes. */
+  removedFromPages?: ReadonlyMap<string, readonly string[]>;
+  formSettings?: FormSettings;
   touchedSettings: readonly string[];
   /** The pages this change adds or changes. */
   touchedPages: readonly string[];
@@ -161,6 +170,112 @@ function emptyListNotes(change: DocumentChange, registry: readonly AnyBlockDefin
   return notes;
 }
 
+// ---- forms ----
+
+const FIELD_TYPE_NAMES: Record<string, string> = {
+  "short-text": "short text",
+  "long-text": "long text",
+  email: "email",
+  phone: "phone",
+  dropdown: "dropdown",
+  checkbox: "checkbox",
+  consent: "consent box (unticked)",
+};
+
+type FormFieldData = Record<string, unknown>;
+const fieldsOf = (form: unknown): FormFieldData[] => (isObject(form) && Array.isArray(form.fields) ? form.fields.filter(isObject) : []);
+
+function fieldLine(field: FormFieldData, n: number, mark: string): string {
+  const type = FIELD_TYPE_NAMES[String(field.type)] ?? String(field.type);
+  // Email is always required and a missing "required" is the type's default, so only an explicit value is shown.
+  const required = field.type === "email" || field.required === true ? "required" : field.required === false ? "optional" : "default for its type";
+  const options = Array.isArray(field.options) ? `, options: ${field.options.map((option) => quote(option)).join(", ")}` : "";
+  const size = typeof field.max === "number" ? `, up to ${field.max} characters` : "";
+  const help = typeof field.help === "string" ? `, help: ${quote(field.help)}` : "";
+  return `    ${n}. ${quote(field.label)}: ${type}, ${required}${options}${size}${help}${mark}`;
+}
+
+/** The full numbered field list, with lines marked [new], [changed] or [moved] against the old form; removed fields come last. */
+function fieldList(old: unknown, now: unknown): string[] {
+  const was = fieldsOf(old);
+  const fields = fieldsOf(now);
+  const lines = fields.map((field, i) => {
+    const before = was.findIndex((candidate) => candidate.id === field.id);
+    const mark = !isObject(old) ? "" : before < 0 ? "  [new]" : !deepEqual(was[before], field) ? "  [changed]" : before !== i ? "  [moved]" : "";
+    return fieldLine(field, i + 1, mark);
+  });
+  if (isObject(old)) {
+    for (const field of was) if (!fields.some((candidate) => candidate.id === field.id)) lines.push(`    Removed: ${quote(field.label)}`);
+  }
+  return ["  Fields:", ...lines];
+}
+
+function downloadText(download: unknown, ctx: Ctx): string {
+  if (!isObject(download)) return "no file";
+  const href = String(download.href);
+  const upload = ctx.byValue.get(href);
+  const from = upload ? `, from the upload ${quote(upload.name)} (PDF, ${formatSize(upload.bytes)})` : "";
+  return `${quote(download.title)} at ${href}${from}`;
+}
+
+const GATE_NOTE =
+  "  The file's link is emailed to each visitor after they send the form. It is a plain public link: anyone who has it can open it, and can share it. It collects an email address; it does not lock the file.";
+
+function formStatusLine(status: string, was: string, id: string, pages: readonly string[]): string {
+  if (status === "archived") {
+    const where = pages.length > 0 ? `its form ${pages.length === 1 ? "section is" : "sections are"} removed from ${pages.join(", ")}` : "no page shows it";
+    return `Status: archive. It leaves the site: ${where}. Nothing is deleted; it can be brought back, but its sections are not put back automatically.`;
+  }
+  if (was === "archived") return `Status: restore. It can be placed on a page again with a form section for "${id}". No page shows it until one does.`;
+  return `Status: live. Nothing shows it until a page has a form section for "${id}".`;
+}
+
+function formSection(id: string, old: unknown, now: unknown, ctx: Ctx, removed: readonly string[]): string | null {
+  if (!isObject(now) || deepEqual(old, now)) return null;
+  const name = typeof now.name === "string" ? now.name : id;
+  const lines: string[] = [];
+  if (!isObject(old)) {
+    lines.push(`New form ${quote(name)} (${id}).`, `  ${formStatusLine(String(now.status), "", id, [])}`);
+    lines.push(`  Button: ${quote(now.button)}`, `  Thank-you: ${quote(now.thanks)}`);
+    lines.push(`  File to send: ${downloadText(now.download, ctx)}`);
+    if (isObject(now.download)) lines.push(GATE_NOTE);
+  } else {
+    lines.push(`Form ${quote(name)} (${id}):`);
+    if (old.status !== now.status) lines.push(`  ${formStatusLine(String(now.status), String(old.status), id, removed)}`);
+    for (const [key, label] of [["name", "Name"], ["button", "Button"], ["thanks", "Thank-you"]] as const) {
+      if (old[key] !== now[key]) lines.push(`  ${label}, was: ${quote(old[key])}`, `  ${label}, now: ${quote(now[key])}`);
+    }
+    if (!deepEqual(old.download, now.download)) lines.push(`  File to send, was: ${downloadText(old.download, ctx)}`, `  File to send, now: ${downloadText(now.download, ctx)}`);
+    if (isObject(now.download) && !deepEqual(old.download, now.download)) lines.push(GATE_NOTE);
+  }
+  if (!isObject(old) || old.status === now.status || now.status === "live") lines.push(...fieldList(old, now));
+  return lines.join("\n");
+}
+
+function definitionsOf(forms: ReadonlyMap<string, unknown> | undefined, settings: FormSettings): FormDefinition[] {
+  const out: FormDefinition[] = [];
+  for (const [id, data] of forms ?? []) {
+    const def = parseForm(data, settings, id);
+    if (def !== null) out.push(def);
+  }
+  return out;
+}
+
+/** The warnings for the forms a change touches, and the privacy note when a live form now collects a kind of personal data no live form did. */
+function formNotes(change: DocumentChange): string[] {
+  const touched = change.touchedForms ?? [];
+  if (touched.length === 0) return [];
+  const settings = change.formSettings ?? DEFAULT_FORM_SETTINGS;
+  const notes = siteWarnings({ forms: touched.map((id) => ({ id, data: change.after.forms?.get(id) })) }).map((warning) => `Warning: ${warning}`);
+  const kinds = newDataKinds(definitionsOf(change.before.forms, settings), definitionsOf(change.after.forms, settings));
+  if (kinds.length > 0) {
+    notes.push(
+      `Privacy: this change makes the site collect ${kinds.map(dataKindLabel).join(", ")}, which no form collected before. The privacy page should say so: offer the owner a change to it in this same proposal.`,
+    );
+  }
+  return notes;
+}
+
 // ---- settings ----
 
 const B = BUSINESS_LABELS;
@@ -267,6 +382,10 @@ export function documentSections(change: DocumentChange, ctx: Ctx, registry: rea
     const section = itemSection(key, change.before.items.get(key), change.after.items.get(key), ctx);
     if (section !== null) sections.push(section);
   }
+  for (const id of change.touchedForms ?? []) {
+    const section = formSection(id, change.before.forms?.get(id), change.after.forms?.get(id), ctx, change.removedFromPages?.get(id) ?? []);
+    if (section !== null) sections.push(section);
+  }
   for (const name of SETTINGS_NAMES) {
     if (!change.touchedSettings.includes(name)) continue;
     const old = change.before.settings.get(name);
@@ -276,7 +395,7 @@ export function documentSections(change: DocumentChange, ctx: Ctx, registry: rea
     else if (name === "brand") sections.push(brandSection(old, now, ctx));
     else sections.push(noticeSection(old, now, change.today, ctx));
   }
-  const notes = emptyListNotes(change, registry);
+  const notes = [...emptyListNotes(change, registry), ...formNotes(change)];
   if (notes.length > 0) sections.push(notes.join("\n"));
   return sections;
 }

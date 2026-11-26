@@ -92,12 +92,85 @@ Photos and PDFs can be sent to the site from the owner page. Uploads need the on
 | Damaged | Refused. Export or save the file again. |
 | The monthly photo allowance is used up | Photos are refused until the allowance is available again. PDFs still work. Huston Logic is told. |
 
+## Forms
+
+A form collects details from visitors, such as a quote request, a booking request or a newsletter sign-up. The owner asks for a form by chat. A form goes through the same steps as any change: the list, the yes, the optional preview, then publish.
+
+### What works now
+
+- **Add a form.** Ask in plain words. The AI app proposes the form. The change list shows every field, the button text and the thank-you message. Say yes only to the full list.
+- **Place a form on a page.** A page can hold one form. The form shows where its block sits on the page.
+- **Change a field.** Change a field's label, its help text, a dropdown's options or its error message.
+- **Make a field optional or required.**
+- **Add a consent box.** A box that asks if the visitor agrees to be contacted or to terms. It is never ticked when the form opens.
+- **Change the thank-you.** The thank-you message replaces the form on the page. A form has no thanks page of its own.
+- **Archive and restore.** Archiving takes the form off every page in the same change, and the change list says which pages changed. Nothing is deleted. The form's file is kept, so it can be restored.
+- **Offer a file to download.** Upload a PDF on the owner page, then ask for a form that emails the file to the visitor after they submit it. Read "How strong a download gate is" first.
+
+### Sayings the editor is tested with
+
+These are the owner's own words. Each one has a test. The last one is refused.
+
+- "Add a quote request form to the Services page with name, email, phone, project type as a dropdown, and a message."
+- "Make phone optional."
+- "Add a checkbox asking if we can email them updates."
+- "Add a form on the home page: fill it out to get the Buyer's Checklist PDF I just uploaded."
+- "Change the thank-you message on the quote form."
+- "Remove the newsletter form." The form is archived, not deleted. Its place on each page is removed in the same change.
+- "Add a field for their credit card number." Refused. The AI app says why: a website form is not a safe place for card numbers. The answers sit in email and in a spreadsheet as plain text. Payments need a payment provider, and Huston Logic builds that (see Lane 3 in [EDITING-LANES.md](EDITING-LANES.md)).
+
+### Field types
+
+Every form uses one of these seven types. There is no other type.
+
+| Type | What the visitor gives | Limits |
+| --- | --- | --- |
+| Short text | One line. It can be marked as the visitor's name, organization or website, so the browser can fill it in. | Up to 300 characters (200 by default) |
+| Long text | Several lines | Up to 5,000 characters (2,000 by default) |
+| Email | An email address. Every form has exactly one, and it is always required. | 254 characters |
+| Phone | A phone number of 7 to 20 digits. Digits, spaces and `+ ( ) - .` only. | 30 characters |
+| Dropdown | One choice from 2 to 20 options. It shows as a menu, or as buttons. | Each option up to 80 characters |
+| Checkbox | Yes or no. If it is required, it must be ticked. | Label up to 300 characters |
+| Consent | Yes or no, to agree to be contacted or to terms. It is never ticked when the form opens. | Label up to 300 characters |
+
+A form has up to 12 fields. A site has up to 10 live forms. These are the template's defaults and are set in `site.config.ts`, which the owner cannot change by chat. No field can carry a starting value.
+
+### Personal data rules
+
+- **Refused.** Card numbers and security codes, bank account details, government ID numbers (such as a social security number, a passport number, a driver's licence number or a tax ID), and passwords and PINs. The AI app will not add these fields.
+- **Warned.** Health words, such as health, medical, diagnosis, medication, allergy and disability. The change list shows a warning. The site is not set up for health details, so the AI app suggests asking for them on a call. The AI app proposes such a field only if the owner insists after the warning.
+- **Consent is never ticked.** No consent box or checkbox starts ticked.
+- **New kinds of personal data.** When a form collects something no live form collected before, such as postal addresses, the change list ends with a note that the privacy page should say so. The AI app offers a privacy page edit in the same change. You decide whether to accept it.
+
+### Where the answers go
+
+- **The same place as the contact form.** The answers are saved to the Pipeline app or to the Google Sheet, whichever the site uses (`contact.destination`). The owner sets nothing up for a new form.
+- **The Sheet.** Other forms use two more tabs, `Forms` and `Forms preview`. Every form uses one header row: `Received (UTC) | Form | Name | Email | Answers | Mode`. The answers sit in one cell, one line for each field, with checkboxes shown as Yes or No. A very long answers cell is cut, and the email has every answer.
+- **The Pipeline app.** The message starts with the form's name, then the answers.
+- **The notification email.** The owner gets an email with every answer, as the contact form does.
+- **The visitor.** The visitor sees the thank-you message only when the answers reached the owner. A form that cannot save shows an error and keeps what the visitor typed.
+
+### How strong a download gate is
+
+A download form asks for an email address before it sends a link. It is not a lock.
+
+- The link goes to the visitor's email only after the answers reached the owner. The browser never gets the link.
+- Anyone who has the link can download the file, at any time, forever. They can pass it on.
+- The file sits at a public address on the site. It is not linked from any page, but it is not hidden.
+- Never put anything private or paid-for in a download form. If the file must stay private or be sold, ask Huston Logic. That is a larger build with signed, expiring links.
+
+### The contact form stays Huston Logic's
+
+The contact form is set up by Huston Logic, and the owner cannot change it by chat. Its fields feed fixed Sheet columns and the Pipeline message. Ask Huston Logic to change it. Destinations, recipients and secrets are never chat changes.
+
+When a form is added, the editor also rewrites one generated file, `src/forms/registry.generated.ts`, in the same change. The Worker reads its list of forms from that file, so a submission is judged against the form the site was built from.
+
 ## What is protected
 
 - **Owners only.** Only the emails in `editor.ownerEmails` in `site.config.ts` can sign in or connect an AI app. Cloudflare Access (a sign-in gate that emails a one-time code) and the Worker both check this on every visit to `/owner`.
 - **Limited access to GitHub.** The site has its own GitHub App. A GitHub App is a small identity on GitHub with only the permissions it is given. This one is installed on the site's repository only. It can read and write contents, pull requests and issues. It cannot change workflows, settings, Actions or secrets. It is not a bypass actor in the "Protect main" ruleset, so the rules apply to it.
 - **Short-lived tokens.** The Worker holds the App's private key as a secret. Each time it needs GitHub, it asks for a token that lasts one hour and works on that one repository only.
-- **Page files, item files, settings and the owner's uploads.** The editor changes only the files in `src/content/pages/`, the item files under `src/content/collections/` (one file per post, video, episode, testimonial or team member), the three settings files `src/content/business.json`, `src/content/brand.json` and `src/content/notice.json`, and adds the photos and PDFs the owner uploaded (`public/images/uploads/<id>.webp` and `public/files/<slug>-<id>.pdf`). A brand change also rewrites two generated files, `src/app/palette.css` and `src/lib/fonts.ts`, from `brand.json`. All of this happens only through a proposal the owner says yes to. The editor never deletes a page file or an item file. A page or an item that is no longer wanted is archived, and its file stays.
+- **Page files, item files, settings and the owner's uploads.** The editor changes only the files in `src/content/pages/`, the item files under `src/content/collections/` (one file per post, video, episode, testimonial or team member), the three settings files `src/content/business.json`, `src/content/brand.json` and `src/content/notice.json`, the form files in `src/content/forms/` (one per form, never the contact form's file), and adds the photos and PDFs the owner uploaded (`public/images/uploads/<id>.webp` and `public/files/<slug>-<id>.pdf`). A brand change also rewrites two generated files, `src/app/palette.css` and `src/lib/fonts.ts`, from `brand.json`. All of this happens only through a proposal the owner says yes to. The editor never deletes a page file or an item file. A page or an item that is no longer wanted is archived, and its file stays.
 - **Not editable by chat.** The editor never writes wiring: the notification email address, the booking link, the scheduler, the Worker settings, the security headers (CSP) and the other values in `site.config.ts`. Those go to Huston Logic. The auto-reply email and the owner page keep their own colors, which are also in `site.config.ts`. The modules in `src/content/` that are not listed above (the thanks page, the 404 page, the menu labels) are not changed by the editor either.
 - **One change in flight.** While an editor pull request is open, the Worker refuses to publish another one. Several previews can wait at once.
 - **Daily cap.** At most `editor.dailyChangeLimit` changes a day (default 10). The Worker counts the editor's pull requests on GitHub since 00:00 UTC. An undo counts. Withdrawing an open change does not. Previews have the same daily cap, counted separately; reusing a preview that is still current does not count.
@@ -112,7 +185,7 @@ Photos and PDFs can be sent to the site from the owner page. Uploads need the on
 
 ## The tools the AI app gets
 
-The AI app gets these 18 tools. Changes are made with exact operations (set a piece of text, insert, move or remove a block or list item, add, archive or restore a page, add or change an item, set a brand color or a font), not by rewriting whole pages.
+The AI app gets these 20 tools. Changes are made with exact operations (set a piece of text, insert, move or remove a block or list item, add, archive or restore a page, add or change an item, add or archive a form, set a brand color or a font), not by rewriting whole pages.
 
 | Tool | What it does |
 | --- | --- |
@@ -124,6 +197,8 @@ The AI app gets these 18 tools. Changes are made with exact operations (set a pi
 | `get_collection` | Gives what a kind of item holds (its fields and limits) and lists its items with their status and date or order. |
 | `get_item` | Gives one item, with its body parts numbered. |
 | `get_settings` | Gives the business details, the brand (color roles, current contrast results and the fonts to choose from) or the notice. |
+| `list_forms` | Lists each form with its name, id, status, a summary of its fields, the pages that show it and whether it sends a file. |
+| `get_form` | Gives one form as data, with its fields numbered so they can be named in a change. |
 | `propose_change` | Builds a proposal and its change list, or the problems in plain words. Writes nothing to the repo. |
 | `preview_change` | Pushes the proposal to a preview branch, with no pull request, and gives the preview link. |
 | `publish_change` | Opens the change after the owner's yes. Refused if the site has moved, a change is open or the daily cap is reached. |
@@ -141,9 +216,11 @@ The AI app gets these 18 tools. Changes are made with exact operations (set a pi
 
 | Operation | What it does |
 | --- | --- |
-| `set`, `insert_item`, `remove_item` | Change one value, or add or remove one list item. Each takes exactly one target: a `page` (such as `/hours`), an `item` (such as `posts/new-inspection-service`), or `settings` (`business`, `brand` or `notice`). |
+| `set`, `insert_item`, `remove_item` | Change one value, or add or remove one list item. Each takes exactly one target: a `page` (such as `/hours`), an `item` (such as `posts/new-inspection-service`), `settings` (`business`, `brand` or `notice`), or a `form` (such as `quote-request`, with pointers under `/name`, `/fields`, `/button`, `/thanks` and `/download`). |
 | `add_item` | Adds a post, video, episode, testimonial or team member. Its status is `draft` or `live`. |
 | `set_item_status` | Sets an item to `draft`, `live` or `archived`. Nothing is deleted. |
+| `add_form` | Adds a new live form with its fields, button, thank-you and optional file. The contact form cannot be added or changed. |
+| `set_form_status` | Sets a form to `live` or `archived`. Archiving also removes the form's block from any page in the same change. Nothing is deleted. |
 | `set_brand_color` | Sets the brand color or the accent color, and works out the companion colors from it. It is refused if text would become hard to read. |
 | `set_font` | Sets a display, body or accent font from the curated list. |
 
@@ -204,8 +281,10 @@ Lighthouse sets the pace. It checks 6 pages, three runs each.
 - **Brand changes need preview links.** A preview of a brand change needs the site's preview address set up (`workersSubdomain` in the editor block of `site.config.ts`). Without it the editor refuses a brand proposal up front, before anything is drafted, and says that Huston Logic can make the change.
 - **A list shows only live items.** A video list, episode list, testimonials or team block is left off the page until one item in it is live. The change list says so. The blog index shows its own empty text instead.
 - **Spotify may need a second press.** Browsers limit autoplay inside a frame from another site, so a Spotify episode may need a second press to start.
-- **Not in this version.** Tags or categories, post search, scheduled publishing, comments, authors other than the site, a notice with a close button, a 24-hour clock, owner-set background or text colors, and SVG logos by chat.
+- **Not in this version.** Tags or categories, post search, scheduled publishing, comments, authors other than the site, a notice with a close button, a 24-hour clock, owner-set background or text colors, and SVG logos by chat. For forms: payments, calendar bookings, visitor file uploads, multi-step forms, conditional fields, hidden fields, and changes to the contact form or to where answers go.
 - **Testimonials are not checked for truth.** The check can confirm the fields are there. It cannot confirm that the client said the quote. The AI app is told never to write one without the quote and the name from the owner.
+- **New forms need the Sheet script updated first.** Until the Apps Script in each site's Sheet is updated and the `Forms` and `Forms preview` tabs exist, a new form's answers do not reach the Sheet. The owner's email says so ("Sheet: NOT saved"), and it has every answer. Huston Logic makes this update (see the setup notes in the README's "Contact form" section).
+- **A visitor without JavaScript cannot send a form.** The form still shows every field and the button. Below the button it gives the owner's email address to write to. Sending needs JavaScript, because the human check (Turnstile) runs in the browser.
 
 ## Set up the editor on one site
 
@@ -378,7 +457,7 @@ Commit the result, open a pull request and merge it.
 
 ### What uploads cost
 
-These figures come from the design spec (`docs/superpowers/specs/2026-11-25-uploads-and-photos-design.md`).
+These figures come from the design spec (`huston-logic/site-template: docs/superpowers/specs/2026-11-25-uploads-and-photos-design.md`).
 
 - **R2 storage** is shared by all sites on the Cloudflare account. Each month the account gets 10 GB-months of storage, 1 million writes and 10 million reads free. Deletes are free. Past that: $0.015 per GB-month of storage, $4.50 per million writes and $0.36 per million reads. No egress fees. Only converted files are kept (at most 450 KB each, plus a 30 KB preview), never originals, and each site's inbox is capped at 200 MB. A full site costs at most $0.003 a month past the free tier.
 - **Images** on the Free plan include 5,000 unique transformations a month per account, shared by all sites. Each photo takes 2 to 5 (the web file, the preview, and up to 3 retries for size), so that is about 1,000 to 2,500 photos a month before the limit. Past the limit the Free plan refuses (error 9422) and charges nothing. The paid plan is $0.50 per 1,000 beyond 5,000.
@@ -536,6 +615,67 @@ that lists every change to AGENTS.md, README.md, package.json and site.config.ts
 
 Under Needs Grant in docs/STATUS.md, list the placeholders left in place, the time zone if it was not given, and the
 fonts or settings Huston Logic must still add.
+
+Stop, queue the item and continue with the other work on any of these, as CLAUDE.md says: secrets or credentials, DNS,
+accounts or money, sending real email, deleting user data, lowering a threshold or a required check, or any owner-only
+path (.claude/hooks, .claude/agents, .claude/skills, .claude/settings*.json, .github/workflows). For an owner-only
+change, write the proposed file to the scratchpad and list it for Grant to copy in by hand.
+
+END OF BRIEF
+```
+
+## Add forms and downloads to an existing client site
+
+Use this for a site that already runs the site editor and does not have forms yet. It is a process run, so it works in one branch and one pull request, like the runs above. Keep it separate from any other change. It adds no form on its own: the owner adds forms by chat afterwards.
+
+```text
+This is an autonomous process run named "Forms and downloads". Work from the forms sections of docs/EDITING.md in the
+huston-logic/site-template repo (fetch it from GitHub; do not guess the steps). Read CLAUDE.md, AGENTS.md and
+docs/PROCESS.md in this repo first.
+
+This site must already have the site editor (see "Add the editor to an existing client site" above). If it does not,
+stop and say so.
+
+Port these from huston-logic/site-template, as they are:
+- the whole src/forms/ folder with its *.test.ts files, src/content/forms.ts, and the whole src/content/forms/ folder
+  (it holds the contact form's file, contact.json; do not change that file)
+- the form block (src/blocks/library/form/, with its definition, component, example and tests) and the shared form
+  components it uses
+- worker/forms.ts and worker/forms.test.ts, worker/contact.ts, worker/messages.ts, worker/config.ts, worker/index.ts,
+  worker/tsconfig.json and the whole worker/editor/ folder, with their tests
+- the scripts this run changed: sync-config.mjs, config-rules.mjs, check-content.mjs, blocks-catalog.mjs,
+  change-scope-rules.mjs, check-change-scope.mjs, change-report.mjs, and their tests
+- docs/apps-script/contact-sheet.gs
+- docs/EDITING.md, docs/EDITING-LANES.md, docs/CHANGE-SCOPE.md, docs/SECRETS.md and docs/HOSTING.md; regenerate
+  docs/BLOCKS.md and docs/blocks.json with npm run blocks:catalog
+
+Merge, do not replace:
+- AGENTS.md, README.md and package.json: keep the client's own changes and add the template's.
+- site.config.ts: keep the client's values. Add the forms caps (forms.maxForms, maxFields, maxAnswerChars and
+  maxBodyBytes, with the template's values) and the two tab names in contact.sheetTabs (forms "Forms", formsPreview
+  "Forms preview"). Do not change the client's contact.rateLimitIds, contact.destination, contact.sheetWriter or any
+  recipient.
+- If the client's contact form has changed, keep its markup and its tests as they are. If porting the form view would
+  change how the contact form looks or behaves, stop and list it in the pull request.
+
+Then run npm run sync:config. It writes src/forms/registry.generated.ts and wrangler.jsonc. Then run npm run check:config.
+Commit the generated files with the rest.
+
+Do not create a form, do not set any value that needs an account, and do not change any Cloudflare, Google or GitHub
+setting. Do not set any secret. Forms add no rate-limit id: they use the contact pair in site.config.ts.
+
+No new dependency is expected; if one seems needed, stop and list it.
+
+Run npm run check:fast on each commit and npm run check before the pull request. If either fails, stop and show the
+exact error.
+
+Open one pull request on a branch named feat/forms-and-downloads. Its description starts with a "Needs your eyes" line
+that lists every change to AGENTS.md, README.md, package.json and site.config.ts.
+
+Under Needs Grant in docs/STATUS.md, list in order: update the Apps Script in the client's Sheet from
+docs/apps-script/contact-sheet.gs, add the tabs "Forms" and "Forms preview" with the header row
+Received (UTC) | Form | Name | Email | Answers | Mode, and deploy a new version of the same web app. Set the script
+properties TAB_FORMS and TAB_FORMS_PREVIEW only if the tab names differ. A Pipeline site needs no Sheet step.
 
 Stop, queue the item and continue with the other work on any of these, as CLAUDE.md says: secrets or credentials, DNS,
 accounts or money, sending real email, deleting user data, lowering a threshold or a required check, or any owner-only

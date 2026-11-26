@@ -9,6 +9,7 @@ import { CURATED_FONTS, FONT_ROLES } from "../../src/brand/fonts.ts";
 import { COLLECTION_KINDS, ITEM_STATUSES, RESERVED_POST_SLUGS, SLUG_RE, type CollectionKind, type ItemStatus } from "../../src/collections/schema.ts";
 import { SETTINGS_NAMES, type SettingsName } from "../../src/collections/site-validate.ts";
 import { BRAND_FIXED, BRAND_FIXED_MESSAGE } from "../../src/settings/names.ts";
+import { CONTACT_FORM_ID, FORM_ID_RE, FORM_STATUSES, type FormStatus } from "../../src/forms/schema.ts";
 import { isObject, type Json } from "./json.ts";
 import { AGENCY_NAME } from "./words.ts";
 
@@ -22,7 +23,7 @@ export type BlockIds = { before: Map<string, string[]>; after: Map<string, (stri
 type Block = { type: string; variant?: string; anchor?: string; content: unknown };
 
 /** Exactly one of these names what a set, insert_item or remove_item changes. */
-type Target = { page: string } | { item: string } | { settings: SettingsName };
+type Target = { page: string } | { item: string } | { settings: SettingsName } | { form: string };
 
 export type Operation =
   | ({ op: "set"; pointer: string; value: unknown } & Target)
@@ -36,6 +37,8 @@ export type Operation =
   | { op: "restore_page"; page: string }
   | { op: "add_item"; collection: CollectionKind; slug: string; item: Record<string, unknown> }
   | { op: "set_item_status"; item: string; status: ItemStatus }
+  | { op: "add_form"; form: string; definition: Record<string, unknown> }
+  | { op: "set_form_status"; form: string; status: FormStatus }
   | { op: "set_brand_color"; role: Role; value: string }
   | { op: "set_font"; role: "display" | "body" | "accent"; font: string };
 
@@ -43,7 +46,12 @@ export type Operation =
 export interface Documents {
   items: ReadonlyMap<string, unknown>;
   settings: ReadonlyMap<string, unknown>;
+  /** The form files by id (never missing in a real site: the contact form is one). */
+  forms?: ReadonlyMap<string, unknown>;
 }
+
+/** The sentence for any write to the contact form (the owner cannot change it by chat). */
+export const CONTACT_REFUSAL = "The contact form is set up by Huston Logic; ask them to change it.";
 
 export type ApplyResult =
   | {
@@ -56,20 +64,26 @@ export type ApplyResult =
       settings: Map<string, unknown>;
       touchedItems: string[];
       touchedSettings: string[];
+      forms: Map<string, unknown>;
+      touchedForms: string[];
+      /** For each archived form, the pages whose form sections the archive removed. */
+      removedFromPages: Map<string, string[]>;
     }
   | { ok: false; problems: string[] };
 
 const OP_NAMES = [
   "set", "insert_item", "remove_item", "insert_block", "move_block", "remove_block", "add_page", "archive_page", "restore_page",
-  "add_item", "set_item_status", "set_brand_color", "set_font",
+  "add_item", "set_item_status", "add_form", "set_form_status", "set_brand_color", "set_font",
 ];
-const TARGETS = ["page", "item", "settings"];
+const TARGETS = ["page", "item", "settings", "form"];
 const OP_KEYS: Record<string, string[]> = {
   set: ["op", "pointer", "value"],
   insert_item: ["op", "pointer", "at", "value"],
   remove_item: ["op", "pointer", "at"],
   add_item: ["op", "collection", "slug", "item"],
   set_item_status: ["op", "item", "status"],
+  add_form: ["op", "form", "definition"],
+  set_form_status: ["op", "form", "status"],
   set_brand_color: ["op", "role", "value"],
   set_font: ["op", "role", "font"],
   insert_block: ["op", "page", "at", "block"],
@@ -163,6 +177,7 @@ export function applyOperations(pages: ReadonlyMap<string, unknown>, ops: unknow
     const page = raw.op === "add_page" && isObject(raw.page) ? raw.page.path : raw.page;
     if (typeof page === "string") named.add(page);
     if (typeof raw.item === "string") namedItems.add(raw.item);
+    if (typeof raw.form === "string") namedItems.add(`form:${raw.form}`);
     if (raw.op === "add_item" && typeof raw.collection === "string" && typeof raw.slug === "string") namedItems.add(itemKey(raw.collection, raw.slug));
   }
   if (named.size > MAX_PAGES) {
@@ -195,7 +210,10 @@ export function applyOperations(pages: ReadonlyMap<string, unknown>, ops: unknow
   };
   const items = cloneAll(docs.items);
   const settings = cloneAll(docs.settings);
-  const scope: Scope = { pages: work, items, settings, originalPages: pages, originalItems: docs.items };
+  const forms = cloneAll(docs.forms ?? new Map());
+  const originalForms = docs.forms ?? new Map<string, unknown>();
+  const removedFromPages = new Map<string, string[]>();
+  const scope: Scope = { pages: work, items, settings, forms, originalPages: pages, originalItems: docs.items, originalForms, removedFromPages };
 
   const moved: string[] = [];
   for (const [index, raw] of ops.entries()) {
@@ -224,6 +242,9 @@ export function applyOperations(pages: ReadonlyMap<string, unknown>, ops: unknow
     settings: new Map<string, unknown>(settings),
     touchedItems: changed(docs.items, items),
     touchedSettings: changed(docs.settings, settings),
+    forms: new Map<string, unknown>(forms),
+    touchedForms: changed(originalForms, forms),
+    removedFromPages,
   };
 }
 
@@ -232,8 +253,11 @@ interface Scope {
   pages: Map<string, Json>;
   items: Map<string, Json>;
   settings: Map<string, Json>;
+  forms: Map<string, Json>;
   originalPages: ReadonlyMap<string, unknown>;
   originalItems: ReadonlyMap<string, unknown>;
+  originalForms: ReadonlyMap<string, unknown>;
+  removedFromPages: Map<string, string[]>;
 }
 
 function applyOne(raw: unknown, scope: Scope, ids: Map<string, (string | null)[]>, moved: string[]): void {
@@ -249,10 +273,11 @@ function applyOne(raw: unknown, scope: Scope, ids: Map<string, (string | null)[]
   for (const key of OP_KEYS[op] ?? ["op", "page"]) if (!(key in raw)) refuse(`the field "${key}" is missing.`);
   if (pointerOp) {
     const named = TARGETS.filter((key) => key in raw);
-    if (named.length !== 1) refuse('name what to change with exactly one of "page", "item" or "settings".');
-    if (!("page" in raw)) return applyDocumentPointerOp(op, raw, scope, named[0] as "item" | "settings");
+    if (named.length !== 1) refuse('name what to change with exactly one of "page", "item", "settings" or "form".');
+    if (!("page" in raw)) return applyDocumentPointerOp(op, raw, scope, named[0] as "item" | "settings" | "form");
   }
   if (op === "add_item" || op === "set_item_status") return applyItemOp(op, raw, scope);
+  if (op === "add_form" || op === "set_form_status") return applyFormOp(op, raw, scope, ids);
   if (op === "set_brand_color" || op === "set_font") {
     if (BRAND_FIXED) return refuse(BRAND_FIXED_MESSAGE);
     return applyBrandOp(op, raw, scope.settings);
@@ -350,8 +375,26 @@ const pageGuard = (page: Json): Guard => (tokens, pointer) => checkAllowed(token
 /** Settings fields whose "nothing" is a null value, not a missing field. */
 const NULLABLE_SETTINGS = ["logo", "endsOn", "hours"];
 
-function applyDocumentPointerOp(op: string, raw: Json, scope: Scope, target: "item" | "settings"): void {
+/** The parts of a form file a pointer may reach. */
+const FORM_POINTER_PARTS = ["name", "fields", "button", "thanks", "download"];
+
+function formGuard(pointer: string, tokens: string[]): void {
+  if (tokens[0] === "status") refuse("a form's status cannot be set this way; use set_form_status.");
+  if (!FORM_POINTER_PARTS.includes(tokens[0])) {
+    refuse(`${pointer} is not allowed; a pointer on a form must start with ${FORM_POINTER_PARTS.map((part) => `/${part}`).join(", ")}.`);
+  }
+}
+
+function applyDocumentPointerOp(op: string, raw: Json, scope: Scope, target: "item" | "settings" | "form"): void {
   const name = raw[target];
+  if (target === "form") {
+    if (name === CONTACT_FORM_ID) return refuse(CONTACT_REFUSAL);
+    if (typeof name !== "string" || !scope.forms.has(name)) {
+      return refuse(`there is no form ${JSON.stringify(name)}; use list_forms to see the forms. Use add_form for a new one.`);
+    }
+    const form = scope.forms.get(name) as Json;
+    return applyPointerOp(op, raw, form, (tokens, pointer) => formGuard(pointer, tokens));
+  }
   if (target === "item") {
     if (typeof name !== "string" || !scope.items.has(name)) {
       return refuse(`there is no item ${JSON.stringify(name)}; name it as "posts/<slug>". Use add_item for a new one.`);
@@ -415,6 +458,54 @@ function applyItemOp(op: string, raw: Json, scope: Scope): void {
   }
   if (current.status === status) return refuse(`${key} is already ${status}.`);
   current.status = status;
+}
+
+function applyFormOp(op: string, raw: Json, scope: Scope, ids: Map<string, (string | null)[]>): void {
+  const { form } = raw;
+  if (form === CONTACT_FORM_ID) return refuse(CONTACT_REFUSAL);
+  if (op === "add_form") {
+    if (typeof form !== "string" || !FORM_ID_RE.test(form)) {
+      return refuse(`the form id ${JSON.stringify(form)} must be lowercase words and digits joined by hyphens, 1 to 60 characters, like "quote-request".`);
+    }
+    const existing = scope.forms.get(form) ?? scope.originalForms.get(form);
+    if (existing !== undefined) {
+      const status = isObject(existing) ? existing.status : undefined;
+      return refuse(
+        status === "archived"
+          ? `the form ${form} exists, archived; restore it instead (set_form_status to "live").`
+          : `the form ${form} already exists; use set to change it, or pick another id.`,
+      );
+    }
+    const { definition } = raw;
+    if (!isObject(definition)) return refuse("the definition must be an object holding the form's name, status, fields, button and thanks.");
+    if (definition.status !== "live") return refuse('a new form needs "status": "live" (a new form is never archived).');
+    scope.forms.set(form, structuredClone(definition));
+    return;
+  }
+  const { status } = raw;
+  const current = typeof form === "string" ? scope.forms.get(form) : undefined;
+  if (typeof form !== "string" || current === undefined) return refuse(`there is no form ${JSON.stringify(form)}; use list_forms to see the forms.`);
+  if (typeof status !== "string" || !(FORM_STATUSES as readonly string[]).includes(status)) return refuse(`the status must be one of ${FORM_STATUSES.join(", ")}.`);
+  if (current.status === status) return refuse(`the form ${form} is already ${status}.`);
+  current.status = status;
+  if (status !== "archived") return;
+  // An archived form is never built into a page, so every section that shows it goes in the same change.
+  for (const [path, page] of scope.pages) {
+    if (!Array.isArray(page.blocks)) continue;
+    const blockIds = ids.get(path) ?? [];
+    let removed = false;
+    for (let i = page.blocks.length - 1; i >= 0; i -= 1) {
+      const block: unknown = page.blocks[i];
+      if (!isObject(block) || block.type !== "form" || !isObject(block.content) || block.content.form !== form) continue;
+      page.blocks.splice(i, 1);
+      blockIds.splice(i, 1);
+      removed = true;
+    }
+    if (removed) {
+      ids.set(path, blockIds);
+      scope.removedFromPages.set(form, [...(scope.removedFromPages.get(form) ?? []), path]);
+    }
+  }
 }
 
 const floorOne = (n: number) => (Math.floor(n * 10) / 10).toFixed(1);

@@ -147,6 +147,22 @@ function uploadsProblems(c) {
   return problems;
 }
 
+const FORM_SETTING_KEYS = ["maxForms", "maxFields", "maxAnswerChars", "maxBodyBytes"];
+
+/** Problems with the `forms` block (the caps on forms owners add). Nothing is checked while it is missing. */
+function formsProblems(c) {
+  const f = c.forms;
+  if (f === undefined || f === null) return [];
+  const problems = [];
+  for (const key of FORM_SETTING_KEYS) {
+    if (!Number.isInteger(f[key]) || f[key] < 1) problems.push(`site.config.ts  forms.${key} must be a whole number of at least 1, not ${JSON.stringify(f[key])}`);
+  }
+  for (const key of Object.keys(f)) {
+    if (!FORM_SETTING_KEYS.includes(key)) problems.push(`site.config.ts  forms.${key} is not a form setting. The settings are: ${FORM_SETTING_KEYS.join(", ")}`);
+  }
+  return problems;
+}
+
 /** The text of wrangler.jsonc, generated from site.config.ts. Editor bindings appear only when editor.enabled is true. */
 export function wranglerText(c) {
   const { limit, periodSeconds } = c.contact.rateLimit;
@@ -229,7 +245,7 @@ export function configProblems(c) {
   const ids = contact.rateLimitIds;
   if (!ids || typeof ids !== "object") {
     problems.push("site.config.ts  contact.rateLimitIds is missing. Set { production, preview } to two whole numbers from docs/HOSTING.md");
-    return [...problems, ...editorProblems(c), ...uploadsProblems(c)];
+    return [...problems, ...formsProblems(c), ...editorProblems(c), ...uploadsProblems(c)];
   }
   let numeric = true;
   for (const key of ["production", "preview"]) {
@@ -254,7 +270,7 @@ export function configProblems(c) {
       }
     }
   }
-  return [...problems, ...editorProblems(c), ...uploadsProblems(c)];
+  return [...problems, ...formsProblems(c), ...editorProblems(c), ...uploadsProblems(c)];
 }
 
 /**

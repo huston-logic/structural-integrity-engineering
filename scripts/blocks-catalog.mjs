@@ -286,6 +286,8 @@ function limitsWords(f) {
       return `a whole number from ${f.min} to ${f.max}`;
     case "audio":
       return `a ${audioNames.join(" or ")} episode link`;
+    case "form":
+      return "the id of a live form (never the contact form)";
     case "body":
       return `up to ${f.maxParts} parts and ${f.maxChars} characters: headings, paragraphs, lists, quotes and photos`;
     case "boolean":

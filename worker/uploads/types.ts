@@ -1,4 +1,4 @@
-/** Shared shapes for the owner's upload inbox (docs/superpowers/specs/2026-11-25-uploads-and-photos-design.md). */
+/** Shared shapes for the owner's upload inbox (huston-logic/site-template: docs/superpowers/specs/2026-11-25-uploads-and-photos-design.md). */
 
 export type UploadKind = "photo" | "pdf";
 

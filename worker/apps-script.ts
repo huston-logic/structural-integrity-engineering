@@ -4,7 +4,7 @@ import { safeCell } from "./sheets.ts";
 /**
  * Appends one row to the Google Sheet through a Google Apps Script web app (docs/apps-script/contact-sheet.gs), the
  * default Sheet writer. The Worker POSTs JSON `{ secret, tab, row }` to the web-app URL; the script checks the shared
- * secret, accepts only its two configured tab names and writes the row as plain text. Apps Script answers a POST with a
+ * secret, accepts only its four configured tab names and writes the row as plain text. Apps Script answers a POST with a
  * redirect to the result, which `fetch` follows. Success is HTTP 200 and a JSON body of `{"ok":true}`.
  * The URL and the secret are Worker secrets (SHEET_WEBHOOK_URL, SHEET_WEBHOOK_SECRET). Logs hold fixed event names and
  * status codes only, never the URL, the secret or any row data.

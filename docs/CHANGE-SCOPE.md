@@ -21,9 +21,9 @@ The rules live in one file: [`scripts/change-scope-rules.mjs`](../scripts/change
 
 (Tier 2, "ask first", is about a vague request and is handled by the agent, not by files, so the scope check does not know it.)
 
-Four modules in `src/content/` are wiring, not copy, so they are tier 3: `site.ts`, `providers.ts`, `auto-reply.ts` and
-`contact-fields.ts`. Files with a dot in the name (`*.test.ts`, `*.d.ts`) and files in sub-folders are tier 3 too (the page
-files in `src/content/pages/` are the one exception, see below). Symbolic links, submodules and file type changes are tier 3
+Five modules in `src/content/` are wiring, not copy, so they are tier 3: `site.ts`, `providers.ts`, `auto-reply.ts`,
+`contact-fields.ts` and `contact.ts` (the contact form's error words, which `forms/contact.json` repeats). Files with a dot in the name (`*.test.ts`, `*.d.ts`) and files in sub-folders are tier 3 too (the page
+files in `src/content/pages/` and the form files in `src/content/forms/` are the exceptions, see below). Symbolic links, submodules and file type changes are tier 3
 at any path, and so is deleting `routes.ts` or `nav.ts`.
 
 **Tier 1 `.ts` files must be plain data.** A content module runs at build time (and `contact-fields.ts` also runs inside the
@@ -48,8 +48,17 @@ unknown kind, a nested file and any other file under `src/content/collections/`.
 items as they do to pages (an image used in an item with `alt` beside it counts as a use). A change to `brand.json` or a
 generated brand file is marked in the report ("Brand change: touches every page; it needs a preview before the yes.").
 
+**Forms.** A form file (`src/content/forms/<id>.json`, with a slug id) is tier 1 when the whole site passes the content check
+at the head commit, new or edited. A change branch is blocked by a content problem in it, as for pages. The registry
+(`src/forms/registry.generated.ts`) is tier 1 only when it is byte-for-byte what the form files generate at the head commit;
+otherwise it is tier 3 ("not a form file" or a registry that does not match). `src/content/forms/contact.json` is tier 3 in any
+status ("the contact form's wiring"), because the contact form is set up by Huston Logic. Deleting or renaming a form file is
+tier 3: forms are archived, not deleted. Any other file under `src/forms/` is tier 3 ("form rules (code)"). The `forms`
+caps and tab names in `site.config.ts` are tier 3, as is the rest of that file.
+
 In the change report, a post maps to `/blog/<slug>` and `/blog`, any item to every page with a list block of its kind, and the
-settings files and generated brand files to every page.
+settings files and generated brand files to every page. A form file maps to every page whose `form` block shows that form,
+on the head side or the base side, so those pages get before and after screenshots.
 
 There is no longer a list of flagged changes. Prices, contact details, legal text, new links, page changes and file size
 are the client's own business, so they pass without a flag. Bad links (`javascript:`, `data:`, `http:`, and links to a

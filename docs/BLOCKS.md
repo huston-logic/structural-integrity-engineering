@@ -468,6 +468,37 @@ A booking column next to the site's contact form. The form itself is wired to th
 }
 ```
 
+## Form (`form`)
+
+One of the site's forms (a quote request, a download sign-up) in a panel, with an optional heading and a sentence above or beside it. The form's fields, button and thank-you message are in its own form file.
+
+**Where it can go:** anywhere, once.
+
+**Variants** (set with `variant`; the first is used when it is left out):
+
+- `stacked` (default): The heading and intro above the form panel, in one centred column.
+- `beside`: The heading and intro on the left, the form panel on the right (stacked on phones).
+
+**Fields** (inside `content`):
+
+| Field | What it is | Required | Limits |
+| --- | --- | --- | --- |
+| `form` | Form. The id of a live form, other than the contact form. | yes | the id of a live form (never the contact form) |
+| `heading` | Heading | no | up to 60 characters |
+| `intro` | Intro | no | up to 300 characters |
+
+**Motion:** No entrance motion. People type here, so the form stays still and is usable the moment it appears.
+
+**Example:**
+
+```json
+{
+  "form": "showcase-example",
+  "heading": "A short heading that says what the form is for",
+  "intro": "A sentence or two that says what happens after the visitor sends the form."
+}
+```
+
 ## Numbered steps (`steps`)
 
 A heading and a short numbered list that says what happens, step by step. It can end with an email line.

@@ -10,6 +10,8 @@ strings: `contact.rateLimitIds` `{ production, preview }` in `site.config.ts` (`
 `wrangler.jsonc`). `npm run check:config` refuses a missing pair, a pair with the same number twice, and a site that
 still uses the template's 1001 and 1002. The site editor has its own id, `editor.rateLimitId` in `site.config.ts`, a whole number written as a string. Once the editor is on, `npm run check:config` also refuses the template's 1003 on a real site.
 
+Forms add no rate-limit id. Each form counts on the site's existing contact pair, with its own key per form, so one visitor gets the same limit on each form.
+
 **To give a new site its ids:** take the next three free ids in a row below, starting at 2001, 2002 and 2003 (the first two for the contact form, the third for the editor), then add a row in the same PR.
 
 | Site | Production | Preview | Editor | Notes |

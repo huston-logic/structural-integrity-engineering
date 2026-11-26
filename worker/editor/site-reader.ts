@@ -6,6 +6,8 @@ import { FONTS_PATH, GENERATED_BRAND_FILES, PALETTE_PATH } from "../../src/brand
 import { paletteCss } from "../../src/brand/palette.ts";
 import { COLLECTION_KINDS, ITEM_DIR, itemFilePath, SLUG_RE, type ItemFile } from "../../src/collections/schema.ts";
 import { SITE_SETTINGS_NAMES, settingsPath, validateSite, type SettingsName } from "../../src/collections/site-validate.ts";
+import { FORM_DIR, FORM_ID_RE, CONTACT_FORM_ID, DEFAULT_FORM_SETTINGS, formFilePath, type FormFile, type FormSettings } from "../../src/forms/schema.ts";
+import { REGISTRY_PATH, registryIds, registrySource } from "../../src/forms/registry.ts";
 import type { GitHub } from "./github.ts";
 import { isObject } from "./json.ts";
 
@@ -17,6 +19,7 @@ const FILES_DIR = "public/files";
 const FILE_BLOB = /^public\/files\/[^/]+\.pdf$/;
 const PAGE_FILE = /^src\/content\/pages\/[a-z0-9]+(?:-[a-z0-9]+)*(?:--[a-z0-9]+(?:-[a-z0-9]+)*)?\.json$/; // two levels: a -- is the / (D2)
 const ITEM_FILE = new RegExp(`^${ITEM_DIR}/(${COLLECTION_KINDS.join("|")})/([a-z0-9]+(?:-[a-z0-9]+)*)\\.json$`);
+const FORM_FILE = new RegExp(`^${FORM_DIR}/([a-z0-9]+(?:-[a-z0-9]+)*)\\.json$`);
 const UPLOAD_PHOTO = /^public\/images\/uploads\/[a-z0-9]{8}\.webp$/;
 const UPLOAD_PDF = /^public\/files\/[a-z0-9]+(?:-[a-z0-9]+)*\.pdf$/;
 /** The files a brand change regenerates from brand.json. */
@@ -41,6 +44,14 @@ export interface Snapshot {
   items: Map<string, unknown>;
   /** Item files that would not parse. */
   itemBroken: ItemFile[];
+  /** Form files by id, parsed (the contact form is one). */
+  forms: Map<string, unknown>;
+  /** Form files that would not parse. */
+  formBroken: FormFile[];
+  /** The form ids the committed registry lists, or null when the file is missing. */
+  registryIds: string[] | null;
+  /** The git tree of src/content/forms ("none" when the folder does not exist). */
+  formsTree: string;
   /** The three settings files, parsed (a missing or unreadable file is absent). */
   settings: Map<string, unknown>;
   settingsErrors: Partial<Record<SettingsName, string>>;
@@ -57,6 +68,7 @@ export interface Snapshot {
 export interface Documents {
   items: ReadonlyMap<string, unknown>;
   settings: ReadonlyMap<string, unknown>;
+  forms?: ReadonlyMap<string, unknown>;
 }
 
 /** Files a change would add: image values and PDF values as pages write them, and each new photo's upload name. */
@@ -83,6 +95,10 @@ export async function readSite(github: GitHub): Promise<Snapshot> {
     files: new Set(),
     items: new Map(),
     itemBroken: [],
+    forms: new Map(),
+    formBroken: [],
+    registryIds: null,
+    formsTree: entries.find((e) => e.type === "tree" && e.path === FORM_DIR)?.sha ?? "none",
     settings: new Map(),
     settingsErrors: {},
     pagesTree: entries.find((e) => e.type === "tree" && e.path === PAGES_DIR)?.sha ?? "none",
@@ -97,11 +113,15 @@ export async function readSite(github: GitHub): Promise<Snapshot> {
   }
   const files = entries.filter((e) => e.type === "blob" && PAGE_FILE.test(e.path)).map((e) => e.path);
   const itemPaths = entries.filter((e) => e.type === "blob" && ITEM_FILE.test(e.path)).map((e) => e.path);
+  const formPaths = entries.filter((e) => e.type === "blob" && FORM_FILE.test(e.path)).map((e) => e.path);
+  const hasRegistry = entries.some((e) => e.type === "blob" && e.path === REGISTRY_PATH);
   const settingNames = SITE_SETTINGS_NAMES.filter((name) => entries.some((e) => e.type === "blob" && e.path === settingsPath(name)));
   for (const name of settingNames) snapshot.settingsShas[name] = entries.find((e) => e.type === "blob" && e.path === settingsPath(name))?.sha ?? "none";
-  const [texts, itemTexts, settingTexts] = await Promise.all([
+  const [texts, itemTexts, formTexts, registryText, settingTexts] = await Promise.all([
     Promise.all(files.map((path) => github.fileAt(head.commit, path))),
     Promise.all(itemPaths.map((path) => github.fileAt(head.commit, path))),
+    Promise.all(formPaths.map((path) => github.fileAt(head.commit, path))),
+    hasRegistry ? github.fileAt(head.commit, REGISTRY_PATH) : Promise.resolve(null),
     Promise.all(settingNames.map((name) => github.fileAt(head.commit, settingsPath(name)))),
   ]);
   files.forEach((path, i) => {
@@ -123,6 +143,15 @@ export async function readSite(github: GitHub): Promise<Snapshot> {
       snapshot.itemBroken.push({ kind, slug, data: null, error: "this file is not valid JSON, so the site cannot read it." });
     }
   });
+  formPaths.forEach((path, i) => {
+    const id = FORM_FILE.exec(path)?.[1] ?? "";
+    try {
+      snapshot.forms.set(id, JSON.parse(formTexts[i] ?? ""));
+    } catch {
+      snapshot.formBroken.push({ id, data: null, error: "this file is not valid JSON, so the site cannot read it." });
+    }
+  });
+  if (registryText !== null) snapshot.registryIds = registryIds(registryText);
   settingNames.forEach((name, i) => {
     try {
       snapshot.settings.set(name, JSON.parse(settingTexts[i] ?? ""));
@@ -141,6 +170,7 @@ export function validateSet(
   links: ThanksLinks,
   pending?: Pending,
   documents: Documents = snapshot,
+  formSettings: FormSettings = DEFAULT_FORM_SETTINGS,
 ): string[] {
   const files: PageFile[] = [...snapshot.broken];
   for (const [path, data] of after) files.push({ file: snapshot.fileOf.get(path) ?? fileForPath(path), data });
@@ -149,10 +179,17 @@ export function validateSet(
     const at = key.indexOf("/");
     items.push({ kind: key.slice(0, at), slug: key.slice(at + 1), data });
   }
+  const forms: FormFile[] = [...snapshot.formBroken];
+  const formDocs = documents.forms ?? snapshot.forms;
+  for (const [id, data] of formDocs) forms.push({ id, data });
+  // A form added by this change is listed by the registry the editor writes with it; otherwise the committed registry stands.
+  const added = [...formDocs.keys()].some((id) => !snapshot.forms.has(id));
+  const listedIds = added || snapshot.registryIds === null ? forms.map((form) => form.id) : snapshot.registryIds;
   return validateSite(
     {
       pages: files,
       items,
+      forms,
       business: documents.settings.get("business"),
       brand: documents.settings.get("brand"),
       notice: documents.settings.get("notice"),
@@ -163,7 +200,7 @@ export function validateSet(
       imageExists: (src) => snapshot.images.has(src) || (pending?.images.has(src) ?? false),
       fileExists: (href) => snapshot.files.has(href) || (pending?.files.has(href) ?? false),
     },
-    { links, ...(pending && pending.names.size > 0 ? { uploadNames: pending.names } : {}) },
+    { links, formSettings, registryIds: listedIds,...(pending && pending.names.size > 0 ? { uploadNames: pending.names } : {}) },
   );
 }
 
@@ -184,6 +221,19 @@ export function itemFilesFor(after: ReadonlyMap<string, unknown>, touched: reado
     const { status, ...fields } = item;
     return [{ path: itemFilePath(key.slice(0, at), key.slice(at + 1)), content: serializePage({ status, ...fields }) }];
   });
+}
+
+/** The files to commit for the forms a change touched: name, then status, then the fields as written (the format of a form file). A form added by the change also writes the regenerated registry. */
+export function formFilesFor(snapshot: Snapshot, after: ReadonlyMap<string, unknown>, touched: readonly string[]): { path: string; content: string }[] {
+  const out = touched.flatMap((id) => {
+    const form = after.get(id);
+    if (!isObject(form) || id === CONTACT_FORM_ID) return [];
+    const { name, status, ...fields } = form;
+    return [{ path: formFilePath(id), content: serializePage({ name, status, ...fields }) }];
+  });
+  const added = touched.some((id) => !snapshot.forms.has(id) && isObject(after.get(id)));
+  if (added) out.push({ path: REGISTRY_PATH, content: registrySource([...new Set([...snapshot.forms.keys(), ...snapshot.formBroken.map((f) => f.id), ...after.keys()])]) });
+  return out;
 }
 
 /** The files to commit for the settings a change touched; a brand change also regenerates the palette and the fonts module. */
@@ -207,8 +257,14 @@ export function settingsFilesFor(after: ReadonlyMap<string, unknown>, touched: r
 export function isCommittablePath(path: string): boolean {
   const item = ITEM_FILE.exec(path);
   if (item !== null) return SLUG_RE.test(item[2] ?? "");
+  const form = FORM_FILE.exec(path);
+  if (form !== null) return FORM_ID_RE.test(form[1] ?? "") && form[1] !== CONTACT_FORM_ID;
+  if (path === REGISTRY_PATH) return true;
   return PAGE_FILE.test(path) || settingNameOf(path) !== null || GENERATED_BRAND_FILES.includes(path) || UPLOAD_PHOTO.test(path) || UPLOAD_PDF.test(path);
 }
+
+/** The form id for a form file's repo path, or null. */
+export const formKeyOf = (path: string): string | null => FORM_FILE.exec(path)?.[1] ?? null;
 
 /** "<collection>/<slug>" for an item file's repo path, or null. */
 export function itemKeyOf(path: string): string | null {

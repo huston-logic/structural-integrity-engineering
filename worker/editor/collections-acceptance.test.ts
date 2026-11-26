@@ -1,10 +1,10 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { blogFiles, seedSite } from "./test-support.ts";
-import { aiApp, JPEG, makeUploadsEditor, pdfBytes, type Called, type UploadsEditor } from "./uploads-test-support.ts";
+import { aiApp, JPEG, makeUploadsEditor, type Called, type UploadsEditor } from "./uploads-test-support.ts";
 
 /**
- * The acceptance sayings of the collections and brand run (spec: docs/superpowers/specs/2026-11-25-collections-and-brand-design.md),
+ * The acceptance sayings of the collections and brand run (spec: huston-logic/site-template: docs/superpowers/specs/2026-11-25-collections-and-brand-design.md),
  * each played as the owner's AI app calling the MCP endpoint on the fake GitHub, with a real upload store on fake R2. A test
  * checks the change list's words, and the files a publish commits; a refusal checks the plain-words reason.
  */
@@ -492,7 +492,7 @@ test("one proposal may touch at most 5 pages and 10 items", async () => {
 test("a proposal names exactly one target, and an unknown item or settings name is refused", async () => {
   const ai = aiApp(site());
   const none = await ai("propose_change", { summary: "x", operations: [{ op: "set", pointer: "/title", value: "x" }] });
-  assert.match(none.text, /name what to change with exactly one of "page", "item" or "settings"/);
+  assert.match(none.text, /name what to change with exactly one of "page", "item", "settings" or "form"/);
   const two = await ai("propose_change", { summary: "x", operations: [{ op: "set", page: "/", settings: "business", pointer: "/phone", value: "1" }] });
   assert.match(two.text, /exactly one of/);
   const missing = await ai("propose_change", { summary: "x", operations: [{ op: "set", item: "posts/nope", pointer: "/title", value: "x" }] });

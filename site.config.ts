@@ -65,8 +65,8 @@ export const siteConfig = {
      * which names wrangler.jsonc lists under secrets.required (see docs/SECRETS.md).
      */
     sheetWriter: "apps-script" as "apps-script" | "service-account",
-    /** The two tab names in the Sheet. Generic names; the Apps Script reads the same two names from its Script Properties. */
-    sheetTabs: { production: "Submissions", preview: "Preview" },
+    /** The tab names in the Sheet: the contact form's two, then the two every other form shares. Generic names; the Apps Script reads the same names from its Script Properties. */
+    sheetTabs: { production: "Submissions", preview: "Preview", forms: "Forms", formsPreview: "Forms preview" },
     /**
      * Where each submission is saved. "sheet" (the default) is the Google Sheet above, the fallback. "pipeline" posts it
      * server to server to the client's Pipeline app copy (`pipelineUrl` + "/intake", secret INTAKE_SECRET). The notification
@@ -85,6 +85,13 @@ export const siteConfig = {
     // `npm run check:config` rejects them on a real site.
     rateLimitIds: { production: "2201", preview: "2202" },
   },
+  /**
+   * The caps for the forms owners add (huston-logic/site-template: docs/superpowers/specs/2026-11-25-forms-and-downloads-design.md, "Settings").
+   * Owner-only file: a chat change can never raise them. `maxForms` counts live form files; `maxAnswerChars` is the most
+   * characters one form's fields may allow in all; `maxBodyBytes` is the Worker's body limit for a form post (the contact
+   * form keeps its own 16 KB).
+   */
+  forms: { maxForms: 10, maxFields: 12, maxAnswerChars: 8000, maxBodyBytes: 32_768 },
   /**
    * The owner's chat tools (docs/EDITING.md). Off by default: while `enabled` is false the Worker answers only /api/*
    * and wrangler.jsonc gets none of the editor bindings. Owner-only file: a chat change can never add an owner.
@@ -131,7 +138,7 @@ export const siteConfig = {
     /** Pull request checks that never count when judging whether a change is stuck. */
     ignoredChecks: ["change-report", "change-scope", "Workers Builds"] as string[],
     /**
-     * The owner's upload inbox (photos and PDFs). Settings and their reasons: docs/superpowers/specs/2026-11-25-uploads-and-photos-design.md
+     * The owner's upload inbox (photos and PDFs). Settings and their reasons: huston-logic/site-template: docs/superpowers/specs/2026-11-25-uploads-and-photos-design.md
      * ("Settings"). Needs a private R2 bucket and the Images binding, so it stays off until that setup is done.
      */
     uploads: {

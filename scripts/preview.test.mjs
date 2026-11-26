@@ -51,6 +51,7 @@ test("sends plain text when the browser does not accept gzip", async () => {
   try {
     const res = await get(server.port, "/");
     assert.equal(res.headers["content-encoding"], undefined);
+    assert.equal(res.headers.vary, "Accept-Encoding", "Vary is sent on every compressible file, even when it is not gzipped");
     assert.equal(res.body.toString(), "<!doctype html><title>Home</title>");
   } finally {
     await server.close();
@@ -64,6 +65,7 @@ test("never gzips images, and gzips the 404 page with its 404 status", async () 
   try {
     const photo = await get(server.port, "/photo.jpg", "gzip");
     assert.equal(photo.headers["content-encoding"], undefined);
+    assert.equal(photo.headers.vary, undefined, "an image is never varied by encoding");
     assert.deepEqual([...photo.body], [0xff, 0xd8, 0xff, 0xd9]);
     const missing = await get(server.port, "/nope", "gzip");
     assert.equal(missing.status, 404);

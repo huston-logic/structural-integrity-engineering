@@ -10,22 +10,28 @@ const root = process.cwd();
 const load = (path) => import(pathToFileURL(join(root, path)).href);
 const { registry } = await load("src/blocks/definitions.ts");
 const { validateRegistry } = await load("src/blocks/validate.ts");
-const { validateSite } = await load("src/collections/site-validate.ts");
-const { readItemFiles, readSettingsFiles } = await load("src/lib/content-files.ts");
+const { validateSite, siteWarnings } = await load("src/collections/site-validate.ts");
+const { formFiles } = await load("src/forms/registry.generated.ts");
+const { siteConfig } = await load("site.config.ts");
+const { readFormFiles, readItemFiles, readSettingsFiles } = await load("src/lib/content-files.ts");
 const { readPageFiles } = await load("src/lib/page-files.ts");
 
 const pdfs = new Set(existsSync(join(root, "public/files")) ? readdirSync(join(root, "public/files")).filter((name) => name.endsWith(".pdf")) : []);
 const repo = { imageExists: (src) => existsSync(join(root, "public", src)), fileExists: (href) => pdfs.has(href.replace(/^\/files\//, "")) };
 const files = readPageFiles(root);
 const items = readItemFiles(root);
+const forms = readFormFiles(root);
 const settings = readSettingsFiles(root);
 const settingsErrors = Object.fromEntries(Object.entries(settings).flatMap(([name, { error }]) => (error === undefined ? [] : [[name, error]])));
-const site = { pages: files, items, business: settings.business.data, brand: settings.brand.data, notice: settings.notice.data, settingsErrors };
+const site = { pages: files, items, forms, business: settings.business.data, brand: settings.brand.data, notice: settings.notice.data, settingsErrors };
 const { catalogProblem } = await import("./blocks-catalog.mjs");
 // No thanks-page links are passed here (docs/SITE-DIFFERENCES.md D5).
-const problems = [...validateRegistry(registry, repo), ...validateSite(site, registry, repo)];
+const problems = [...validateRegistry(registry, repo), ...validateSite(site, registry, repo, { formSettings: siteConfig.forms, registryIds: formFiles.map((file) => file.id) })];
 const stale = catalogProblem(registry, root);
 if (stale) problems.push(stale);
+
+// Warnings never fail the check (health words in a form, for example); the owner reads them in the change list.
+for (const warning of siteWarnings(site)) console.warn(`Warning: ${warning}`);
 
 if (problems.length > 0) {
   console.error(`Content check failed (${problems.length}):`);

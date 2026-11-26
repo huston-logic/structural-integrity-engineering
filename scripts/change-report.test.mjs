@@ -5,7 +5,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { rules } from "./change-scope-rules.mjs";
 import { evaluateChange, formatReport } from "./check-change-scope.mjs";
-import { affectedPages, buildReportMarkdown, collectionBlockTypes, extractOptions, findImporters, itemForFile, itemInfoFromTexts, pageInfoFromTexts, routeForPageFile, slugForRoute } from "./change-report.mjs";
+import { affectedPages, buildReportMarkdown, collectionBlockTypes, extractOptions, findImporters, formForFile, itemForFile, itemInfoFromTexts, pageInfoFromTexts, routeForPageFile, slugForRoute } from "./change-report.mjs";
 import { registry } from "../src/blocks/definitions.ts";
 
 const allRoutes = ["/", "/services", "/about", "/contact", "/privacy", "/contact/thanks", "/blocks"];
@@ -326,4 +326,43 @@ test("business.json, brand.json, notice.json, palette.css and fonts.ts reach eve
     assert.deepEqual(routesOf(result), [...allRoutes, "/blog", "/team", "/podcast"].sort(), path);
     assert.match(result[0].reason, /it reaches every page/);
   }
+});
+
+// ---- forms (Forms and downloads, task 5) --------------------------------------------------------------------------------
+
+const formPage = (...ids) => ({ status: "live", types: ["hero", "form"], forms: ids });
+const formPages = { ...pagesBefore, "/quote": formPage("quote"), "/hire": formPage("quote", "newsletter"), "/join": formPage("newsletter") };
+
+test("formForFile reads the id of a form file", () => {
+  assert.equal(formForFile("src/content/forms/quote.json"), "quote");
+  assert.equal(formForFile("src/content/forms/deep/quote.json"), null);
+  assert.equal(formForFile("src/content/pages/quote.json"), null);
+});
+
+test("pageInfoFromTexts lists the forms a page's form blocks name, and omits the list when there are none", () => {
+  const info = pageInfoFromTexts([
+    { file: "quote.json", text: JSON.stringify({ path: "/quote", status: "live", blocks: [{ type: "form", content: { form: "quote" } }, { type: "form", content: { form: "quote" } }, { type: "form", content: {} }] }) },
+    { file: "plain.json", text: JSON.stringify({ path: "/plain", status: "live", blocks: [{ type: "hero" }] }) },
+  ]);
+  assert.deepEqual(info["/quote"], { status: "live", types: ["form"], forms: ["quote"] });
+  assert.deepEqual(info["/plain"], { status: "live", types: ["hero"] });
+});
+
+test("a changed form file traces to the pages whose form blocks name it, and no other page", () => {
+  const result = affectedPages({ files: change(["M", "src/content/forms/quote.json"]), sources, pageRoutes, allRoutes: [...allRoutes, "/quote", "/hire", "/join"], pagesHead: formPages, pagesBase: formPages });
+  assert.deepEqual(result.map((p) => p.route), ["/hire", "/quote"]);
+  assert.match(result[0].reason, /"quote" form/);
+});
+
+test("a form file's pages come from the base side too, and the registry photographs nothing", () => {
+  const head = { ...formPages };
+  delete head["/quote"];
+  const result = affectedPages({ files: change(["M", "src/content/forms/quote.json"]), sources, pageRoutes, allRoutes, pagesHead: head, pagesBase: formPages });
+  assert.ok(result.some((p) => p.route === "/quote"));
+  assert.deepEqual(affectedPages({ files: change(["M", "src/forms/registry.generated.ts"]), sources, pageRoutes, allRoutes, pagesHead: formPages, pagesBase: formPages }), []);
+});
+
+test("a changed contact form file traces to the pages that use the contact-form block", () => {
+  const result = affectedPages({ files: change(["M", "src/content/forms/contact.json"]), sources, pageRoutes, allRoutes: [...allRoutes, "/quote"], pagesHead: formPages, pagesBase: formPages });
+  assert.deepEqual(result.map((p) => p.route), ["/contact"]);
 });

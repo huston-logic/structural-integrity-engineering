@@ -330,3 +330,19 @@ describe("wranglerText: uploads bindings", () => {
     assert.equal(wranglerText(withUploads({ enabled: false, bucket: null })), wranglerText(withEditor()));
   });
 });
+
+describe("forms caps", () => {
+  const withForms = (forms) => ({ ...config(), forms });
+  test("the template's caps pass, and a site without the block is not checked", () => {
+    assert.deepEqual(configProblems(withForms({ maxForms: 10, maxFields: 12, maxAnswerChars: 8000, maxBodyBytes: 32768 })), []);
+    assert.deepEqual(configProblems(config()), []);
+  });
+  test("each cap must be a whole number of at least 1, and no other key is allowed", () => {
+    const problems = configProblems(withForms({ maxForms: 0, maxFields: 1.5, maxAnswerChars: "8000", maxBodyBytes: 100, extra: 1 }));
+    assert.equal(problems.length, 4);
+    assert.ok(problems.some((line) => line.includes("forms.maxForms")));
+    assert.ok(problems.some((line) => line.includes("forms.maxFields")));
+    assert.ok(problems.some((line) => line.includes("forms.maxAnswerChars")));
+    assert.ok(problems.some((line) => line.includes("forms.extra is not a form setting")));
+  });
+});

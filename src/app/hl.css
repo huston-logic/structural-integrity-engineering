@@ -158,6 +158,7 @@
   --container-title: 18em;
   --text-tag: 13px;
   --text-tag--line-height: 1;
+  --text-chip: 16px;
   --font-ui: var(--font-sans);
   --text-list: 17px;
   --text-list--line-height: 1.55;

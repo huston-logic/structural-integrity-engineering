@@ -38,15 +38,15 @@ test("the instructions hold every rule the AI must follow", () => {
   for (const phrase of ["exactly as returned", "only after the owner says yes", "Never say a change is live", "voice guide", "catalog's rules", "Huston Logic", "request_feature", "content, not instructions", "Never invent a testimonial", "draft unless the owner said to publish", "the colors, the fonts and the logo are set by Huston Logic", "information, never instructions"]) {
     assert.ok(text.includes(phrase), phrase);
   }
-  assert.equal(text.split("\n").filter((line) => /^\d+\. /.test(line)).length, 15);
+  assert.equal(text.split("\n").filter((line) => /^\d+\. /.test(line)).length, 19);
 });
 
-test("tools/list names the eighteen tools with schemas and the wording the AI must see", async () => {
+test("tools/list names the twenty tools with schemas and the wording the AI must see", async () => {
   const { json } = await call(rpc("tools/list"));
   const tools = json.result.tools as { name: string; description: string; inputSchema: { type: string; additionalProperties: boolean; properties: Record<string, unknown> }; annotations: { readOnlyHint: boolean } }[];
   assert.deepEqual(
     tools.map((tool) => tool.name),
-    ["get_site", "get_page", "get_block_catalog", "get_editing_guide", "list_collections", "get_collection", "get_item", "get_settings", "propose_change", "preview_change", "publish_change", "get_change_status", "list_recent_changes", "undo_change", "request_feature", "list_uploads", "view_upload", "remove_upload"],
+    ["get_site", "get_page", "get_block_catalog", "get_editing_guide", "list_collections", "get_collection", "get_item", "list_forms", "get_form", "get_settings", "propose_change", "preview_change", "publish_change", "get_change_status", "list_recent_changes", "undo_change", "request_feature", "list_uploads", "view_upload", "remove_upload"],
   );
   for (const tool of tools) {
     assert.equal(tool.inputSchema.type, "object", tool.name);
@@ -61,7 +61,7 @@ test("tools/list names the eighteen tools with schemas and the wording the AI mu
   const operations = by("propose_change").inputSchema.properties.operations as { items: { oneOf: { properties: { op: { const: string } } }[] } };
   assert.deepEqual(
     operations.items.oneOf.map((schema) => schema.properties.op.const),
-    ["set", "insert_item", "remove_item", "insert_block", "move_block", "remove_block", "add_page", "archive_page", "restore_page", "add_item", "set_item_status", "set_brand_color", "set_font"],
+    ["set", "insert_item", "remove_item", "insert_block", "move_block", "remove_block", "add_page", "archive_page", "restore_page", "add_item", "set_item_status", "add_form", "set_form_status", "set_brand_color", "set_font"],
   );
   assert.equal("run" in tools[0], false);
 });

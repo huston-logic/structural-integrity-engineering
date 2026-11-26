@@ -1,5 +1,6 @@
 import type { EditorConfig } from "../config.ts";
 import type { AnyBlockDefinition } from "../../src/blocks/schema.ts";
+import type { FormSettings } from "../../src/forms/schema.ts";
 import type { UploadStore } from "../uploads/store.ts";
 import type { GitHub } from "./github.ts";
 import type { ChangeView, ProposalView, UploadView } from "./views.ts";
@@ -24,6 +25,8 @@ export interface EditorDeps {
   randomId?: () => string;
   /** The owner's upload inbox; absent when uploads are not set up on this site. */
   uploads?: UploadStore;
+  /** The site's form caps (`forms` in site.config.ts); missing means the defaults. */
+  formSettings?: FormSettings;
 }
 
 export interface Editor {
@@ -35,6 +38,9 @@ export interface Editor {
   collections(): Promise<ToolResult>;
   collection(kind: string): Promise<ToolResult>;
   item(kind: string, slug: string): Promise<ToolResult>;
+  /** Each form with its status, fields and the pages that show it. */
+  forms(): Promise<ToolResult>;
+  form(id: string): Promise<ToolResult>;
   /** One settings file: "business", "brand" or "notice". */
   settings(name: string): Promise<ToolResult>;
   propose(input: { summary: string; operations: unknown }, owner: Owner): Promise<ToolResult>;

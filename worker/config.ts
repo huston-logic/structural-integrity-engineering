@@ -1,5 +1,6 @@
 import { siteConfig } from "../site.config.ts";
 import { buildAutoReply, type AutoReply, type AutoReplyConfig } from "../src/content/auto-reply.ts";
+import { DEFAULT_FORM_SETTINGS, type FormSettings } from "../src/forms/schema.ts";
 import type { UploadsConfig } from "./uploads/types.ts";
 
 /** Which code appends the contact form's row to the Google Sheet. */
@@ -18,6 +19,8 @@ export interface WorkerSiteConfig extends AutoReplyConfig {
   business: { name: string; tagline: string; timeZone?: string };
   /** Optional so an older fixture still compiles; missing means the editor is disabled. */
   editor?: EditorSiteConfig;
+  /** Optional so an older fixture still compiles; missing means the defaults. */
+  forms?: FormSettings;
   contact: {
     siteEmail: string | null;
     fromName: string;
@@ -25,7 +28,8 @@ export interface WorkerSiteConfig extends AutoReplyConfig {
     /** The colors the automatic reply uses inline (`contact.emailColors`); wiring, not read from brand.json. */
     emailColors: { green: string; ink: string; ink2: string; rust: string; line: string };
     sheetWriter: SheetWriter;
-    sheetTabs: { production: string; preview: string };
+    /** `forms` and `formsPreview` are optional so an older fixture still compiles; missing means "Forms" and "Forms preview". */
+    sheetTabs: { production: string; preview: string; forms?: string; formsPreview?: string };
     /** Optional so a config without it means "sheet". */
     destination?: Destination;
     /** The Pipeline app copy's https origin. Only read when destination is "pipeline". */
@@ -80,7 +84,7 @@ export interface EditorConfig {
   uploads: UploadsConfig;
 }
 
-/** The spec's defaults (docs/superpowers/specs/2026-11-25-uploads-and-photos-design.md, "Settings"). */
+/** The spec's defaults (huston-logic/site-template: docs/superpowers/specs/2026-11-25-uploads-and-photos-design.md, "Settings"). */
 export const DEFAULT_UPLOADS: UploadsConfig = {
   enabled: false,
   bucket: null,
@@ -100,11 +104,12 @@ export interface WorkerConfig {
   workerName: string;
   previewHostSuffix: string;
   sheetWriter: SheetWriter;
-  sheetTabs: { production: string; preview: string };
+  sheetTabs: { production: string; preview: string; forms: string; formsPreview: string };
   destination: Destination;
   /** null when the destination is "sheet" or the owner has not set it. The Worker then saves nothing to the app. */
   pipelineUrl: string | null;
   autoReply: AutoReply;
+  forms: FormSettings;
   editor: EditorConfig;
 }
 
@@ -153,10 +158,16 @@ export function buildWorkerConfig(config: WorkerSiteConfig): WorkerConfig {
     workerName: domain.workerName,
     previewHostSuffix: domain.previewHostSuffix,
     sheetWriter: contact.sheetWriter,
-    sheetTabs: contact.sheetTabs,
+    sheetTabs: {
+      production: contact.sheetTabs.production,
+      preview: contact.sheetTabs.preview,
+      forms: contact.sheetTabs.forms ?? "Forms",
+      formsPreview: contact.sheetTabs.formsPreview ?? "Forms preview",
+    },
     destination: contact.destination ?? "sheet",
     pipelineUrl: contact.pipelineUrl ?? null,
     autoReply: buildAutoReply(config),
+    forms: { ...DEFAULT_FORM_SETTINGS, ...(config.forms ?? {}) },
     editor: buildEditorConfig(config),
   };
 }

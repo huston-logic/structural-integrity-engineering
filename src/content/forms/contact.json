@@ -1,0 +1,14 @@
+{
+  "name": "Contact form",
+  "status": "live",
+  "fields": [
+    { "id": "first-name", "type": "short-text", "label": "First name", "purpose": "name", "max": 100, "required": true, "error": "Add your first name." },
+    { "id": "last-name", "type": "short-text", "label": "Last name", "max": 100, "required": true, "error": "Add your last name." },
+    { "id": "email", "type": "email", "label": "Email", "required": true, "error": "That email doesn't look right. Check it and try again." },
+    { "id": "phone", "type": "phone", "label": "Phone", "required": true, "error": "That phone number doesn't look right. Use 7 to 15 digits." },
+    { "id": "location", "type": "short-text", "label": "Project city and state", "purpose": "address", "max": 200, "required": true, "error": "Add the project city and state." },
+    { "id": "scope", "type": "long-text", "label": "Project scope", "max": 5000, "required": true, "error": "Tell us a little about the project." }
+  ],
+  "button": "Send request",
+  "thanks": "Thanks. Your request is in, and Dylan will reply within 48 hours."
+}

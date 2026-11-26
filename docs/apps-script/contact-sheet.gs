@@ -2,16 +2,20 @@
  * Contact form -> Google Sheet writer (a Google Apps Script web app).
  *
  * The site's contact Worker (worker/apps-script.ts) POSTs JSON { secret, tab, row } to this script's web-app URL. The
- * script checks the shared secret, accepts only the two configured tab names, and writes the row as plain text.
+ * script checks the shared secret, accepts only the four configured tab names, and writes the row as plain text.
  * Setup steps: README, "Contact form", "Apps Script setup". Secret names: docs/SECRETS.md.
  *
  * Script Properties (Project Settings > Script properties). No value lives in this file.
  *   SHEET_SECRET    required  The shared secret. Must equal the Worker secret SHEET_WEBHOOK_SECRET.
  *   TAB_PRODUCTION  optional  Tab for live submissions. Default "Submissions" (contact.sheetTabs.production).
  *   TAB_PREVIEW     optional  Tab for branch previews. Default "Preview" (contact.sheetTabs.preview).
+ *   TAB_FORMS         optional  Tab for live submissions of every other form. Default "Forms" (contact.sheetTabs.forms).
+ *   TAB_FORMS_PREVIEW optional  Tab for branch previews of the other forms. Default "Forms preview" (contact.sheetTabs.formsPreview).
  *
  * Header row of each tab (row 1), the same order the Worker sends (worker/messages.ts, sheetRow):
  *   Received (UTC) | First name | Last name | Email | Phone | Project city and state | Project scope | Mode
+ * Header row of the two forms tabs (worker/messages.ts, formSheetRow), one header for every form:
+ *   Received (UTC) | Form | Name | Email | Answers | Mode
  *
  * Deploy as: Web app, Execute as "Me", Who has access "Anyone". The secret is what keeps the URL private.
  * Every failure returns {"ok":false} with no details.
@@ -26,11 +30,13 @@ function doPost(e) {
     var expected = props.getProperty("SHEET_SECRET");
     var production = props.getProperty("TAB_PRODUCTION") || "Submissions";
     var preview = props.getProperty("TAB_PREVIEW") || "Preview";
+    var forms = props.getProperty("TAB_FORMS") || "Forms";
+    var formsPreview = props.getProperty("TAB_FORMS_PREVIEW") || "Forms preview";
 
     var data = JSON.parse(e.postData.contents);
     // Refuse everything while the secret is unset, so a half-finished setup never accepts rows.
     if (!expected || typeof data.secret !== "string" || !sameText(data.secret, expected)) return reply(false);
-    if (data.tab !== production && data.tab !== preview) return reply(false);
+    if (data.tab !== production && data.tab !== preview && data.tab !== forms && data.tab !== formsPreview) return reply(false);
 
     var row = data.row;
     if (!Array.isArray(row) || row.length === 0 || row.length > MAX_COLUMNS) return reply(false);

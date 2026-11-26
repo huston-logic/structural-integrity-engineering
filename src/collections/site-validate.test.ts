@@ -36,7 +36,7 @@ const post = (data: Record<string, unknown> = {}): ItemFile => ({
   slug: "hello",
   data: { status: "live", title: "T", description: "D", date: "2026-03-27", body: [{ type: "paragraph", text: "Hi" }], ...data },
 });
-const site = (over: Partial<SiteInput> = {}): SiteInput => ({ pages: [page("/"), page(CONTACT_PATH)], items: [], business, notice, ...over });
+const site = (over: Partial<SiteInput> = {}): SiteInput => ({ pages: [page("/"), page(CONTACT_PATH)], items: [], forms: [], business, notice, ...over });
 const has = (problems: string[], text: string) => assert.ok(problems.some((p) => p.includes(text)), `${text} in ${JSON.stringify(problems)}`);
 
 describe("validateSite", () => {
