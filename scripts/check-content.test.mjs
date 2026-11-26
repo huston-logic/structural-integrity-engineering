@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { test } from "node:test";
 import { CONTACT_PATH, defineBlock, fileForPath, GENERIC_ALT_WORDS, THANKS_PATH } from "../src/blocks/schema.ts";
 import { embedOrigins, embedUrl, parseVideoUrl, videoProviders, watchUrl } from "../src/blocks/embeds.ts";
-import { validateContent, validatePages, validateRegistry } from "../src/blocks/validate.ts";
+import { MENU_REFUSED, validateContent, validatePages, validateRegistry } from "../src/blocks/validate.ts";
 import { thanksPageLinks } from "../src/lib/thanks-links.ts";
 import { livePages, pathForFile, readPageFiles } from "../src/lib/page-files.ts";
 import { rules } from "./change-scope-rules.mjs";
@@ -105,11 +105,19 @@ const checkHome = (blocks) => validatePages([home(blocks), contact()], registry,
 const aboutWith = (blocks, extra) => ({ file: "about.json", data: page("/about", blocks, extra) });
 
 test("accepts a valid page", () => {
-  const about = aboutWith(
-    [heroBlock(), block("faq", { heading: "Q", items: [{ question: "Why?", answer: "**Because** [[maybe]]." }] }, { anchor: "faq" }), block("closing-cta", { heading: "Go", action: { label: "Book", href: `${CONTACT_PATH}#book` } })],
-    { menu: { label: "About", order: 2, places: ["header", "footer"] } },
-  );
+  const about = aboutWith([heroBlock(), block("faq", { heading: "Q", items: [{ question: "Why?", answer: "**Because** [[maybe]]." }] }, { anchor: "faq" }), block("closing-cta", { heading: "Go", action: { label: "Book", href: `${CONTACT_PATH}#book` } })]);
   assert.deepEqual(check(about), []);
+});
+
+// This site's menu is src/content/nav.ts (SITE-DIFFERENCES D7), so a page file's menu is refused, however well formed.
+const menuRefused = (problems) => problems.filter((p) => p.includes('"menu" cannot be used here'));
+const withoutRefusal = (problems) => problems.filter((p) => !p.includes('"menu" cannot be used here'));
+
+test("a menu on a page file is refused with a plain message", () => {
+  const about = aboutWith([heroBlock()], { menu: { label: "About", order: 2, places: ["header", "footer"] } });
+  assert.deepEqual(check(about), [MENU_REFUSED("about.json")]);
+  assert.match(MENU_REFUSED("about.json"), /The menu on this site is set by Huston Logic/);
+  assert.equal(menuRefused(check(aboutWith([heroBlock()]))).length, 0);
 });
 
 test("reports unreadable JSON by file", () => {
@@ -355,7 +363,7 @@ test("page rules: path, title, description, status, blocks", () => {
 });
 
 test("menu rules", () => {
-  const withMenu = (menu) => check(aboutWith([heroBlock()], { menu }));
+  const withMenu = (menu) => withoutRefusal(check(aboutWith([heroBlock()], { menu })));
   assert.deepEqual(withMenu({ label: "About", order: 1, places: ["header", "footer", "legal"] }), []);
   assert.match(withMenu({ label: "", order: 1, places: ["header"] })[0], /menu "label"/);
   assert.match(withMenu({ label: "x".repeat(25), order: 1, places: ["header"] })[0], /menu "label" is 25 characters/);
@@ -368,9 +376,10 @@ test("menu rules", () => {
 test("at most six header pages; archived menu entries are ignored", () => {
   const pagesWithMenu = (n, status = "live") =>
     Array.from({ length: n }, (_, i) => ({ file: `p${i}.json`, data: page(`/p${i}`, [heroBlock()], { status, menu: { label: `P${i}`, order: i, places: ["header"] } }) }));
-  assert.deepEqual(validatePages([home(), contact(), ...pagesWithMenu(6)], registry, repo), []);
-  assert.deepEqual(validatePages([home(), contact(), ...pagesWithMenu(7)], registry, repo), ["The header menu lists 7 pages; at most 6 fit. Remove some from the header or archive them."]);
-  assert.deepEqual(validatePages([home(), contact(), ...pagesWithMenu(9, "archived")], registry, repo), []);
+  const run = (n, status) => withoutRefusal(validatePages([home(), contact(), ...pagesWithMenu(n, status)], registry, repo));
+  assert.deepEqual(run(6), []);
+  assert.deepEqual(run(7), ["The header menu lists 7 pages; at most 6 fit. Remove some from the header or archive them."]);
+  assert.deepEqual(run(9, "archived"), []);
 });
 
 test("validateContent works on one block", () => {
