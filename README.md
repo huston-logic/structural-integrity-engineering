@@ -285,6 +285,8 @@ Before launch:
 
 `output: "export"` means there is no Node server at runtime. The only server code is the contact Worker on `/api/*`.
 
+**Managed hosting.** Huston Logic hosts every client site in its own Cloudflare account, from a repo in the `huston-logic` GitHub org; the client keeps their domain registration and mailboxes (rule 13 in [docs/PROCESS.md](docs/PROCESS.md)). Each site needs its own pair of rate-limit ids, listed in [docs/HOSTING.md](docs/HOSTING.md). To move a client to their own GitHub and Cloudflare, follow [docs/OFFBOARDING.md](docs/OFFBOARDING.md) (not yet rehearsed).
+
 ## Monitoring
 
 - **Site down or erroring:** an UptimeRobot Free monitor checks the production URL every 5 minutes and emails the owner when it gets an error response (anything other than 2xx or 3xx), a timeout or no answer. It only sees the public HTTP response; no token or secret is involved.

@@ -1,9 +1,12 @@
 # Client onboarding checklist
 
 An ordered checklist for standing up a **new client site** on this pipeline. Follow it top to
-bottom. Every account is created **in the client's name** (the Services copy promises "Websites are
-hosted on Cloudflare, in an account in your name"), with the builder added as a member where the
-platform allows it, so the client owns the site, the domain and the mail from day one.
+bottom. Under **managed hosting** (decision by Grant, 2026-11-24) Huston Logic creates and holds the
+accounts that run the site: the GitHub repo (huston-logic org), the Cloudflare account (zone, Worker,
+Workers Builds, Turnstile), the Resend account and uptime monitoring. The client's domain registration
+and mailboxes stay in the client's name, and their data stays theirs. The client keeps only the
+registrar login and the email login. On request, Huston Logic hands everything over using
+`docs/OFFBOARDING.md` (not yet rehearsed).
 
 Each step says where it comes from. Steps marked **UNVERIFIED (dashboard)** describe a dashboard the
 repo cannot read; confirm them on screen the first time and update this file. Steps marked
@@ -22,12 +25,17 @@ Back to the [map](./README.md). The gotchas are collected at the end.
       removes that pressure but the CodeQL workflow then needs GitHub Advanced Security.
 - [ ] Have the builder's Mac ready: Node 22.19 or newer, npm 10 (`npx --yes npm@10.9.9` in front of
       `npm install` and `npm ci` if the default npm is 11), Claude Code, `gh` logged in, `wrangler`
-      logged in to the client's Cloudflare account (`npx wrangler login` from the repo folder;
+      logged in to **Huston Logic's** Cloudflare account (`npx wrangler login` from the repo folder;
       **UNVERIFIED** that a per-folder profile is needed, see wrangler's `--profile` flag).
+- [ ] Decide the form destination: `pipeline` (the client's Pipeline app copy), `sheet` (the Google
+      Sheet, the default), or another tool the client names. Another tool is not built yet: queue it
+      for Grant and use the Sheet meanwhile.
 
-## 1. The repo (GitHub, client's organisation or account)
+## 1. The repo (GitHub, huston-logic org)
 
-- [ ] Create the repo. Default branch `main`. Copy this repo's tree, then strip the content.
+The repo lives in the **huston-logic** GitHub organisation, not in the client's. Huston Logic holds it.
+
+- [ ] Create the repo in the huston-logic org. Default branch `main`. Copy this repo's tree, then strip the content.
 - [ ] Copy Gate 1 as a block: `.claude/hooks/`, `.claude/settings.json`, `.claude/agents/`,
       `.claude/skills/`. Edit the lists at the top of `lib.mjs`, `guard-bash.mjs` and `scan-src.mjs` if
       the repo differs ([gate1-local.md](./gate1-local.md#reusing-the-hooks-in-a-client-repo)). Keep a
@@ -63,24 +71,30 @@ Back to the [map](./README.md). The gotchas are collected at the end.
       [gate2-ci.md](./gate2-ci.md#proof-pr-recipes). Then add the check to the ruleset (for CodeQL,
       the "Require code scanning results" rule, not a status check). Record the dates in `CLAUDE.md`.
 
-## 2. Cloudflare (client's account)
+## 2. Cloudflare (Huston Logic's account)
 
-- [ ] Add the client's domain as a **zone** in the account (or register it there). The custom domain
-      step below needs the zone in the same account.
+The Cloudflare account is Huston Logic's. It serves all client sites, because Cloudflare allows a
+GitHub account to point to only one Cloudflare account. The client does not create a Cloudflare account.
+
+- [ ] Add the client's domain as a **zone** in Huston Logic's Cloudflare account. The client then
+      points the domain's nameservers at the zone's nameservers at their registrar (the client keeps
+      the registrar login). The custom domain step below needs the zone in the same account.
 - [ ] **Do not enable Email Routing** on the zone if Google Workspace (or any other provider) will
       handle the domain's mail: both need the root MX records, so only one can receive mail (gotcha
       G3). If it is already on: Email, Email Routing, Settings, **Disable**; delete its
       `route*.mx.cloudflare.net` MX records and its SPF (`include:_spf.mx.cloudflare.net`) from the
       root before adding Google's records in step 4. A leftover `cf2024-1._domainkey` TXT is harmless.
-- [ ] Workers & Pages, Create, connect the GitHub repo (Workers Builds). Settings
-      (**UNVERIFIED (dashboard)**, from this repo's README): production branch `main`, build command
+- [ ] Workers & Pages, Create, connect the GitHub repo (Workers Builds), in Huston Logic's account.
+      Settings (**UNVERIFIED (dashboard)**, from this repo's README): production branch `main`, build command
       `npm run build`, deploy command `npx wrangler deploy`, root directory `/`, build variable
       `NODE_VERSION=22`. Add `NEXT_PUBLIC_SITE_URL=https://<apex>` as a build variable only if the
       default in `src/content/site.ts` is not already the apex.
 - [ ] `wrangler.jsonc`: set `name`, keep `assets`, `run_worker_first: ["/api/*"]`, `secrets.required`,
-      the `ratelimits` binding (pick two fresh `namespace_id` values; **UNVERIFIED** whether ids must be
-      unique per account or per Worker), `observability`, and the `previews` block (required even if
-      empty). Run `npx wrangler types worker/worker-configuration.d.ts` after any change.
+      the `ratelimits` binding, `observability`, and the `previews` block (required even if
+      empty). Take the two rate-limit `namespace_id` values from the register in `docs/HOSTING.md`
+      (new sites start at 2001 and 2002). Each id must be unique per site in the Cloudflare account,
+      and the same ids are set in `site.config.ts` (step 8). Run
+      `npx wrangler types worker/worker-configuration.d.ts` after any change.
 - [ ] Push a branch and confirm Cloudflare comments a preview URL on the PR
       (`<branch-slug>-<worker>.<account>.workers.dev`).
 - [ ] After the first merge: **Deployments** shows an Active production version. Practise the rollback
@@ -93,7 +107,7 @@ Back to the [map](./README.md). The gotchas are collected at the end.
       from WWW to root"**, deploy; **and** add a proxied `AAAA` record `www` to `100::`. Without a
       `www` DNS record the name does not resolve and the rule never runs (gotcha G21).
 
-## 3. Turnstile (client's Cloudflare account)
+## 3. Turnstile (Huston Logic's Cloudflare account)
 
 - [ ] Turnstile, Add widget, **Managed** mode. Hostnames: the apex (covers its subdomains) and the
       account's `<account>.workers.dev` so previews work (error 110200 on a preview means it is not
@@ -103,7 +117,10 @@ Back to the [map](./README.md). The gotchas are collected at the end.
 - [ ] The widget's `action` is hard-coded as `contact` in `useTurnstile.ts` and `contact.ts`; keep
       them equal if you change it.
 
-## 4. Mail: Google Workspace (client's domain)
+## 4. Mail: Google Workspace (client's domain, client's mailboxes)
+
+The Workspace and its mailboxes stay in the client's name. The DNS records for them are added in the
+zone in Huston Logic's Cloudflare account (step 2).
 
 - [ ] Workspace owns the mailbox the form writes to (`providers.email`). Its records on the **root**:
       Google's 5 MX records, the single SPF TXT `v=spf1 include:_spf.google.com ~all`, DKIM at
@@ -115,10 +132,10 @@ Back to the [map](./README.md). The gotchas are collected at the end.
 - [ ] Rule: **never add Resend (or anyone else) to the root SPF.** Resend's mail authenticates on its
       own subdomain (step 5).
 
-## 5. Mail: Resend (client's Resend account)
+## 5. Mail: Resend (Huston Logic's Resend account, client's domain)
 
-- [ ] Resend, Domains, Add the apex. Resend proposes its **Forge** records. Add them in the Cloudflare
-      zone exactly as given, all **DNS only** (grey cloud):
+- [ ] Resend, Domains, Add the apex, in Huston Logic's Resend account. Resend proposes its **Forge**
+      records. Add them in the Cloudflare zone exactly as given, all **DNS only** (grey cloud):
 
   | Type | Name | Content |
   |---|---|---|
@@ -135,7 +152,20 @@ Back to the [map](./README.md). The gotchas are collected at the end.
       `Business Name <providers.email>` in `worker/contact.ts`; change the display name for the
       client.
 
-## 6. Google Sheet and service account (client's Google account)
+## 6. Google Sheet and service account (client's Google account, only when the destination is "sheet")
+
+Do this section only when `contact.destination` is `"sheet"`.
+
+If the destination is `"pipeline"`, skip the Sheet steps below and do this instead:
+
+- [ ] Set the three contact settings in `site.config.ts` (step 8): `contact.destination` to `"pipeline"`,
+      `contact.pipelineUrl` to the https origin of the client's Pipeline app copy, and
+      `contact.rateLimitIds`.
+- [ ] Set the Worker secret `INTAKE_SECRET`: `npx wrangler secret put INTAKE_SECRET` in the repo folder.
+      Set the same value on the Pipeline app copy. Use one value for both.
+- [ ] Send a test lead through the form and see it in the Pipeline app.
+
+Sheet steps (for `"sheet"` only):
 
 - [ ] Create the Sheet with two tabs, `Submissions` and `Preview`, each with the header row
       `Received (UTC) | Need | Topic | Name | Email | Business | Message | Tools | Website | Source | Mode`.
@@ -161,12 +191,19 @@ Back to the [map](./README.md). The gotchas are collected at the end.
 
 Full commands in [contact-form.md](./contact-form.md#secrets-by-name).
 
-- [ ] Production: `npx wrangler secret put <NAME>` for `RESEND_API_KEY`, `TURNSTILE_SECRET_KEY`,
-      `GOOGLE_SERVICE_ACCOUNT_KEY`, `GOOGLE_SHEET_ID`. A deploy fails while one is missing
-      (`secrets.required`). If `secret put` says the latest version isn't deployed, use the dashboard
-      (Settings, Variables and Secrets).
+The secret names depend on the destination:
+
+- Always: `RESEND_API_KEY` and `TURNSTILE_SECRET_KEY`.
+- `"pipeline"`: `INTAKE_SECRET`.
+- `"sheet"`: `SHEET_WEBHOOK_URL` and `SHEET_WEBHOOK_SECRET` for the `apps-script` writer (the default), or
+  `GOOGLE_SERVICE_ACCOUNT_KEY` and `GOOGLE_SHEET_ID` for the `service-account` writer. `contact.sheetWriter`
+  says which; `docs/SECRETS.md` has the table.
+
+- [ ] Production: `npx wrangler secret put <NAME>` for each name above. A deploy fails while one is
+      missing (`secrets.required`). If `secret put` says the latest version isn't deployed, use the
+      dashboard (Settings, Variables and Secrets).
 - [ ] **Preview base config, before pushing any branch that should have a working form:**
-      `npx wrangler preview base-config secret put <NAME>` for the same four. Previews copy the base
+      `npx wrangler preview base-config secret put <NAME>` for the same names. Previews copy the base
       config **when created**; an existing preview needs
       `npx wrangler preview secret put <NAME> --name <branch>` (gotcha G1).
 - [ ] Check names only: `npx wrangler secret list`, `npx wrangler preview base-config secret list`.
@@ -175,15 +212,21 @@ Full commands in [contact-form.md](./contact-form.md#secrets-by-name).
 
 - [ ] `src/content/providers.ts`: `email`, `schedulerUrl`, `linkedInUrl`, `turnstileSiteKey`. All
       four must be non-null for `npm run check:placeholders` (and so `npm run build:launch`) to pass.
+- [ ] `site.config.ts` (`contact.*`):
+  - `contact.destination`: `"pipeline"` or `"sheet"` (the default is `"sheet"`).
+  - `contact.pipelineUrl`: the https origin of the client's Pipeline app copy. Only for `"pipeline"`.
+  - `contact.rateLimitIds`: `{ production, preview }`, taken from the register in `docs/HOSTING.md`
+    (new sites start at 2001 and 2002). Unique per site in Huston Logic's Cloudflare account, and the
+    same ids as the `ratelimits` binding in `wrangler.jsonc` (step 2).
 - [ ] `src/content/site.ts`: the site URL default and `decisionsConfirmed`.
 - [ ] `public/_headers`: if the scheduler is embedded in an iframe, add its exact origin to
       `frame-src`; if analytics is added, add its exact origin to `script-src` and `connect-src`; a
       plain link (this repo's choice) needs no CSP change. Document every origin in the README.
 - [ ] Resolve every `[[placeholder]]` in `src/content/` and `src/app/`.
 
-## 9. Monitoring
+## 9. Monitoring (Huston Logic's account)
 
-- [ ] UptimeRobot (free plan), new HTTP monitor on the production URL, 5-minute interval, email alert
+- [ ] UptimeRobot, in Huston Logic's account (free plan), new HTTP monitor on the production URL, 5-minute interval, email alert
       to the client (and the builder). **UNVERIFIED (dashboard)**.
 - [ ] Prove it: add a temporary monitor on a page that does not exist, wait for the Down email, delete
       the temporary monitor. Never break the production monitor on purpose.
@@ -196,7 +239,8 @@ Full commands in [contact-form.md](./contact-form.md#secrets-by-name).
 - [ ] Submit the form with your own address. Preview: the site inbox gets `[Preview] New note...`
       and `[Preview → would go to ...]`, the `Preview` tab gets a row, `Submissions` does not.
       Production: the client inbox gets the note, you get the automatic reply, `Submissions` gets a
-      row. Delete the test row.
+      row. Delete the test row. (The tab checks apply to the `"sheet"` destination. For `"pipeline"`,
+      check the lead in the Pipeline app instead, and confirm the preview behaviour on screen the first time.)
 - [ ] Gmail "Show original" on both emails: SPF, DKIM and DMARC all **PASS**.
 - [ ] Turnstile works on the preview host and on the apex and `www.`.
 - [ ] `?topic=partner` (or the client's variants), a missing field, six quick submits (the sixth
@@ -214,13 +258,17 @@ Full commands in [contact-form.md](./contact-form.md#secrets-by-name).
 
 ## 12. Handoff to the client
 
-- [ ] The client holds the owner role on: the GitHub organisation or repo, the Cloudflare account,
-      the Resend account, the Google Workspace tenant, the Google Cloud project, the Google Sheet, the
-      UptimeRobot account. The builder is a member, removable without breaking anything.
-- [ ] Hand over, in writing: the four secret **names** and where each value came from (so they can be
-      rotated), the weekly Sheet check (every `Submissions` row should have had a reply), the rollback
-      runbook, the "do not click" list (Delete, Disconnect, Split versions, Retry build, build or
-      deploy command, production branch), and the rule that merging to `main` is the deploy.
+- [ ] Under managed hosting the client keeps only two logins: the **registrar** (the domain) and the
+      **email** (the Google Workspace mailboxes). Huston Logic holds the GitHub repo (huston-logic org),
+      the Cloudflare account, Resend and the UptimeRobot account. Tell the client this in writing.
+- [ ] Hand over, in writing: the secret **names** for the chosen destination and where each value came
+      from (so they can be rotated), the weekly check (every form lead should have had a reply; for
+      `"sheet"`, every `Submissions` row), the rollback runbook, the "do not click" list (Delete,
+      Disconnect, Split versions, Retry build, build or deploy command, production branch), and the
+      rule that merging to `main` is the deploy.
+- [ ] Tell the client how to leave: the exit runbook is `docs/OFFBOARDING.md` (new, not yet
+      rehearsed). On request Huston Logic moves the repo, the Cloudflare zone and Worker, Resend and
+      monitoring to the client using that runbook.
 - [ ] Record the ruleset, the Workers Builds settings and the dates of every promotion in the client
       repo's `CLAUDE.md`, the way this repo's does.
 
