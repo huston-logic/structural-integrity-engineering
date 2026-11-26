@@ -45,17 +45,20 @@ function scanConfig(value, path) {
 }
 scanConfig(config, "");
 
-// Optional on purpose: legalName (falls back to the business name), brand.logo (empty means no logo in the JSON-LD),
+// Phone, email, address, socials and the logo are not here: they are in src/content/business.json and brand.json, which the
+// scan of src/content above covers like the rest of the copy.
+// Optional on purpose: legalName (falls back to the business name),
 // prices.website (empty means none published),
 // the csp.extra* lists and the analytics flag.
 const requiredKeys = [
   "business.name", "business.tagline", "business.oneLiner",
-  "owner.name", "owner.givenName", "owner.familyName", "owner.role", "owner.phone", "owner.regionLine",
+  "owner.name", "owner.givenName", "owner.familyName", "owner.role", "owner.regionLine",
   "domain.url", "domain.workerName", "domain.previewHostSuffix",
   "contact.siteEmail", "contact.fromName", "contact.replyFromName", "contact.schedulerUrl", "contact.bookingFallbackPath",
-  "contact.linkedInUrl", "contact.turnstileSiteKey", "contact.sheetWriter", "contact.sheetTabs.production", "contact.sheetTabs.preview",
+  "contact.turnstileSiteKey", "contact.sheetWriter", "contact.sheetTabs.production", "contact.sheetTabs.preview",
   "contact.rateLimitIds.production", "contact.rateLimitIds.preview",
   ...(config.contact.destination === "pipeline" ? ["contact.pipelineUrl"] : []),
+  // Brand is fixed on this site (SITE-DIFFERENCES D11): the colors and fonts stay in site.config.ts `theme`.
   ...Object.keys(config.theme.colors).map((k) => `theme.colors.${k}`),
   // theme.fonts.body and theme.fonts.accent are optional (they fall back to the display font).
   "theme.fonts.display.family",
@@ -68,8 +71,8 @@ for (const key of requiredKeys) {
   else if (typeof value === "string" && value.trim() === "") problems.push(`site.config.ts  ${key} is empty`);
 }
 
-// "none" is a deliberate answer for the two optional links; null (not decided) still fails above.
-for (const key of ["contact.schedulerUrl", "contact.linkedInUrl"]) {
+// "none" is a deliberate answer for the booking link; null (not decided) still fails above.
+for (const key of ["contact.schedulerUrl"]) {
   const value = key.split(".").reduce((obj, part) => obj?.[part], config);
   if (typeof value === "string" && value !== "none" && !/^https?:\/\/\S+$/.test(value)) {
     problems.push(`site.config.ts  ${key} must be "none" or an http(s) URL, not ${JSON.stringify(value)}`);

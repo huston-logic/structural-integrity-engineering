@@ -4,8 +4,9 @@ import { Text } from "@/components/ui/Text";
 import { footerLinks, privacyLink } from "@/content/nav";
 import { footer } from "@/content/shared";
 import { siteConfig } from "@/content/site";
-import { settingUrl } from "@/lib/optional-setting";
-import { telHref } from "@/lib/phone";
+import { socialLinks } from "@/lib/chrome-view";
+import { directContact } from "@/lib/direct-contact";
+import { getBusiness } from "@/lib/settings";
 import { Logo } from "./Logo";
 
 /**
@@ -13,8 +14,8 @@ import { Logo } from "./Logo";
  * line, on deep teal under the dusk contact band.
  */
 export function Footer() {
-  const linkedIn = settingUrl(siteConfig.linkedInUrl);
-  const tel = telHref(siteConfig.phone);
+  const { phone, tel, email } = directContact();
+  const socials = socialLinks(getBusiness());
   return (
     <footer className="bg-dusk-deep">
       <Container className="pb-10 pt-16 md:pt-24">
@@ -48,23 +49,23 @@ export function Footer() {
           </nav>
 
           <ul className="space-y-1">
-            {siteConfig.email ? (
+            {email ? (
               <li>
-                <TextLink href={`mailto:${siteConfig.email}`} className="break-words [overflow-wrap:anywhere]">
-                  {siteConfig.email}
+                <TextLink href={`mailto:${email}`} className="break-words [overflow-wrap:anywhere]">
+                  {email}
                 </TextLink>
               </li>
             ) : null}
             {tel ? (
               <li>
-                <TextLink href={tel}>{siteConfig.phone}</TextLink>
+                <TextLink href={tel}>{phone}</TextLink>
               </li>
             ) : null}
-            {linkedIn ? (
-              <li>
-                <TextLink href={linkedIn}>LinkedIn</TextLink>
+            {socials.map((social) => (
+              <li key={social.url}>
+                <TextLink href={social.url}>{social.label}</TextLink>
               </li>
-            ) : null}
+            ))}
           </ul>
         </div>
 

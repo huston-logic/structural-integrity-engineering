@@ -6,7 +6,7 @@ import { THANKS_PATH } from "@/blocks/schema";
 import { noteForm } from "@/content/contact";
 import { contactFields, honeypot, type ContactFieldSpec } from "@/content/contact-fields";
 import { providers } from "@/content/providers";
-import { siteConfig } from "@/content/site";
+import type { DirectContact } from "@/lib/direct-contact";
 import { validateContact, type ContactField, type ContactInput } from "@/lib/contact-validation";
 import { buttonClass } from "./Button";
 import { turnstileSiteKey, useTurnstile } from "./useTurnstile";
@@ -44,7 +44,8 @@ function ErrorLine({ id, message }: { id: string; message?: string }) {
  * `name` names the form for screen readers; the default is the deck's button label. `idPrefix` starts every field id.
  * Only the block showcase, which shows two forms, passes others, so its two forms have no id in common.
  */
-export function ContactForm({ name = noteForm.formLabel, idPrefix = "cf" }: { name?: string; idPrefix?: string } = {}) {
+/** `direct` is the phone and public email from business.json, passed by the server block because this is a client component. */
+export function ContactForm({ direct, name = noteForm.formLabel, idPrefix = "cf" }: { direct: Pick<DirectContact, "phone" | "email">; name?: string; idPrefix?: string }) {
   const router = useRouter();
   const [values, setValues] = useState<Record<string, string>>({});
   const [errors, setErrors] = useState<Errors>({});
@@ -157,9 +158,9 @@ export function ContactForm({ name = noteForm.formLabel, idPrefix = "cf" }: { na
     );
   }
 
-  const failedMessage = siteConfig.email
-    ? noteForm.sendErrors.failed.replace("{email}", siteConfig.email).replace("{phone}", siteConfig.phone)
-    : noteForm.sendErrors.failedNoEmail.replace("{phone}", siteConfig.phone);
+  const failedMessage = direct.email
+    ? noteForm.sendErrors.failed.replace("{email}", direct.email).replace("{phone}", direct.phone)
+    : noteForm.sendErrors.failedNoEmail.replace("{phone}", direct.phone);
   const sendMessage = sendError === "failed" ? failedMessage : sendError ? noteForm.sendErrors[sendError] : null;
 
   return (

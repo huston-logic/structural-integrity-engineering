@@ -1,8 +1,7 @@
 import Image from "next/image";
 import { Text } from "@/components/ui/Text";
 import { contactBand } from "@/content/shared";
-import { siteConfig } from "@/content/site";
-import { telHref } from "@/lib/phone";
+import { directContact } from "@/lib/direct-contact";
 import { Button } from "./Button";
 import { Container } from "./Container";
 import { TextLink } from "./TextLink";
@@ -16,12 +15,12 @@ type ContactBandProps = {
 
 /**
  * The contact band that ends every page (copy deck, "Contact band"): the headline, the line under it, the Request a
- * quote button, then the phone number and email (from site.config.ts). Centered on dusk, as in the option G reference.
+ * quote button, then the phone number and email (from business.json). Centered on dusk, as in the option G reference.
  * With `contactBand.photo` (shared.ts) set, the photo sits behind a dusk wash dense enough to keep the text at AA.
  * One per page (its heading id is fixed).
  */
 export function ContactBand({ heading, body, action }: ContactBandProps) {
-  const tel = telHref(siteConfig.phone);
+  const { phone, tel, email } = directContact();
   const { photo } = contactBand;
   return (
     <section aria-labelledby="contact-band-title" className="relative isolate overflow-hidden bg-dusk">
@@ -48,10 +47,10 @@ export function ContactBand({ heading, body, action }: ContactBandProps) {
         </p>
         <div className="mt-8 flex flex-wrap items-center justify-center gap-x-7 gap-y-2">
           <Button href={action.href}>{action.label}</Button>
-          {tel ? <TextLink href={tel}>{siteConfig.phone}</TextLink> : null}
-          {siteConfig.email ? (
-            <TextLink href={`mailto:${siteConfig.email}`} className="wrap-anywhere">
-              {siteConfig.email}
+          {tel ? <TextLink href={tel}>{phone}</TextLink> : null}
+          {email ? (
+            <TextLink href={`mailto:${email}`} className="wrap-anywhere">
+              {email}
             </TextLink>
           ) : null}
         </div>

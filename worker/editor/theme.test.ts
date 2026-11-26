@@ -13,6 +13,10 @@ describe("ownerTheme", () => {
     }
   });
 
+  it("is what site.config.ts editor.pageColors holds, so the page the Worker draws wears Dusk", () => {
+    assert.deepEqual({ ...siteConfig.editor.pageColors }, { ...theme });
+  });
+
   it("uses Dusk's light color for the page and its dark color for the text", () => {
     assert.equal(theme.white, siteConfig.theme.colors.snow);
     assert.equal(theme.ink, siteConfig.theme.colors.night);

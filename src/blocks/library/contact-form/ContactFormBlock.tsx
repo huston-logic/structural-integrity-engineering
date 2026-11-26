@@ -3,6 +3,7 @@ import { Container } from "@/components/hl/Container";
 import { ContactForm } from "@/components/hl/ContactForm";
 import { Text } from "@/components/ui/Text";
 import { siteConfig } from "@/content/site";
+import { directContact } from "@/lib/direct-contact";
 import type { BlockProps } from "@/blocks/types";
 import type { ContentOf } from "@/blocks/schema";
 import type { contactFormDefinition } from "./definition";
@@ -40,7 +41,7 @@ export function ContactFormBlock({ content, anchor, headingId }: BlockProps<Cont
             )}
           </div>
         </div>
-        <ContactForm />
+        <ContactForm direct={directContact()} />
       </Container>
     </section>
   );

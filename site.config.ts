@@ -17,13 +17,15 @@ export const siteConfig = {
     /** The positioning line. Feeds the JSON-LD description. */
     oneLiner: "Structural engineering for homes, low-rise commercial buildings and glazing systems in Colorado.",
     copyrightYear: 2026,
+    // The site notice's last day (src/content/notice.json) is judged in this zone at build time. The business's other
+    // details (phone, email, address, hours, socials) are in src/content/business.json.
+    timeZone: "America/Denver",
   },
   owner: {
     name: "Dylan Gassmann",
     givenName: "Dylan",
     familyName: "Gassmann",
     role: "Principal Engineer",
-    phone: "(907) 350-3456",
     regionLine: "Colorado",
   },
   domain: {
@@ -49,9 +51,12 @@ export const siteConfig = {
     // contact page shows a placeholder, and the contact Worker refuses to send (502).
     schedulerUrl: "none" as string | null,
     bookingFallbackPath: "/contact-us#book",
-    // CLIENT: replace. A LinkedIn URL, or "none" when there is no page to link: the footer leaves the link out. null means
-    // not decided yet; check:placeholders fails while it is null.
-    linkedInUrl: "none" as string | null,
+    /**
+     * Colors the automatic reply email uses inline (an email cannot read the site's CSS). Wiring, not brand: the values
+     * are the Dusk tokens the email has always used, read on a white background: ink is night, ink2 is rule, green is
+     * dusk, rust is dusk-deep and line is mist (amber and snow are for the dark site and would fail contrast on white).
+     */
+    emailColors: { green: "#1C4A50", ink: "#13262B", ink2: "#3D6A70", rust: "#163A40", line: "#C2D6D8" },
     /** Cloudflare Turnstile site key for the contact form. Public by design: it ships in the page. */
     turnstileSiteKey: null as string | null,
     /**
@@ -101,6 +106,24 @@ export const siteConfig = {
     /** The account's workers.dev subdomain, used to compute preview links. */
     workersSubdomain: null as string | null,
     dailyChangeLimit: 10,
+    /**
+     * Colors of the owner page (/owner), which the Worker draws itself and so cannot read the site's CSS. Wiring, like
+     * contact.emailColors. The values are Dusk mapped onto the page's ten roles (docs/SITE-DIFFERENCES.md, D8;
+     * worker/editor/theme.ts `ownerTheme` is the one mapping). `rust` is empty: Dusk has no red that reads on a light
+     * page, so the page uses its own dark rust.
+     */
+    pageColors: {
+      white: "#EEF4F4",
+      ink: "#13262B",
+      ink2: "#163A40",
+      silver: "#C2D6D8",
+      silver2: "#C2D6D8",
+      green: "#1C4A50",
+      greenDeep: "#163A40",
+      rust: "",
+      line: "#3D6A70",
+      tint: "#EEF4F4",
+    },
     /** A whole number written as a string, unique in the Cloudflare account (docs/HOSTING.md). 2203 is reserved for this site. */
     rateLimitId: "2203",
     /** KV namespace ids (32 hex characters): OAuth tokens, and drafts with change times. */
@@ -123,7 +146,8 @@ export const siteConfig = {
     },
   },
   theme: {
-    // Option G, "Dusk" (docs/STYLE-GUIDE.md §2). Each key becomes `--hl-<key>` in src/app/hl.css and a Tailwind color
+    // Brand is fixed on this site, so these colors, the font and `brand.logo` stay here and not in src/content/brand.json
+    // (docs/SITE-DIFFERENCES.md, D11). Option G, "Dusk" (docs/STYLE-GUIDE.md §2). Each key becomes `--hl-<key>` in src/app/hl.css and a Tailwind color
     // (`bg-dusk`, `text-snow`, `border-rule` ...). Contrast on dusk: snow 9.2:1, mist 6.8:1, amber 5.5:1, error 6.0:1;
     // night on amber 8.5:1. `rule` is decorative only (1.7:1), never a text or control-boundary color.
     colors: {

@@ -3,6 +3,7 @@ import type { BlockProps } from "@/blocks/types";
 import { ContactForm } from "@/components/hl/ContactForm";
 import { ContactHero } from "@/components/hl/ContactHero";
 import { noteForm } from "@/content/contact";
+import { directContact } from "@/lib/direct-contact";
 import type { contactHeroFormDefinition } from "./definition";
 
 export function ContactHeroFormBlock({ content, primary }: BlockProps<ContentOf<typeof contactHeroFormDefinition.fields>>) {
@@ -10,9 +11,9 @@ export function ContactHeroFormBlock({ content, primary }: BlockProps<ContentOf<
     <ContactHero title={content.title} intro={content.intro} headingLevel={primary ? "h1" : "h2"}>
       {/* On the showcase page a second form sits beside the library's, so the example names itself and uses its own ids. */}
       {primary ? (
-        <ContactForm />
+        <ContactForm direct={directContact()} />
       ) : (
-        <ContactForm name={`${noteForm.formLabel} (${content.title})`} idPrefix="cf-example" />
+        <ContactForm direct={directContact()} name={`${noteForm.formLabel} (${content.title})`} idPrefix="cf-example" />
       )}
     </ContactHero>
   );

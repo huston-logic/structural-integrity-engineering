@@ -2,6 +2,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { Text } from "@/components/ui/Text";
 import { siteConfig } from "@/content/site";
+import { chrome } from "@/content/chrome";
+import { getBusiness } from "@/lib/settings";
 
 // Dylan's mark is dark navy and steel on a transparent background, so on the dusk header it would vanish. It sits on a
 // snow hexagon (the same outline as the mark, a little larger) so the frame and letters keep their own colors and read
@@ -11,10 +13,11 @@ const markHeight = 1370;
 
 /** The logo mark on a light hexagon, then the business name as text, linking home. */
 export function Logo() {
+  const name = getBusiness().name;
   return (
     <Link
       href="/"
-      aria-label={`${siteConfig.name}, home`}
+      aria-label={chrome.logoHomeLabel(name)}
       className="group inline-flex min-h-11 items-center gap-3 text-wordmark font-bold text-snow transition-colors hover:text-amber"
     >
       {siteConfig.logo ? (
@@ -33,7 +36,7 @@ export function Logo() {
         </span>
       ) : null}
       <span className="min-w-0">
-        <Text>{siteConfig.name}</Text>
+        <Text>{name}</Text>
       </span>
     </Link>
   );
