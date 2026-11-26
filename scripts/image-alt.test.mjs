@@ -114,3 +114,35 @@ test("a choice between two images in src still finds the alt text", () => {
   const page = source("src/app/(site)/a/page.tsx", `export default ({ wide }) => <img src={wide ? "${URL_A}" : "/images/other.jpg"} alt="Sam at the desk" />;\n`);
   assert.deepEqual(check(page).problems, []);
 });
+
+// ---- page files (JSON) --------------------------------------------------------------------------------------------
+
+const pageJson = (image) => source("src/content/pages/about.json", JSON.stringify({ path: "/about", blocks: [{ type: "video", content: { poster: image } }] }, null, 2));
+
+test("a page file that uses the image with good alt text passes, and the alt text is reported", () => {
+  const result = check(pageJson({ src: URL_A, alt: "Sam holding a mug at the front desk" }));
+  assert.deepEqual(result.problems, []);
+  assert.deepEqual(result.alts, ["Sam holding a mug at the front desk"]);
+});
+
+test("a page file that uses the image with generic, empty or missing alt text fails and names the file", () => {
+  for (const image of [{ src: URL_A, alt: "photo" }, { src: URL_A, alt: "" }, { src: URL_A, alt: "[[alt]]" }, { src: URL_A }]) {
+    const result = check(pageJson(image));
+    assert.equal(result.problems.length, 1, JSON.stringify(image));
+    assert.match(result.problems[0], /src\/content\/pages\/about\.json/);
+  }
+});
+
+test("in a page file the alt text must sit next to the image, and the image must be used somewhere", () => {
+  const bare = check(source("src/content/pages/about.json", JSON.stringify({ posters: [URL_A] })));
+  assert.match(bare.problems[0], /used on its own/);
+  assert.match(check(source("src/content/pages/about.json", JSON.stringify({ poster: URL_A }))).problems[0], /no alt/);
+  assert.match(check(source("src/content/pages/about.json", JSON.stringify({ poster: { src: "/images/other.jpg", alt: "other things" } }))).problems[0], /not used/);
+});
+
+test("a page file and a content module can both use the image; one bad use fails the image", () => {
+  const result = check(pageJson({ src: URL_A, alt: "Sam at the desk" }), content(`export const x = { src: "${URL_A}", alt: "image" };\n`));
+  assert.equal(result.problems.length, 1);
+  assert.match(result.problems[0], /src\/content\/about\.ts/);
+  assert.deepEqual(result.alts, ["Sam at the desk"]);
+});

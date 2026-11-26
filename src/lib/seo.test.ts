@@ -2,11 +2,27 @@ import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 import { seo } from "../content/seo.ts";
+import { readPageFiles } from "./page-files.ts";
 
-const entries = Object.entries(seo) as [string, { title: string; description: string }][];
+// Every page's title and description: the page files in src/content/pages (one per page) and the thank-you page, which is
+// still a route (src/content/seo.ts). The same rules as before the pages became files.
+const pages = readPageFiles().map(({ file, data }) => {
+  const page = data as { title: string; description: string };
+  return [file.replace(/\.json$/, ""), { title: page.title, description: page.description }] as const;
+});
+const entries: (readonly [string, { title: string; description: string }])[] = [...pages, ...Object.entries(seo)];
 const norm = (s: string) => s.replace(/\s+/g, " ").trim();
 
 describe("seo entries", () => {
+  it("reads every page file and the thank-you page", () => {
+    assert.equal(pages.length, 8);
+    assert.deepEqual(
+      pages.map(([name]) => name).sort(),
+      ["about-us", "contact-us", "home", "privacy", "services", "services--glazing-and-mullion-engineering", "services--low-rise-commercial-structural-design", "services--residential-structural-design"],
+    );
+    assert.equal(entries.length, pages.length + 1);
+  });
+
   it("has unique titles and descriptions", () => {
     const titles = entries.map(([, e]) => e.title);
     assert.equal(new Set(titles).size, titles.length);

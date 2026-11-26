@@ -23,7 +23,7 @@ export function SplitSection({ id, heading, children, tone, spacing }: SplitSect
       labelledBy={id}
       className="grid gap-10 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:gap-20"
     >
-      <h2 id={id} className="max-w-[12em] text-h2">
+      <h2 id={id} className="max-w-em-12 text-h2">
         {heading}
       </h2>
       <div className="lg:pt-3">{children}</div>

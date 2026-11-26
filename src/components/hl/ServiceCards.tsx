@@ -1,7 +1,17 @@
 import Image from "next/image";
 import { Text } from "@/components/ui/Text";
-import type { ServiceCard } from "@/content/home";
 import { HlLink } from "./HlLink";
+
+type Copy = { src: string; width: number; height: number };
+export type ServiceCard = {
+  title: string;
+  body: string;
+  href: string;
+  /** The card photo, already cropped to 4:5 as in the option G reference. */
+  photo: Copy & { alt: string };
+  /** The same crop at 660px, offered to phones through srcset. */
+  small?: Copy;
+};
 
 // The card's rendered width: a third of the column from 900px, the column below.
 const sizes = "(min-width: 1320px) 392px, (min-width: 900px) calc((100vw - 152px) / 3), calc(100vw - 44px)";
@@ -14,13 +24,13 @@ const sizes = "(min-width: 1320px) 392px, (min-width: 900px) calc((100vw - 152px
  */
 export function ServiceCards({ items }: { items: readonly ServiceCard[] }) {
   return (
-    <ul className="grid gap-10 min-[900px]:grid-cols-3 min-[900px]:gap-7">
+    <ul className="grid gap-10 split:grid-cols-3 split:gap-7">
       {items.map((item) => (
-        <li key={item.href} className="reveal relative flex flex-col gap-[18px]">
-          <div className="reveal-zoom aspect-[4/5] overflow-hidden bg-night">
+        <li key={item.href} className="reveal relative flex flex-col gap-4.5">
+          <div className="reveal-zoom aspect-4/5 overflow-hidden bg-night">
             <picture>
               <source
-                srcSet={`${item.photoSmall.src} ${item.photoSmall.width}w, ${item.photo.src} ${item.photo.width}w`}
+                srcSet={item.small ? `${item.small.src} ${item.small.width}w, ${item.photo.src} ${item.photo.width}w` : `${item.photo.src} ${item.photo.width}w`}
                 sizes={sizes}
               />
               <Image

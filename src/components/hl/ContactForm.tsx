@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useRef, useState, type SyntheticEvent } from "react";
+import { THANKS_PATH } from "@/blocks/schema";
 import { noteForm } from "@/content/contact";
 import { contactFields, honeypot, type ContactFieldSpec } from "@/content/contact-fields";
 import { providers } from "@/content/providers";
@@ -13,16 +14,16 @@ import { turnstileSiteKey, useTurnstile } from "./useTurnstile";
 type Errors = Partial<Record<ContactField, string>>;
 type SendError = keyof typeof noteForm.sendErrors;
 
-const label = "block text-[15px] font-semibold text-snow";
+const label = "block text-label font-semibold text-snow";
 const control =
-  "mt-2 block w-full rounded-field border border-mist bg-night px-[14px] text-[17px] text-snow [color-scheme:dark] placeholder:text-mist focus:border-amber aria-[invalid=true]:border-error";
+  "mt-2 block w-full rounded-field border border-mist bg-night px-3.5 text-control text-snow scheme-dark placeholder:text-mist focus:border-amber aria-[invalid=true]:border-error";
 
 function ErrorLine({ id, message }: { id: string; message?: string }) {
   return (
     <div id={id} aria-live="polite">
       {message ? (
-        <p className="mt-2 flex items-start gap-2 text-[15px] text-error">
-          <svg aria-hidden="true" viewBox="0 0 16 16" className="mt-[3px] size-4 shrink-0" fill="none" stroke="currentColor" strokeWidth="1.75">
+        <p className="mt-2 flex items-start gap-2 text-label text-error">
+          <svg aria-hidden="true" viewBox="0 0 16 16" className="mt-0.75 size-4 shrink-0" fill="none" stroke="currentColor" strokeWidth="1.75">
             <circle cx="8" cy="8" r="6.25" />
           </svg>
           {message}
@@ -39,7 +40,11 @@ function ErrorLine({ id, message }: { id: string; message?: string }) {
  * in browser storage. Every failure keeps the visitor's answers. No `action`, and `method="post"`, so without JavaScript
  * nothing is sent.
  */
-export function ContactForm() {
+/**
+ * `name` names the form for screen readers; the default is the deck's button label. `idPrefix` starts every field id.
+ * Only the block showcase, which shows two forms, passes others, so its two forms have no id in common.
+ */
+export function ContactForm({ name = noteForm.formLabel, idPrefix = "cf" }: { name?: string; idPrefix?: string } = {}) {
   const router = useRouter();
   const [values, setValues] = useState<Record<string, string>>({});
   const [errors, setErrors] = useState<Errors>({});
@@ -59,7 +64,7 @@ export function ContactForm() {
     for (const field of fields) next[field] = noteForm.errors[field];
     setErrors(next);
     const first = contactFields.find((f) => next[f.key]);
-    if (first) formRef.current?.querySelector<HTMLElement>(`#cf-${first.key}`)?.focus();
+    if (first) formRef.current?.querySelector<HTMLElement>(`#${idPrefix}-${first.key}`)?.focus();
   }
 
   function fail(error: SendError) {
@@ -107,7 +112,7 @@ export function ContactForm() {
     const body = (await response.json().catch(() => null)) as { ok?: boolean; error?: string; fields?: unknown } | null;
 
     if (response.ok && body?.ok === true) {
-      router.push("/contact-us/thanks");
+      router.push(THANKS_PATH);
       return;
     }
     if (response.status === 400 && body?.error === "invalid" && Array.isArray(body.fields)) {
@@ -123,7 +128,7 @@ export function ContactForm() {
   }
 
   function renderField(spec: ContactFieldSpec) {
-    const id = `cf-${spec.key}`;
+    const id = `${idPrefix}-${spec.key}`;
     const error = errors[spec.key];
     const shared = {
       id,
@@ -143,9 +148,9 @@ export function ContactForm() {
           {spec.label}
         </label>
         {spec.kind === "textarea" ? (
-          <textarea {...shared} rows={6} className={`${control} min-h-[160px] py-3`} />
+          <textarea {...shared} rows={6} className={`${control} min-h-40 py-3`} />
         ) : (
-          <input {...shared} type={spec.kind} className={`${control} h-[52px]`} />
+          <input {...shared} type={spec.kind} className={`${control} h-13`} />
         )}
         <ErrorLine id={`${id}-error`} message={error} />
       </div>
@@ -159,14 +164,14 @@ export function ContactForm() {
 
   return (
     <div className="rounded-panel bg-dusk-deep p-5 sm:p-6 md:p-9">
-      <form ref={formRef} method="post" noValidate aria-label={noteForm.formLabel} onSubmit={submit} onFocus={startTurnstile} className="space-y-6">
-        <p className="text-[15px] text-mist">{noteForm.requiredNote}</p>
+      <form ref={formRef} method="post" noValidate aria-label={name} onSubmit={submit} onFocus={startTurnstile} className="space-y-6">
+        <p className="text-label text-mist">{noteForm.requiredNote}</p>
         <div className="grid gap-6 sm:grid-cols-2">{contactFields.map(renderField)}</div>
 
         {/* Spam trap: hidden from people and screen readers, out of the tab order. A filled value is refused. */}
         <div aria-hidden="true" className="sr-only">
-          <label htmlFor="cf-fax">{honeypot.label}</label>
-          <input id="cf-fax" name={honeypot.name} type="text" tabIndex={-1} autoComplete="off" defaultValue="" />
+          <label htmlFor={`${idPrefix}-fax`}>{honeypot.label}</label>
+          <input id={`${idPrefix}-fax`}name={honeypot.name} type="text" tabIndex={-1} autoComplete="off" defaultValue="" />
         </div>
 
         <div>
@@ -182,7 +187,7 @@ export function ContactForm() {
           </button>
         </div>
 
-        <div role="status">{sendMessage ? <p className="text-[15px] text-error">{sendMessage}</p> : null}</div>
+        <div role="status">{sendMessage ? <p className="text-label text-error">{sendMessage}</p> : null}</div>
       </form>
     </div>
   );

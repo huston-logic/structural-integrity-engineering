@@ -8,6 +8,9 @@ const VISIBLE = 0.6;
 // Close to the reference's cubic-bezier(.2,.7,.2,1): fast start, long settle.
 const easeOut = (t: number) => 1 - (1 - t) ** 3;
 
+/** The figure's width in digits, as min-w-ch-N classes (written out so Tailwind sees them). */
+const MIN_WIDTH = ["min-w-ch-1", "min-w-ch-2", "min-w-ch-3", "min-w-ch-4"] as const;
+
 /**
  * A figure that counts up from 0 the first time it scrolls into view (option G reference). The real value is in the
  * HTML twice: visually hidden for screen readers, and as the visible figure, which is what shows without JavaScript,
@@ -68,8 +71,7 @@ export function CountUp({ value, className = "" }: { value: number; className?: 
       <span
         ref={ref}
         aria-hidden="true"
-        className={`inline-block tabular-nums ${className}`}
-        style={{ minWidth: `${String(value).length}ch` }}
+        className={`inline-block tabular-nums ${MIN_WIDTH[Math.min(String(value).length, MIN_WIDTH.length) - 1]} ${className}`}
       >
         {shown}
       </span>

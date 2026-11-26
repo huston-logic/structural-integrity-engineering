@@ -15,6 +15,7 @@ import { join, posix, relative, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { decide, evaluateChange, fence, formatReport, gatherChange, parseArgs, realGit, safe } from "./check-change-scope.mjs";
 import { rules } from "./change-scope-rules.mjs";
+import { pathForFile } from "../src/blocks/schema.ts";
 import { startPreviewServer } from "./preview.mjs";
 
 export const VIEWPORTS = [
@@ -26,10 +27,9 @@ const root = new URL("..", import.meta.url).pathname;
 
 // ---- which pages does a change touch? (pure) --------------------------------------------------------------------
 
-/** "src/app/(site)/about-us/page.tsx" becomes "/about-us"; the home page is "/"; anything else is null. */
+/** "src/content/pages/about.json" becomes "/about"; home.json is "/"; anything else is null. */
 export function routeForPageFile(path) {
-  const match = /^src\/app\/\(site\)\/(?:(.+)\/)?page\.tsx$/.exec(path);
-  return match ? (match[1] ? `/${match[1]}` : "/") : null;
+  return rules.pageFile.test(path) ? pathForFile(path) : null;
 }
 
 export const slugForRoute = (route) => (route === "/" ? "home" : route.slice(1).replace(/\//g, "-"));
@@ -53,52 +53,130 @@ export function findImporters(path, sources) {
   });
 }
 
-/** Follows imports upward until it reaches pages. `all` is true when it reaches the shared layout or cannot tell. */
+const BLOCK_FOLDER = /^src\/(?:blocks\/library|site-blocks)\/([^/]+)\//;
+
+/**
+ * The block types a file inside a block folder belongs to: its own, plus the types of other block folders that import it
+ * (video-grid imports video's player). Importers outside block folders are not followed; they would reach every page.
+ */
+function blockTypesReaching(path, sources) {
+  const types = new Set();
+  const seen = new Set([path]);
+  const queue = [path];
+  while (queue.length > 0) {
+    const file = queue.shift();
+    types.add(BLOCK_FOLDER.exec(file)[1]);
+    for (const importer of findImporters(file, sources)) {
+      if (seen.has(importer) || !BLOCK_FOLDER.test(importer)) continue;
+      seen.add(importer);
+      queue.push(importer);
+    }
+  }
+  return types;
+}
+
+/**
+ * Follows imports upward until it reaches pages. `all` is true when it reaches the shared layout or cannot tell. Tracing
+ * stops at a file inside a block's folder and records that block type in `types`, so a component only one block uses maps
+ * to the pages using that block, not to every page.
+ */
 function reachablePages(path, sources, pageRoutes) {
   const routes = new Set();
+  const types = new Set();
   const seen = new Set([path]);
   const queue = [path];
   let first = true;
   while (queue.length > 0) {
     const importers = findImporters(queue.shift(), sources);
-    if (first && importers.length === 0) return { all: true, routes };
+    if (first && importers.length === 0) return { all: true, routes, types };
     first = false;
     for (const importer of importers) {
       if (seen.has(importer)) continue;
       seen.add(importer);
       if (pageRoutes[importer]) routes.add(pageRoutes[importer]);
-      else if (importer.startsWith("src/app/")) return { all: true, routes };
+      else if (importer.startsWith("src/app/")) return { all: true, routes, types };
+      else if (BLOCK_FOLDER.test(importer)) for (const type of blockTypesReaching(importer, sources)) types.add(type);
       else queue.push(importer);
     }
   }
-  return { all: false, routes };
+  return { all: false, routes, types };
 }
 
 /** Files that cannot change how a page looks. */
-const NO_VISUAL_EFFECT = /^(?:docs|scripts|tests|\.github|\.claude)\/|\.md$|^src\/lib\/routes\.ts$/;
+const NO_VISUAL_EFFECT = /^(?:docs|scripts|tests|\.github|\.claude|worker)\/|\.md$|\.test\.(?:ts|mjs)$|^src\/lib\/routes\.ts$/;
+const BLOCK_CODE = /^src\/(?:blocks|site-blocks)\//;
+export const SHOWCASE_ROUTE = "/blocks";
+
+/**
+ * What the report needs to know about each page file: { [route]: { status, types } }, where `types` lists the block types the
+ * page uses. `entries` is [{ file, text }] (the text of every file in src/content/pages/). A file that is not valid JSON is skipped.
+ */
+export function pageInfoFromTexts(entries) {
+  const info = {};
+  for (const { file, text } of entries) {
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch {
+      continue;
+    }
+    if (typeof data !== "object" || data === null || Array.isArray(data)) continue;
+    const route = typeof data.path === "string" ? data.path : pathForFile(file);
+    info[route] = { status: data.status, types: [...new Set((Array.isArray(data.blocks) ? data.blocks : []).map((block) => block?.type).filter((type) => typeof type === "string"))] };
+  }
+  return info;
+}
 
 /**
  * Which pages to screenshot. `files` is [{ status, path }], `sources` maps src/ file paths to their text, `pageRoutes`
- * maps page files to routes and `allRoutes` lists every route. Returns [{ route, slug, before, after, reason }].
+ * maps source files that are whole pages to routes (import tracing), `allRoutes` lists every route, and `pagesHead` and
+ * `pagesBase` are pageInfoFromTexts results for the two sides. A route that is a page file on neither side (the thanks
+ * page, the showcase) is taken to be there on both. Returns [{ route, slug, before, after, reason }].
  */
-export function affectedPages({ files, sources, pageRoutes, allRoutes }) {
-  const added = new Set();
-  const deleted = new Set();
-  const reasons = new Map();
-  const mark = (route, reason) => reasons.has(route) || reasons.set(route, reason);
+export function affectedPages({ files, sources, pageRoutes = {}, allRoutes, pagesHead = {}, pagesBase = {} }) {
+  const entries = new Map();
+  // A route with no page file on that side may still be a page there: a code page, or (when converting a site to blocks)
+  // a page that only became a file on this branch. The screenshot step asks that side's build and skips a 404.
+  const liveAt = (pages, route) => (Object.hasOwn(pages, route) ? pages[route].status === "live" : true);
+  const mark = (route, reason, sides = {}) => entries.has(route) || entries.set(route, { reason, ...sides });
+  const markTypes = (types, path) => {
+    for (const type of types) {
+      const uses = (pages) => Object.keys(pages).filter((route) => pages[route].types.includes(type));
+      for (const route of new Set([...uses(pagesHead), ...uses(pagesBase)])) mark(route, `${path} changed (this page uses the "${type}" block)`);
+    }
+    mark(SHOWCASE_ROUTE, `${path} changed (the block showcase shows every block)`);
+  };
   for (const { status, path } of files) {
     const own = routeForPageFile(path);
+    const inBlock = BLOCK_FOLDER.test(path);
     if (own) {
-      if (status === "A") added.add(own);
-      if (status === "D") deleted.add(own);
-      mark(own, status === "A" ? "new page" : status === "D" ? "page deleted" : `${path} changed`);
+      const baseLive = liveAt(pagesBase, own);
+      const headLive = liveAt(pagesHead, own);
+      if (status === "A") mark(own, "new page file", { before: baseLive, after: headLive });
+      else if (status === "D") mark(own, "page deleted", { before: baseLive, after: false });
+      else if (baseLive && !headLive) mark(own, "page archived", { before: true, after: false });
+      else if (!baseLive && headLive) mark(own, "page restored", { before: false, after: true });
+      else mark(own, `${path} changed`);
+    } else if (inBlock) {
+      markTypes(blockTypesReaching(path, sources), path);
+    } else if (BLOCK_CODE.test(path)) {
+      for (const route of allRoutes) mark(route, `${path} changed (it reaches every page)`);
     } else if (!NO_VISUAL_EFFECT.test(path)) {
       const reach = reachablePages(path, sources, pageRoutes);
       if (reach.all) for (const route of allRoutes) mark(route, `${path} changed (it reaches every page)`);
-      else for (const route of reach.routes) mark(route, `${path} changed`);
+      else {
+        for (const route of reach.routes) mark(route, `${path} changed`);
+        if (reach.types.size > 0) markTypes(reach.types, path);
+      }
     }
   }
-  return [...reasons.keys()].sort().map((route) => ({ route, slug: slugForRoute(route), before: !added.has(route), after: !deleted.has(route), reason: reasons.get(route) }));
+  return [...entries.keys()]
+    .sort()
+    .map((route) => {
+      const entry = entries.get(route);
+      return { route, slug: slugForRoute(route), before: entry.before ?? liveAt(pagesBase, route), after: entry.after ?? liveAt(pagesHead, route), reason: entry.reason };
+    })
+    .filter((page) => page.before || page.after);
 }
 
 // ---- options and markdown (pure) --------------------------------------------------------------------------------
@@ -128,7 +206,7 @@ export function buildReportMarkdown({ scopeText, base, head, pages, viewports })
     lines.push("| | Before | After |", "| --- | --- | --- |");
     for (const v of viewports) {
       const cell = (side, present, missing) => (present ? `![${side}, ${v.name}](${page.slug}/${side}-${v.name}.png)` : missing);
-      lines.push(`| ${v.name} (${v.width} × ${v.height}) | ${cell("before", page.before, "new page, no before")} | ${cell("after", page.after, "page deleted, no after")} |`);
+      lines.push(`| ${v.name} (${v.width} × ${v.height}) | ${cell("before", page.before, "page not live before (new or restored), no before")} | ${cell("after", page.after, "page not live after (archived or deleted), no after")} |`);
     }
     lines.push("");
   }
@@ -150,9 +228,16 @@ function readSources() {
   return sources;
 }
 
-function readRoutes() {
-  const text = readFileSync(join(root, "src/lib/routes.ts"), "utf8");
-  return [...new Set([...text.matchAll(/["'](\/[a-z0-9/-]*)["']/g)].map((m) => m[1]))];
+/** Every route the site builds right now: the live pages (from the page files) and the pages that are not indexed. */
+async function readRoutes() {
+  const { indexableRoutes, noindexRoutes } = await import(pathToFileURL(join(root, "src/lib/routes.ts")).href);
+  return [...new Set([...indexableRoutes, ...noindexRoutes])];
+}
+
+/** pageInfoFromTexts for the page files at a git ref (the tree, not the working folder). */
+function pageInfoAt(ref) {
+  const names = String(realGit(["ls-tree", "--name-only", "-z", ref, "--", rules.pagesDir])).split("\0").filter((name) => name.endsWith(".json"));
+  return pageInfoFromTexts(names.map((name) => ({ file: name.slice(rules.pagesDir.length), text: String(realGit(["show", `${ref}:${name}`])) })));
 }
 
 function buildBaseSite(base, head, log) {
@@ -183,13 +268,18 @@ function buildBaseSite(base, head, log) {
   return { outDir: join(dir, "out"), cleanup };
 }
 
+// Software rendering: with the GPU, Chromium shades large scaled photos a little differently on every run (up to 47 of 255
+// in places), so two shots of one build disagree. In software two shots of one build are identical, which is what the
+// before and after comparison needs (docs/SITE-DIFFERENCES.md, D6).
+const BROWSER_ARGS = ["--disable-gpu", "--disable-gpu-rasterization", "--disable-partial-raster"];
+
 async function openBrowser() {
   const { chromium } = await import("@playwright/test");
   try {
-    return await chromium.launch();
+    return await chromium.launch({ args: BROWSER_ARGS });
   } catch {
     try {
-      return await chromium.launch({ channel: "chrome" });
+      return await chromium.launch({ channel: "chrome", args: BROWSER_ARGS });
     } catch {
       throw new Error("Could not open a browser. Install one with `npx playwright install chromium` (ask Grant first) or install Google Chrome.");
     }
@@ -215,6 +305,12 @@ async function takeScreenshots({ beforeDir, afterDir, pages, outDir, log }) {
             page[side] = false;
           } else {
             await tab.evaluate(() => document.fonts.ready);
+            // Photos below the fold load lazily: load and decode them all, so the shot does not depend on how far the page had got.
+            await tab.evaluate(async () => {
+              const images = [...document.images];
+              for (const image of images) image.loading = "eager";
+              await Promise.all(images.map((image) => image.decode().catch(() => undefined)));
+            });
             mkdirSync(join(outDir, page.slug), { recursive: true });
             await tab.screenshot({ path: join(outDir, page.slug, `${side}-${viewport.name}.png`), fullPage: true });
             log(`  ${side} ${viewport.name}: ${page.route}`);
@@ -261,8 +357,16 @@ export async function main({ argv, env = process.env, log = console.log }) {
   const result = evaluateChange(change, rules);
   const scopeText = formatReport(result, args);
   const sources = readSources();
-  const pageRoutes = Object.fromEntries(Object.keys(sources).flatMap((path) => (routeForPageFile(path) ? [[path, routeForPageFile(path)]] : [])));
-  const pages = affectedPages({ files: change.files, sources, pageRoutes, allRoutes: readRoutes() });
+  let pagesBase;
+  let pagesHead;
+  try {
+    pagesBase = pageInfoAt(String(realGit(["merge-base", args.base, args.head])).trim());
+    pagesHead = pageInfoAt(args.head);
+  } catch (error) {
+    log(`Change report could not read the page files from git: ${safe(error.stderr?.toString().trim() || error.message)}`);
+    return 2;
+  }
+  const pages = affectedPages({ files: change.files, sources, allRoutes: await readRoutes(), pagesHead, pagesBase });
   log(scopeText, "");
   log(`${pages.length} page(s) to photograph: ${pages.map((p) => p.route).join(", ") || "none"}`);
 

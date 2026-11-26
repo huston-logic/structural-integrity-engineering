@@ -3,16 +3,10 @@ import { seo } from "./seo";
 import { siteConfig } from "./site";
 
 /**
- * Contact page copy, from the copy deck (Contact). The six field labels live in `contact-fields.ts`, which the Worker
- * also reads. Anything the deck does not give is a double-bracket placeholder.
+ * Contact form, thank-you page and 404 copy, from the copy deck (Contact). The contact page's own headline and line are
+ * in src/content/pages/contact-us.json. The six field labels live in `contact-fields.ts`, which the Worker also reads.
+ * Anything the deck does not give is a double-bracket placeholder.
  */
-export const contactMeta = seo.contact;
-
-export const contactHero = {
-  title: "Let's get in touch.",
-  intro: "We're here to help you move forward with clarity and confidence. Send us your plans or questions and we'll respond as fast as we can.",
-};
-
 
 /** The field and send error messages are in the site's voice (short, practical). The deck gives no error text; Grant approves them in the PR. */
 export const noteForm = {

@@ -37,7 +37,7 @@ All copy lives in typed modules under `src/content/`. Components are in `src/com
 npm run lint          # ESLint
 npm run typecheck     # tsc --noEmit for the site, then for the Worker (worker/tsconfig.json)
 npm run test:worker   # contact Worker tests (Node's built-in test runner; no network)
-npm run build         # static export to ./out
+npm run build         # static export to ./out, then scripts/finish-build.mjs (version stamp; /blocks only in non-production builds)
 npm run check         # lint + typecheck + test:worker + build
 ```
 
@@ -81,7 +81,7 @@ npm run build
 npm run test:lighthouse
 ```
 
-`npm run build && npm run test:lighthouse` audits the built site with Lighthouse CI (mobile preset, median of 5 runs per page) against the eight indexable pages in `src/lib/routes.ts` (a `noindex` page cannot pass the SEO check, and the 404 page returns an error status). It serves `out/` through `scripts/preview.mjs`, so the headers in `public/_headers` apply, and uses the Google Chrome installed on your machine (or `CHROME_PATH`). Reports are written to `.lighthouseci/` (git-ignored). Accessibility and SEO must score 0.95 or higher, and best-practices and performance 0.9 or higher; all four fail the job (`lighthouserc.cjs`). The preview server gzips text files like Cloudflare (without that, Lighthouse counts about three times the real bytes and pages whose largest element is a photo fail performance), but it sets no cache headers and does not use Brotli, so its performance score still slightly understates the deployed site.
+`npm run build && npm run test:lighthouse` audits the built site with Lighthouse CI (mobile preset, median of 5 runs per page) against the eight indexable pages in `src/lib/routes.ts` and the `/blocks` showcase (which has no SEO assertion: it is `noindex`; the thanks page is `noindex` too and the 404 returns an error status, so both are left out). It serves `out/` through `scripts/preview.mjs`, so the headers in `public/_headers` apply, and uses the Google Chrome installed on your machine (or `CHROME_PATH`). Reports are written to `.lighthouseci/` (git-ignored). Accessibility and SEO must score 0.95 or higher, and best-practices and performance 0.9 or higher; all four fail the job (`lighthouserc.cjs`). The preview server gzips text files like Cloudflare (without that, Lighthouse counts about three times the real bytes and pages whose largest element is a photo fail performance), but it sets no cache headers and does not use Brotli, so its performance score still slightly understates the deployed site.
 
 In CI this is the `lighthouse` job in `.github/workflows/ci.yml`. It is a required check in the "Protect main" ruleset, so a red result blocks merge. Scores for every page are in the run's Summary, and the full HTML and JSON reports are the `lighthouse-reports` artifact (kept 14 days; open the `.report.html` for the failing URL to see which audits failed). If it fails with `NO_NAVSTART` (a Lighthouse trace-recording hiccup, not a site problem), click "Re-run failed jobs" on the run.
 
@@ -110,7 +110,7 @@ Scheduled runs only happen on the default branch, and GitHub disables schedules 
 |---|---|---|
 | Site URL | `NEXT_PUBLIC_SITE_URL` (see `.env.example`), default `https://structural-integrity-engineering.com` in `src/content/site.ts` | Used for canonical URLs, Open Graph, sitemap, robots and the homepage JSON-LD. Public value, not a secret. |
 | Contact email, scheduler URL, LinkedIn URL, Turnstile site key, sender names, Worker name, Sheet writer and tabs, rate limit | `site.config.ts` (`contact.*`, `domain.workerName`), re-exported by `src/content/providers.ts` and `site.ts` | `null` or `[[placeholder]]` renders a visible marker and fails `build:launch`. The Worker reads this file too (`worker/config.ts`). The Turnstile site key is public. Run `npm run sync:config` after editing; secrets are in [docs/SECRETS.md](docs/SECRETS.md). |
-| Content-Security-Policy | `public/_headers` | `https://challenges.cloudflare.com` is allowed in `script-src` and `frame-src` for Turnstile on the contact form, and `https://static.cloudflareinsights.com` (`script-src`) and `https://cloudflareinsights.com` (`connect-src`) for Cloudflare Web Analytics. Nothing else is loaded from outside. `_headers` covers static files only; the Worker sets its own headers on `/api/*`. |
+| Content-Security-Policy | `public/_headers` | `https://challenges.cloudflare.com` is allowed in `script-src` and `frame-src` for Turnstile on the contact form, and `https://static.cloudflareinsights.com` (`script-src`) and `https://cloudflareinsights.com` (`connect-src`) for Cloudflare Web Analytics. The video blocks add `https://www.youtube-nocookie.com` and `https://player.vimeo.com` to `frame-src`, and `autoplay` for those two origins in `Permissions-Policy` (the list is `embedOrigins` in `src/blocks/embeds.ts`); a player loads only after a visitor presses play, and no live page uses a video yet. Nothing else is loaded from outside. `_headers` covers static files only; the Worker sets its own headers on `/api/*`. |
 | Worker settings | `wrangler.jsonc` (generated from `site.config.ts` by `npm run sync:config`) | Secret **names** only, never values. After changing it, run `npx wrangler types worker/worker-configuration.d.ts`. |
 | Framework step names, numbers, one-liners | `framework.steps` in `src/content/site.ts` | The only place "Scope it / Shape it / Ship it" is defined. Content strings use `{scope}`, `{shape}`, `{ship}`, `{steps}` tokens via `fw()` (`src/lib/framework.ts`). Rename a step here and every page follows. |
 
@@ -260,7 +260,9 @@ Current settings in the Cloudflare dashboard (read by the owner on 2026-11-12, s
 - **Build command:** `npm run build`
 - **Deploy command:** `npx wrangler deploy` (run automatically by Workers Builds)
 - **Root directory:** `/`
-- **Build variables:** `NODE_VERSION=22` is the only one set.
+- **Build variables:** `NODE_VERSION=22` is the only one set. Workers Builds also sets `WORKERS_CI_COMMIT_SHA` and `WORKERS_CI_BRANCH`, which `scripts/finish-build.mjs` reads.
+
+**What the build adds after `next build`.** `scripts/finish-build.mjs` writes `out/site-version.json` (`{ "commit", "builtAt" }`) so the live site says which version it is. When `WORKERS_CI_BRANCH` equals `domain.productionBranch` in `site.config.ts` (`main`), or a Workers Builds build cannot say its branch, it also removes the `/blocks` showcase, so only previews, CI and local builds have it. After the first deploy, check that `/site-version.json` shows the commit and that `/blocks` is a 404 on the live site.
 
 Before launch:
 

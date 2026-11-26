@@ -1,0 +1,55 @@
+{
+  "path": "/privacy",
+  "title": "Privacy Policy | Structural Integrity Engineering",
+  "description": "Build smarter. Build faster.",
+  "status": "live",
+  "blocks": [
+    {
+      "type": "page-hero",
+      "content": {
+        "title": "Privacy Policy",
+        "intro": "What this site collects, and what we do with it."
+      }
+    },
+    {
+      "type": "policy-sections",
+      "content": {
+        "sections": [
+          {
+            "heading": "Who we are",
+            "body": "Structural Integrity Engineering, Inc. Email dylan@structural-integrity-engineering.com. Phone (907) 350-3456."
+          },
+          {
+            "heading": "Information we collect",
+            "body": "Only what you type into the contact form: your first and last name, email, phone number, project city and state, and a description of your project. Like any website, the site also receives technical details such as your IP address and browser type when a page loads or the form is sent."
+          },
+          {
+            "heading": "How we use it",
+            "body": "To answer your request and work with you on your project. We do not sell it, and we do not use it for advertising."
+          },
+          {
+            "heading": "Who we share it with",
+            "body": "Only the people and services that run this site and its form. Huston Logic hosts the site on Cloudflare. Cloudflare runs the site and the form and does the spam check. Resend sends the email that tells us about your request and the automatic reply to you. Google holds a spreadsheet with a record of each request. They handle your information to run the site for us. We share it with no one else."
+          },
+          {
+            "heading": "Cookies and analytics",
+            "body": "This site has no ads and sets no cookies of its own, so there are no tracking cookies. The contact form uses Cloudflare Turnstile, a spam check that checks a person, not a bot, is sending the form. It loads only when you start filling in the form, and it may use your browser's storage to do its job. Cloudflare may also count visits to the site without cookies."
+          },
+          {
+            "heading": "How long we keep it",
+            "body": "For as long as we need it to answer you and work on your project."
+          },
+          {
+            "heading": "Your choices and rights",
+            "body": "To ask what we hold about you, or to have it corrected or deleted, email dylan@structural-integrity-engineering.com. Please include the name and email address you used on the form so we can find it."
+          },
+          {
+            "heading": "Contact",
+            "body": "Structural Integrity Engineering, Inc. Email dylan@structural-integrity-engineering.com. Phone (907) 350-3456."
+          }
+        ],
+        "footnote": "Last updated November 24, 2026."
+      }
+    }
+  ]
+}

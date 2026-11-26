@@ -19,7 +19,7 @@ type TextLinkProps = {
 export function TextLink({ href, children, inline = false, muted = false, className = "" }: TextLinkProps) {
   const tone = muted ? "font-medium text-mist" : "font-semibold text-snow";
   const style = inline
-    ? "text-inherit underline decoration-mist/60 underline-offset-[.25em] transition-colors hover:text-amber hover:decoration-amber"
+    ? "text-inherit underline decoration-mist/60 underline-offset-quarter-em transition-colors hover:text-amber hover:decoration-amber"
     : `inline-flex min-h-11 items-center ${tone} transition-colors hover:text-amber`;
   return (
     <HlLink href={href} className={`${style} ${className}`}>

@@ -11,12 +11,12 @@ const variants: Record<ButtonVariant, string> = {
   /** Amber pill, night label (8.5:1). The one action that matters on a screen. */
   primary: "bg-amber text-night hover:bg-amber-lit",
   /** Outlined pill: mist outline and snow label, both turning amber on hover. For a second, quieter action. */
-  secondary: "border-[1.5px] border-mist text-snow hover:border-amber hover:text-amber",
+  secondary: "border-btn border-mist text-snow hover:border-amber hover:text-amber",
 };
 const sizes: Record<ButtonSize, string> = {
-  default: "min-h-[54px] px-[30px] text-btn",
+  default: "min-h-13.5 px-7.5 text-btn",
   /** The header's Request a quote: still a 44px target. */
-  compact: "min-h-11 px-5 text-[15px] leading-none",
+  compact: "min-h-11 px-5 text-label leading-none",
 };
 
 /**

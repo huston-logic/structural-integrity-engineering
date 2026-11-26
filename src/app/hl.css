@@ -95,6 +95,66 @@
   --text-wordmark: 17px;
   --text-wordmark--line-height: 1.2;
   --text-wordmark--letter-spacing: -0.01em;
+
+  /* Steps the primitives used to write as text-[15px] and text-[17px]; every size keeps its pixels. */
+  --text-label: 15px;
+  --text-control: 17px;
+
+  /* Widths (max-w-*, w-*, min-w-*): the page column, the reading measures, and the em widths the headings and
+     paragraphs use. Every value is the one the primitives used to write in brackets. */
+  --container-page: 1320px;
+  --container-measure: 64ch;
+  --container-answer: 66ch;
+  --container-faq: 760px;
+  --container-em-10: 10em;
+  --container-em-12: 12em;
+  --container-em-14: 14em;
+  --container-em-16: 16em;
+  --container-em-22: 22em;
+  --container-em-28: 28em;
+  --container-em-30: 30em;
+  --container-em-34: 34em;
+  --container-em-38: 38em;
+  --container-em-40: 40em;
+  --container-art-sm: 260px;
+  --container-art: 440px;
+  --container-art-wide: 360px;
+  --container-portrait: 420px;
+  --container-step-number: 1.1em;
+  --container-step-number-md: 1.4em;
+  --container-ch-1: 1ch;
+  --container-ch-2: 2ch;
+  --container-ch-3: 3ch;
+  --container-ch-4: 4ch;
+
+  /* The two-column breakpoint (split:), where the hero and the contact page change layout. */
+  --breakpoint-split: 900px;
+
+  /* mt-dot: the amber bullet sits 0.65em down. */
+  --spacing-dot: 0.65em;
+
+  /* Names the library blocks (src/blocks/library) use, read as this site's roles (docs/SITE-DIFFERENCES.md, D4):
+     ink is the darkest fill (night), ink-2 muted text (mist), green the accent (amber), silver and white light text and
+     fills (snow). The one typeface answers to font-ui too. */
+  --color-ink: var(--hl-night);
+  --color-ink-2: var(--hl-mist);
+  --color-green: var(--hl-amber);
+  --color-silver: var(--hl-snow);
+  --color-white: var(--hl-snow);
+  --font-ui: var(--font-sans);
+  --text-list: 17px;
+  --text-list--line-height: 1.55;
+  --text-blurb: var(--text-body);
+  --text-blurb--line-height: 1.4;
+  --text-item: var(--hl-fs-h4);
+  --text-item--line-height: 1.25;
+  --text-card-title: var(--hl-fs-h3);
+  --text-card-title--line-height: 1.25;
+  --text-subhead: var(--hl-fs-h4);
+  --text-subhead--line-height: 1.25;
+  --container-intro: 60ch;
+  --container-narrow: 48ch;
+  --container-heading: 17em;
 }
 
 @theme {
@@ -103,6 +163,30 @@
   --radius-field: 6px;
   --radius-panel: 10px;
   --radius-pill: 999px;
+  /* The library's names: its buttons are pills here, and photography stays square. */
+  --radius-btn: var(--radius-pill);
+  --radius-card: 0px;
+}
+
+/* One-off utilities for values the primitives used to write in brackets. */
+@utility underline-offset-quarter-em {
+  text-underline-offset: 0.25em;
+}
+
+@utility underline-offset-tight-em {
+  text-underline-offset: 0.18em;
+}
+
+@utility border-btn {
+  border-width: 1.5px;
+}
+
+@utility top-below-header {
+  top: calc(var(--hl-header-h) + 48px);
+}
+
+@utility row-photo {
+  grid-row: 1 / span 2;
 }
 
 @layer components {
@@ -185,7 +269,7 @@
   .hl-u {
     background: linear-gradient(var(--hl-u-color, var(--hl-amber)), var(--hl-u-color, var(--hl-amber))) no-repeat right 100% / 0 1.5px;
     padding-bottom: 3px;
-    transition: background-size 0.5s var(--hl-ease);
+    transition: background-size var(--duration-underline) var(--ease-underline);
   }
 
   :is(a, button):is(:hover, :focus-visible) .hl-u {
@@ -201,7 +285,7 @@
     margin-left: 0.45em;
     vertical-align: -0.04em;
     overflow: visible;
-    transition: transform 150ms ease-out;
+    transition: transform var(--duration-nudge) var(--ease-hover);
   }
 
   :is(a, button):is(:hover, :focus-visible) .hl-arrow[data-dir="right"] {
@@ -377,23 +461,53 @@
   }
 }
 
-/* §9 the focal animation: the hero's line drawing draws itself, then the dimensions, wind arrows and labels arrive.
-   Each element's delay is set inline (HeroDrawing). Every keyframe runs from a hidden `from` state with `backwards`
-   fill, so the resting state is the finished drawing: without these rules, under reduced motion, or after the last
-   animation ends, the full drawing shows. */
+/* §9 the focal animation: the hero's line drawing draws itself, then the dimensions, wind arrows and labels arrive. Each
+   element's delay is its draw-at-N class (N in hundredths of a second, set by HeroDrawing and PageDrawing), read here as
+   --hl-at. The lines (`hl-draw`) start with their dash offset hidden (`@starting-style`) and a transition draws them, so
+   they begin as the page loads; browsers without `@starting-style` show the finished drawing. The dimension, arrow and label
+   groups run from a hidden `from` keyframe with `backwards` fill. The resting state is always the finished drawing: without
+   these rules, under reduced motion, or after the last animation ends, the full drawing shows. */
 @media (prefers-reduced-motion: no-preference) {
   .hl-draw {
     stroke-dasharray: 1;
-    animation: hl-draw 1.2s cubic-bezier(0.55, 0, 0.2, 1) backwards;
+    transition: stroke-dashoffset var(--duration-draw) var(--ease-draw) var(--hl-at, 0s);
+
+    @starting-style {
+      stroke-dashoffset: 1;
+    }
   }
 
   .hl-draw-fade {
-    animation: hl-fade 0.7s ease-out backwards;
+    animation: hl-fade var(--duration-draw-fade) ease-out var(--hl-at, 0s) backwards;
   }
 
   .hl-draw-push {
-    animation: hl-push 0.6s var(--hl-ease) backwards;
+    animation: hl-push var(--duration-draw-push) var(--hl-ease) var(--hl-at, 0s) backwards;
   }
+}
+
+/* The delay of a drawn element: draw-at-40 is 0.4s. The classes are built from numbers in HeroDrawing and PageDrawing, so
+   the whole range is listed here for Tailwind. */
+@source inline("draw-at-{0..300}");
+
+@utility draw-at-* {
+  --hl-at: calc(--value(integer) * 0.01s);
+}
+
+/* The drawing's line style (amber, round) and its dashed dimension lines. */
+.hl-lines {
+  fill: none;
+  stroke: var(--hl-amber);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.hl-dash-7 {
+  stroke-dasharray: 7 7;
+}
+
+.hl-dash-10 {
+  stroke-dasharray: 10 10;
 }
 
 /* §9 the inner pages' one drawing (PageDrawing): amber line work in the viewBox's own units, which the box shows at
@@ -409,6 +523,11 @@
 
 .hl-art .hl-art-thin {
   stroke-width: calc(var(--hl-art-w, 3) * 0.66);
+}
+
+/* A group of the Services drawing drawn at a thicker stroke (the three small icons, scaled down in the photo's corner). */
+.hl-art-w-7 {
+  --hl-art-w: 7;
 }
 
 /* Over a photo (wood, steel, glass) amber has too little contrast, so the lines are snow with a dark under-stroke, which
@@ -429,12 +548,6 @@
 
 .hl-art:not(.hl-art-photo) .hl-art-halo {
   display: none;
-}
-
-@keyframes hl-draw {
-  from {
-    stroke-dashoffset: 1;
-  }
 }
 
 @keyframes hl-fade {
@@ -480,6 +593,21 @@
 @keyframes hl-zoom {
   from {
     scale: 1.1;
+  }
+}
+
+/* Entrance (docs/SITE-DIFFERENCES.md, D4): a library block marked data-motion="enter" waits 16px low and rises into place the
+   first time it comes into view; EnterObserver (src/blocks/EnterObserver.tsx) marks it data-entered with an
+   IntersectionObserver. Transform only: no fade, so every block is readable at full contrast before, during and without the
+   motion, and no layout shift. Gated on the `js` class, so without JavaScript nothing moves. This site's own blocks declare
+   entrance "none" (they have their own reveals above), so only a library block shown in the /blocks showcase uses it. */
+@media (prefers-reduced-motion: no-preference) {
+  .js [data-motion="enter"] {
+    transition: translate var(--duration-enter) var(--ease-site);
+  }
+
+  .js [data-motion="enter"]:not([data-entered]) {
+    translate: 0 var(--motion-enter-distance);
   }
 }
 

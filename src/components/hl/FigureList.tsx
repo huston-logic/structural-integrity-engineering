@@ -12,7 +12,7 @@ type FigureListProps = {
 export function FigureList({ items }: FigureListProps) {
   return (
     <ul
-      className={`grid gap-12 min-[900px]:gap-8 ${items.length === 2 ? "min-[900px]:grid-cols-2" : "min-[900px]:grid-cols-3"}`}
+      className={`grid gap-12 split:gap-8 ${items.length === 2 ? "split:grid-cols-2" : "split:grid-cols-3"}`}
     >
       {items.map((item) => (
         <li key={item.unit} className="flex flex-col gap-2.5">
@@ -22,7 +22,7 @@ export function FigureList({ items }: FigureListProps) {
               <Text>{item.unit}</Text>
             </span>
           </p>
-          <p className="max-w-[22em] text-small text-mist">
+          <p className="max-w-em-22 text-small text-mist">
             <Text>{item.body}</Text>
           </p>
         </li>

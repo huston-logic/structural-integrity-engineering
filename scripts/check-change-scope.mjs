@@ -4,7 +4,7 @@
 //
 //   node scripts/check-change-scope.mjs [--base origin/main] [--head HEAD] [--strict | --report-only] [--ci]
 //
-// --strict (the default) exits 1 on a tier 3 file, a bad image or a new [[placeholder]]. --report-only prints the same
+// --strict (the default) exits 1 on a tier 3 file, a bad image, a content problem in a page file or a new [[placeholder]]. --report-only prints the same
 // report and always exits 0. --ci reads GitHub's own variables: the base comes from GITHUB_BASE_REF, and it is strict
 // only when the pull request's branch (GITHUB_HEAD_REF) starts with "change/" (any capitalisation). Exit codes: 0 pass,
 // 1 fail, 2 could not run.
@@ -12,7 +12,9 @@ import { execFileSync } from "node:child_process";
 import { appendFileSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 import { rules as defaultRules } from "./change-scope-rules.mjs";
-import { contentModuleProblem, pageProblem } from "./change-scope-code.mjs";
+import { contentModuleProblem } from "./change-scope-code.mjs";
+import { registry } from "../src/blocks/definitions.ts";
+import { validatePages as realValidatePages } from "../src/blocks/validate.ts";
 import { imageAltCheck } from "./image-alt.mjs";
 import { inspectMetadata } from "./image-metadata.mjs";
 
@@ -59,6 +61,8 @@ export function parseHunkLines(patch) {
 
 // ---- reading the change from git ------------------------------------------------------------------------------
 
+const isPageFile = (path, rules) => rules.pageFile.test(path);
+
 const isCodeFile = (path, rules) => (rules.contentFile.test(path) && !rules.contentWiring.includes(path)) || rules.tier1Files.includes(path);
 
 const extensionOf = (path) => {
@@ -69,7 +73,7 @@ const extensionOf = (path) => {
 /** The address of an image on the site: "public/images/team/sam.jpg" is served as "/images/team/sam.jpg". */
 const urlOf = (path) => path.slice("public".length);
 
-/** The .ts and .tsx files under src/ at `head` that mention the image's address, with their text. `git grep` exits 1 for "none". */
+/** The .ts, .tsx and .json files under src/ at `head` that mention the image's address, with their text. `git grep` exits 1 for "none". */
 function readReferences(path, head, git, rules) {
   let found;
   try {
@@ -82,14 +86,16 @@ function readReferences(path, head, git, rules) {
     .split("\0")
     .filter(Boolean)
     .map((line) => line.slice(line.indexOf(":") + 1))
-    .filter((referencePath) => /\.tsx?$/.test(referencePath))
+    .filter((referencePath) => /\.(?:tsx?|json)$/.test(referencePath))
     .map((referencePath) => ({ path: referencePath, content: String(git(["show", `${head}:${referencePath}`])) }));
 }
 
 /**
  * Reads a change from git. `git` is a function taking an argument array and returning a Buffer, so tests can fake it.
- * Returns { files, existsAtBase, imageRefs } for evaluateChange. `imageRefs` maps each added or changed image to the source
- * files that use it, so evaluateChange can look for the alt text.
+ * Returns { files, imageRefs, pages, headImages } for evaluateChange. `imageRefs` maps each added or changed
+ * image to the source files that use it, so evaluateChange can look for the alt text. When the change adds or edits a page
+ * file, `pages` holds every page file at `head` ([{ file, data, error? }]) and `headImages` every file under public/images/
+ * at `head`, so the content check judges the pages as they will be built.
  */
 export function gatherChange({ base, head, git, rules = defaultRules }) {
   const range = `${base}...${head}`;
@@ -111,21 +117,39 @@ export function gatherChange({ base, head, git, rules = defaultRules }) {
     }
     // --text: git must not hide the added lines of a file it thinks is binary (for example, one that contains a NUL byte).
     Object.assign(file, parseHunkLines(git(["diff", "-U0", "--no-renames", "--text", range, "--", path])));
-    const needsContent = file.status !== "D" && !special && (isCodeFile(path, rules) || (file.status === "A" && rules.pagePath.test(path)));
+    const needsContent = file.status !== "D" && !special && isCodeFile(path, rules);
     if (needsContent) file.content = String(git(["show", `${head}:${path}`]));
     return file;
   });
-  let mergeBase;
-  const existsAtBase = (path) => {
-    try {
-      mergeBase ??= String(git(["merge-base", base, head])).trim();
-      git(["cat-file", "-e", `${mergeBase}:${path}`]);
-      return true;
-    } catch {
-      return false;
-    }
-  };
-  return { files, existsAtBase, imageRefs };
+  // A page file added or edited, or a picture removed or replaced (a page may still use it), means the pages are checked.
+  const touchesPages = files.some(
+    (f) => !SPECIAL_MODES.includes(f.mode) && ((isPageFile(f.path, rules) && ["A", "M"].includes(f.status)) || (f.path.startsWith(rules.imageDir) && ["D", "M"].includes(f.status))),
+  );
+  if (!touchesPages) return { files, imageRefs };
+  return { files, imageRefs, pages: readPagesAt(head, git, rules), headImages: listAt(head, rules.imageDir, git, true) };
+}
+
+/** The names under a folder at `head` (git ls-tree), as full paths. A missing folder gives []. */
+function listAt(head, dir, git, recursive = false) {
+  const args = ["ls-tree", ...(recursive ? ["-r"] : []), "--name-only", "-z", head, "--", dir];
+  return String(git(args)).split("\0").filter(Boolean);
+}
+
+/** Every *.json directly in the pages folder at `head`, read like src/lib/page-files.ts reads them from disk. */
+function readPagesAt(head, git, rules) {
+  return listAt(head, rules.pagesDir, git)
+    .filter((path) => path.startsWith(rules.pagesDir) && !path.slice(rules.pagesDir.length).includes("/") && path.endsWith(".json"))
+    .sort()
+    .map((path) => {
+      const file = path.slice(rules.pagesDir.length);
+      const text = String(git(["show", `${head}:${path}`])).replace(/^\uFEFF/, "");
+      if (text.trim() === "") return { file, data: undefined, error: "is empty. A page file holds one JSON object." };
+      try {
+        return { file, data: JSON.parse(text) };
+      } catch (cause) {
+        return { file, data: undefined, error: `is not valid JSON (${cause.message}). Look for a missing or extra comma, quote or bracket.` };
+      }
+    });
 }
 
 // ---- the rules, applied to a change ---------------------------------------------------------------------------
@@ -134,47 +158,23 @@ function tier3Reason(path, rules) {
   return rules.tier3Labels.find(([pattern]) => pattern.test(path))[1];
 }
 
-/** Substring checks run before the parser so the reason names the exact text (and they catch the obvious cases cheaply). */
-function newPageProblem(file, rules, existsAtBase) {
-  const { content } = file;
-  if (typeof content !== "string") return "a new page whose contents could not be read";
-  for (const text of rules.pageForbidden) {
-    if (content.includes(text)) return `a new page may not contain \`${text}\``;
-  }
-  for (const text of rules.pageRequires) {
-    if (!content.includes(text)) return `a new page must use \`${text}\` (the shared SEO helper)`;
-  }
-  return pageProblem(content, existsAtBase, rules);
-}
-
-function classify(file, rules, existsAtBase) {
+function classify(file, rules) {
   const { path, status } = file;
   if (status === "T" || (status !== "D" && SPECIAL_MODES.includes(file.mode))) {
     return { ok: false, reason: "symbolic links, submodules and file type changes are not allowed" };
   }
   if (isCodeFile(path, rules)) {
     if (status === "D") {
-      return rules.tier1Files.includes(path) ? { ok: false, reason: "the page list and the menu may be edited, not deleted" } : { ok: true };
+      return rules.tier1Files.includes(path) ? { ok: false, reason: "the menu labels may be edited, not deleted" } : { ok: true };
     }
     if (typeof file.content !== "string") return { ok: false, reason: `the contents of ${path} could not be read` };
     const problem = contentModuleProblem(file.content, rules);
     return problem ? { ok: false, reason: `a content file may hold plain data only, but this one ${problem}` } : { ok: true };
   }
   if (path.startsWith(rules.imageDir)) return { ok: true };
-  if (rules.pagePath.test(path)) {
-    if (status === "D") return { ok: true };
-    if (status === "A") {
-      const problem = newPageProblem(file, rules, existsAtBase);
-      return problem ? { ok: false, reason: problem } : { ok: true };
-    }
-  }
+  if (isPageFile(path, rules)) return status === "D" ? { ok: false, reason: rules.archiveReason } : { ok: true };
   return { ok: false, reason: tier3Reason(path, rules) };
 }
-
-const escapeRegExp = (text) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-const snippet = (line) => safe(line.trim().length > 70 ? `${line.trim().slice(0, 67)}...` : line.trim());
-const routeStrings = (lines) => new Set(lines.flatMap((line) => [...line.matchAll(/["'](\/[a-z0-9/-]*)["']/g)].map((m) => m[1])));
-const LINK_PATTERN = /\bhttps?:\/\/\S+|\bjavascript:|\bdata:[a-z]+\/[a-z]/i;
 
 function imageProblems(file, rules) {
   const extension = extensionOf(file.path);
@@ -201,28 +201,16 @@ function imageProblems(file, rules) {
   return problems;
 }
 
-/** The pure core: takes { files, existsAtBase } and returns the verdict. No git, no disk. */
-export function evaluateChange({ files, existsAtBase, imageRefs = {} }, rules = defaultRules) {
-  const result = { tier: 1, outside: [], flags: [], imageProblems: [], altProblems: [], images: [], placeholders: [], fileCount: files.length, lineCount: 0 };
-  const flag = (kind, path, detail) => result.flags.push({ kind, path: safe(path), detail: safe(detail) });
-  const schedulerPattern = new RegExp(`(?<![\\w.-])(?:https?:\\/\\/|\\/\\/)?(?:[\\w-]+\\.)*(?:${rules.schedulerHosts.map(escapeRegExp).join("|")})\\b`, "i");
-  const addedRoutes = routeStrings(files.find((f) => f.path === "src/lib/routes.ts")?.added ?? []);
+/**
+ * The pure core: takes { files, imageRefs, pages, headImages } and returns the verdict. No git, no disk.
+ * `validate` is the content check (default: the real one), so tests can run it on fake pages.
+ */
+export function evaluateChange({ files, imageRefs = {}, pages, headImages = [] }, rules = defaultRules, validate = realValidatePages) {
+  const result = { tier: 1, outside: [], imageProblems: [], altProblems: [], contentProblems: [], images: [], placeholders: [], fileCount: files.length };
 
   for (const file of files) {
-    const verdict = classify(file, rules, existsAtBase);
+    const verdict = classify(file, rules);
     if (!verdict.ok) result.outside.push({ path: safe(file.path), reason: safe(verdict.reason) });
-
-    const page = rules.pagePath.exec(file.path);
-    if (page && file.status === "D") flag("removed-page", file.path, `the page /${page[1]} was deleted`);
-    if (page && file.status === "A" && verdict.ok && !addedRoutes.has(`/${page[1]}`)) {
-      flag("new-page-not-in-routes", file.path, `/${page[1]} is not added to src/lib/routes.ts, so the sitemap and the accessibility scan would miss it`);
-    }
-    if (file.path === "src/lib/routes.ts") {
-      for (const route of routeStrings(file.removed)) {
-        if (!addedRoutes.has(route)) flag("removed-page", file.path, `the route ${route} was removed from the page list`);
-      }
-    }
-    if (rules.sensitiveFiles.includes(file.path)) flag("sensitive-file", file.path, "legal text or the contact form's questions changed");
 
     if (file.path.startsWith(rules.imageDir)) {
       if (file.status !== "D") {
@@ -232,17 +220,6 @@ export function evaluateChange({ files, existsAtBase, imageRefs = {} }, rules = 
         for (const reason of problems) result.altProblems.push({ path: safe(file.path), reason: safe(reason) });
       }
       continue;
-    }
-    result.lineCount += file.added.length + file.removed.length;
-    for (const [side, lines] of [["added", file.added], ["removed", file.removed]]) {
-      for (const line of lines) {
-        if (rules.dollarPatterns.some((p) => p.test(line))) flag("dollar", file.path, `a dollar amount is ${side}: ${snippet(line)}`);
-        if (rules.contactPatterns.some((p) => p.test(line)) || schedulerPattern.test(line)) {
-          flag("contact", file.path, `a contact detail or booking link is ${side}: ${snippet(line)}`);
-        } else if (side === "added" && LINK_PATTERN.test(line)) {
-          flag("link", file.path, `a new link is added: ${snippet(line)}`);
-        }
-      }
     }
     if (rules.placeholderDirs.some((dir) => file.path.startsWith(dir)) && rules.placeholderFiles.test(file.path) && file.status !== "D") {
       // A placeholder that only moved or sat on an edited line is not new: cancel each added one against a removed one.
@@ -258,20 +235,22 @@ export function evaluateChange({ files, existsAtBase, imageRefs = {} }, rules = 
     }
   }
 
-  if (result.lineCount > rules.maxChangedLines) {
-    flag("size", "", `${result.lineCount} lines changed (the limit is ${rules.maxChangedLines})`);
+  if (pages) {
+    const present = new Set(headImages);
+    const repo = { imageExists: (src) => present.has(`public${src}`) };
+    for (const problem of validate(pages, registry, repo)) result.contentProblems.push(safe(problem));
   }
-  if (result.fileCount > rules.maxFiles) flag("size", "", `${result.fileCount} files changed (the limit is ${rules.maxFiles})`);
   if (result.outside.length > 0) result.tier = 3;
   return result;
 }
 
-/** strict: fail on tier 3, a bad image or a new placeholder. report-only: never fail. */
+/** strict: fail on tier 3, a bad image, a content problem or a new placeholder. report-only: never fail. */
 export function decide(result, mode) {
   const reasons = [];
   if (result.outside.length > 0) reasons.push("files outside tier 1");
   if (result.imageProblems.length > 0) reasons.push("image rule broken");
   if (result.altProblems.length > 0) reasons.push("image alt text missing");
+  if (result.contentProblems.length > 0) reasons.push("content problem");
   if (result.placeholders.length > 0) reasons.push("leftover [[placeholder]] text");
   return { ok: mode !== "strict" || reasons.length === 0, reasons };
 }
@@ -290,16 +269,6 @@ export function formatReport(result, { mode = "strict", base, head } = {}) {
     lines.push(`Tier 3: this change needs Grant. ${plural(result.outside.length, "file")} outside what a client change may touch:`);
     lines.push(...list(result.outside.map((o) => `  - ${o.path} (${o.reason})`)));
   }
-  if (result.flags.length > 0) {
-    // Repeats of one kind in one file are shown once, with a count, so a big diff stays readable.
-    const groups = new Map();
-    for (const f of result.flags) {
-      const key = `${f.kind}\0${f.path}`;
-      groups.set(key, groups.has(key) ? { ...groups.get(key), extra: groups.get(key).extra + 1 } : { ...f, extra: 0 });
-    }
-    lines.push("", `Flagged for Grant (${plural(groups.size, "flag")}; the change still passes, but look at it before the client does):`);
-    lines.push(...list([...groups.values()].map((f) => `  - ${f.path ? `${f.path}: ` : ""}${f.detail}${f.extra > 0 ? ` (and ${f.extra} more like it)` : ""}`)));
-  }
   if (result.images.length > 0) {
     lines.push("", "Images in this change (read the alt text: does it say what the picture shows?):");
     lines.push(...list(result.images.map((image) => `  - ${image.path}: ${image.alts.length > 0 ? `alt ${image.alts.map((alt) => JSON.stringify(alt)).join(", ")}` : "no usable alt text"}`)));
@@ -311,6 +280,10 @@ export function formatReport(result, { mode = "strict", base, head } = {}) {
   if (result.altProblems.length > 0) {
     lines.push("", "Alt text problems (blocking on client change branches):");
     lines.push(...list(result.altProblems.map((p) => `  - ${p.path}: ${p.reason}`)));
+  }
+  if (result.contentProblems.length > 0) {
+    lines.push("", "Content problems in the page files (blocking on client change branches):");
+    lines.push(...list(result.contentProblems.map((p) => `  - ${p}`)));
   }
   if (result.placeholders.length > 0) {
     lines.push("", "Leftover [[placeholder]] text added by this change (blocking on client change branches):");

@@ -1,0 +1,90 @@
+{
+  "path": "/services/residential-structural-design",
+  "title": "Residential design | Structural Integrity Engineering",
+  "description": "Permit-ready plans for custom homes, remodels, additions, decks and foundations. Fast, accurate and affordable.",
+  "status": "live",
+  "blocks": [
+    {
+      "type": "service-hero",
+      "content": {
+        "title": "Residential structural design",
+        "intro": "Permit-ready plans for custom homes, remodels, additions, decks and foundations. Fast, accurate and affordable.",
+        "overview": "We engineer residential structures to pass plan check and build cleanly in the field. From removing a load-bearing wall to a new custom home, the goal is simple: move your project forward quickly and correctly, with clear drawings, concise calculations and responsive communication.",
+        "photo": {
+          "src": "/images/framing-wood-900.jpg",
+          "alt": "Looking up at a wood roof frame of rafters and beams against a blue sky with clouds."
+        },
+        "drawing": "residential"
+      }
+    },
+    {
+      "type": "what-we-do",
+      "content": {
+        "heading": "What we do",
+        "items": [
+          {
+            "title": "Custom and luxury homes",
+            "body": "Framing and lateral plans that work with the design; gravity, wind and seismic calculations."
+          },
+          {
+            "title": "Production homes",
+            "body": "Value-engineered structural and foundation plans with clear, buildable details."
+          },
+          {
+            "title": "Remodels and additions",
+            "body": "Removing bearing walls, floor and roof changes, decks and other additions."
+          },
+          {
+            "title": "Foundations",
+            "body": "Spread footings, drilled piers and caissons, micropiles, helical piers."
+          },
+          {
+            "title": "Retaining and site structures",
+            "body": "Cast-in-place concrete, masonry, gravity, Keystone and Redi-Rock walls."
+          }
+        ],
+        "photos": [
+          {
+            "src": "/images/remodel-framing-640.jpg",
+            "alt": "Wood wall studs in an interior under construction, with sheathing and a window opening visible behind them."
+          },
+          {
+            "src": "/images/rebar-800.jpg",
+            "alt": "Steel reinforcing bars bent into a cage, seen from below against a pale sky beside a concrete wall."
+          }
+        ]
+      }
+    },
+    {
+      "type": "split-list",
+      "content": {
+        "heading": "What you get",
+        "items": [
+          "Permit-ready structural and foundation plans (PDF), with a stamped calculation package when your building department requires one.",
+          "Clear assumptions, schedules and early RFIs to keep the project moving.",
+          "Coordination with your architect or contractor during design, revisions for plan check comments, and answers to RFIs during construction."
+        ]
+      }
+    },
+    {
+      "type": "how-we-work-teaser",
+      "content": {
+        "heading": "How we work",
+        "href": "/services",
+        "stepTitle": "Share your plans",
+        "stepBody": "Send drawings, sketches or site photos. We review the scope, ask the right questions and outline what a permit-ready package needs."
+      }
+    },
+    {
+      "type": "contact-band",
+      "content": {
+        "heading": "Ready to get started?",
+        "body": "Quick replies, clean drawings, and fair pricing.",
+        "action": {
+          "label": "Request a quote",
+          "href": "/contact-us"
+        }
+      }
+    }
+  ]
+}

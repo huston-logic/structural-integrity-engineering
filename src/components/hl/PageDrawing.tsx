@@ -1,29 +1,29 @@
-import type { CSSProperties, ReactElement, ReactNode } from "react";
+import type { ReactElement, ReactNode } from "react";
 
 /** The drawings. `about` and `contact` sit on the page; the other four lie over the page's hero photo (600 x 400, 3:2). */
 export type PageDrawingName = "services" | "about" | "contact" | "residential" | "commercial" | "glazing";
 
-const delay = (seconds: number): CSSProperties => ({ animationDelay: `${seconds}s` });
-const dashed: CSSProperties = { strokeDasharray: "7 7" };
+/** The class that starts an element `seconds` into the drawing (hl.css: draw-at-N, N in hundredths of a second). */
+const at = (seconds: number) => `draw-at-${Math.round(seconds * 100)}`;
 
 /**
  * One line that draws itself (hl.css §9, `hl-draw`); `at` is its start in seconds. Over a photo a dark under-stroke
  * (`hl-art-halo`, shown only on `hl-art-photo` drawings) keeps the amber readable on any photo.
  */
-function Draw({ points, at, thin }: { points: string; at: number; thin?: boolean }) {
+function Draw({ points, at: start, thin }: { points: string; at: number; thin?: boolean }) {
   const thinClass = thin ? " hl-art-thin" : "";
   return (
     <>
-      <polyline className={`hl-draw hl-art-halo${thinClass}`} pathLength={1} points={points} style={delay(at)} />
-      <polyline className={`hl-draw${thinClass}`} pathLength={1} points={points} style={delay(at)} />
+      <polyline className={`hl-draw hl-art-halo${thinClass} ${at(start)}`} pathLength={1} points={points} />
+      <polyline className={`hl-draw${thinClass} ${at(start)}`} pathLength={1} points={points} />
     </>
   );
 }
 
 /** Dimensions and other lines that fade in together, under their dark under-stroke. */
-function Fade({ at, children }: { at: number; children: ReactNode }) {
+function Fade({ at: start, children }: { at: number; children: ReactNode }) {
   return (
-    <g className="hl-draw-fade" style={delay(at)}>
+    <g className={`hl-draw-fade ${at(start)}`}>
       <g className="hl-art-halo">{children}</g>
       {children}
     </g>
@@ -46,7 +46,7 @@ function Services() {
   return (
     <>
       {/* A house, a braced frame and a window wall: the three services, small in the photo's top left. */}
-      <g transform="translate(26 28) scale(0.42)" style={{ "--hl-art-w": 7 } as CSSProperties}>
+      <g transform="translate(26 28) scale(0.42)" className="hl-art-w-7">
         <Draw points="20,250 460,250" at={0.3} />
         <Draw points="30,250 30,170 90,120 150,170 150,250" at={0.6} />
         <Draw points="30,170 150,170" at={0.9} thin />
@@ -72,12 +72,12 @@ function About() {
         <Draw points="150,60 330,60 330,90 255,90 255,210 330,210 330,240 150,240 150,210 225,210 225,90 150,90 150,60" at={0.4} />
       </g>
       <Fade at={1.6}>
-        <line x1="240" y1="40" x2="240" y2="262" style={dashed} />
-        <line x1="338" y1="60" x2="388" y2="60" style={dashed} />
-        <line x1="338" y1="240" x2="388" y2="240" style={dashed} />
+        <line x1="240" y1="40" x2="240" y2="262" className="hl-dash-7" />
+        <line x1="338" y1="60" x2="388" y2="60" className="hl-dash-7" />
+        <line x1="338" y1="240" x2="388" y2="240" className="hl-dash-7" />
         <Dimension x1={380} y1={60} x2={380} y2={240} />
-        <line x1="150" y1="248" x2="150" y2="278" style={dashed} />
-        <line x1="330" y1="248" x2="330" y2="278" style={dashed} />
+        <line x1="150" y1="248" x2="150" y2="278" className="hl-dash-7" />
+        <line x1="330" y1="248" x2="330" y2="278" className="hl-dash-7" />
         <Dimension x1={150} y1={270} x2={330} y2={270} />
       </Fade>
     </>
@@ -101,8 +101,8 @@ function Contact() {
         ))}
       </g>
       <Fade at={2.1}>
-        <line x1="40" y1="212" x2="40" y2="240" style={dashed} />
-        <line x1="440" y1="212" x2="440" y2="240" style={dashed} />
+        <line x1="40" y1="212" x2="40" y2="240" className="hl-dash-7" />
+        <line x1="440" y1="212" x2="440" y2="240" className="hl-dash-7" />
         <Dimension x1={40} y1={232} x2={440} y2={232} />
       </Fade>
     </>
@@ -113,8 +113,8 @@ function Contact() {
 function PhotoSpan({ at }: { at: number }) {
   return (
     <Fade at={at}>
-      <line x1="40" y1="350" x2="40" y2="378" style={dashed} />
-      <line x1="560" y1="350" x2="560" y2="378" style={dashed} />
+      <line x1="40" y1="350" x2="40" y2="378" className="hl-dash-7" />
+      <line x1="560" y1="350" x2="560" y2="378" className="hl-dash-7" />
       <Dimension x1={40} y1={370} x2={560} y2={370} />
     </Fade>
   );
@@ -151,8 +151,8 @@ function Glazing() {
     <>
       <g>
         <Draw points="470,60 470,320" at={0.5} />
-        <path className="hl-draw hl-art-halo hl-art-thin" pathLength={1} d="M470,60 Q530,190 470,320" style={delay(1.1)} />
-        <path className="hl-draw hl-art-thin" pathLength={1} d="M470,60 Q530,190 470,320" style={delay(1.1)} />
+        <path className={`hl-draw hl-art-halo hl-art-thin ${at(1.1)}`} pathLength={1} d="M470,60 Q530,190 470,320" />
+        <path className={`hl-draw hl-art-thin ${at(1.1)}`} pathLength={1} d="M470,60 Q530,190 470,320" />
         <Draw points="410,60 410,320" at={1.3} thin />
         <Draw points="530,60 530,320" at={1.4} thin />
       </g>

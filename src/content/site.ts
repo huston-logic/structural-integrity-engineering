@@ -1,4 +1,5 @@
 import { siteConfig as base } from "../../site.config";
+import { CONTACT_PATH } from "@/blocks/schema";
 import { providers } from "./providers";
 
 export const siteConfig = {
@@ -23,4 +24,4 @@ export const siteConfig = {
   turnstileSiteKey: providers.turnstileSiteKey,
 } as const;
 
-export const SCHEDULER_FALLBACK_HREF = "/contact-us";
+export const SCHEDULER_FALLBACK_HREF = CONTACT_PATH;

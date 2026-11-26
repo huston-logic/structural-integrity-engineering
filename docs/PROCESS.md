@@ -97,6 +97,13 @@ what enforces it. `npm run check:process` fails if a rule has no "Why" or this f
 - **Decided:** Grant, 2026-11-24
 - **Enforced by:** `lighthouserc.cjs`; the required `lighthouse` check.
 
+### 16. A new block passes the block gate
+
+- **What:** A block joins the library (or this site's own `src/site-blocks/`) only with: its registry entry (the definition: description, fields with their limits, variants, placement and motion); an example that passes the content check; a place in the showcase (`/blocks`, added automatically from the registry); passing `npm run check:design` (tokens and motion) and `npm run check:content`; and a design critique from screenshots of the showcase at 1440 and 390 pixels wide.
+- **Why:** A client builds pages from these blocks by chatting, and nobody reviews each client page. So every block must look designed on its own, at both widths, with any content inside its limits.
+- **Decided:** Grant, 2026-11-25
+- **Enforced by:** `npm run check:content` (registry, example, catalog), `npm run check:design` (tokens and motion), the `a11y` and `lighthouse` jobs (they cover the showcase), and the design critique (convention, no automatic check).
+
 ## What still stops for Grant
 
 - Adding or upgrading a dependency. (In an autonomous run this item is replaced; see "Autonomous runs" in CLAUDE.md.)

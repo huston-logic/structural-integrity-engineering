@@ -1,18 +1,21 @@
 import type { Metadata, Viewport } from "next";
-import { seo } from "@/content/seo";
 import { siteConfig } from "@/content/site";
 import { fontVariables } from "@/lib/fonts";
 import { OG_IMAGE_ALT, OG_IMAGE_PATH } from "@/lib/metadata";
+import { getPage } from "@/lib/pages";
 import { siteConfig as base } from "../../site.config";
 import "./globals.css";
+
+// The site-wide default title and description are the home page's (src/content/pages/home.json).
+const home = getPage("/");
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteConfig.url),
   title: {
-    default: seo.home.title,
+    default: home?.title ?? siteConfig.name,
     template: `%s | ${siteConfig.name}`,
   },
-  description: seo.home.description,
+  description: home?.description,
   applicationName: siteConfig.name,
   authors: [{ name: siteConfig.founder }],
   openGraph: {
