@@ -146,9 +146,11 @@ unchanged (PR 3 swaps in placeholders; PR 4 did it for the Worker's values). Wha
   `previewHostSuffix`, `contact.siteEmail`, `fromName`, `replyFromName`, `schedulerUrl`, `sheetWriter`, `sheetTabs`, and
   `business.tagline` plus `theme.colors` for the automatic reply's signature (`src/content/auto-reply.ts`). The rate
   limit is generated into `wrangler.jsonc`. `contact.sheetWriter` (new in PR 4, default `"apps-script"`) picks the Sheet
-  writer and the `secrets.required` names; see `docs/SECRETS.md`.
-- Since PR 4 the first client's Worker name, sender names, email, booking link and rate-limit namespace ids are
-  `[[placeholders]]` or `null` in `site.config.ts`, so `build:launch` fails until they are filled in.
+  writer. `contact.destination` (`"sheet"` by default, or `"pipeline"`) with it picks the `secrets.required` names, and
+  `contact.pipelineUrl` is read for `"pipeline"`; see `docs/SECRETS.md`.
+- Since PR 4 the first client's Worker name, sender names, email and booking link are `[[placeholders]]` or `null` in
+  `site.config.ts`, so `build:launch` fails until they are filled in. The rate-limit ids (`contact.rateLimitIds`) are
+  the template's `"1001"` and `"1002"` until a free pair is set; `npm run check:config` rejects those on a real site.
 - The four generated files carry no "generated" banner, because they had to stay byte-identical.
 
 The original proposal follows.
@@ -169,7 +171,10 @@ export const siteConfig = {
     linkedInUrl: null as string | null, // a URL, or "none" for no LinkedIn link
     turnstileSiteKey: "",
     sheetTabs: { production: "Submissions", preview: "Preview" },
-    rateLimit: { limit: 5, periodSeconds: 60, namespaceIds: { production: "", preview: "" } },
+    destination: "sheet" as "sheet" | "pipeline",   // "pipeline" also needs pipelineUrl and INTAKE_SECRET
+    pipelineUrl: null as string | null,
+    rateLimit: { limit: 5, periodSeconds: 60 },
+    rateLimitIds: { production: "", preview: "" },  // two whole-number strings, unique per site in the Cloudflare account
   },
   theme: {
     colors: { silver: "", silver2: "", white: "", ink: "", ink2: "", green: "", greenDeep: "", greenEdge: "", tint: "", glow: "", mint: "", rust: "", line: "" },

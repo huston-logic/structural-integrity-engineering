@@ -118,7 +118,7 @@ The installed wrangler is 4.160.1 (exact-pinned devDependency). `wrangler previe
   `<branch-slug>-<worker-name>.<account>.workers.dev` that always points at the latest preview
   deployment, and a per-deployment URL `<deployment-id>-<worker-name>.<account>.workers.dev`.
 - **Preview secrets are separate from production** and are copied from the Preview base config
-  **when the preview is created**. Set the four secrets on the base config before pushing a branch;
+  **when the preview is created**. Set every secret in `secrets.required` (the names depend on `contact.destination`) on the base config before pushing a branch;
   an existing preview is fixed with `wrangler preview secret put <NAME> --name <branch>`, which
   creates a new deployment of that preview. Full commands in
   [contact-form.md](./contact-form.md#secrets-by-name).
