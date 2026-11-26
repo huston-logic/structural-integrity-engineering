@@ -64,3 +64,6 @@ secrets/
 !.vscode/extensions.json
 *.swp
 *.swo
+
+# Claude Code's temporary git worktrees
+/.claude/worktrees/

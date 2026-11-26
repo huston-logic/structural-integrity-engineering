@@ -5,7 +5,7 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
-import { configProblems, secretsFor } from "./config-rules.mjs";
+import { configProblems, wranglerText } from "./config-rules.mjs";
 
 const root = new URL("..", import.meta.url).pathname;
 const { siteConfig: c } = await import(pathToFileURL(join(root, "site.config.ts")).href);
@@ -25,40 +25,7 @@ if (problems.length > 0) {
   process.exit(1);
 }
 
-function wrangler() {
-  const { limit, periodSeconds } = c.contact.rateLimit;
-  const namespaceIds = c.contact.rateLimitIds;
-  const secrets = secretsFor(c.contact);
-  const rate = (id) =>
-    `[{ "name": "CONTACT_RATE_LIMIT", "namespace_id": "${id}", "simple": { "limit": ${limit}, "period": ${periodSeconds} } }]`;
-  return `{
-  "$schema": "./node_modules/wrangler/config-schema.json",
-  "name": "${c.domain.workerName}",
-  // The contact form Worker. It runs only for /api/* (run_worker_first); every page and file is served from ./out.
-  "main": "./worker/contact.ts",
-  "compatibility_date": "2026-11-11",
-  "assets": {
-    "directory": "./out",
-    "not_found_handling": "404-page",
-    "run_worker_first": ["/api/*"]
-  },
-  "vars": { "SITE_ENV": "production" },
-  // Names only. Values are set with \`wrangler secret put\` (README, "Contact form").
-  "secrets": {
-    "required": [${secrets.map((name) => `"${name}"`).join(", ")}]
-  },
-  "ratelimits": ${rate(namespaceIds.production)},
-  // Invocation logs would store request metadata; the Worker's own log lines hold no personal data.
-  "observability": { "enabled": true, "logs": { "invocation_logs": false } },
-  // Worker Previews (branch previews) do not inherit the settings above, so they are repeated here.
-  // Preview secrets are separate: \`wrangler preview base-config secret put\`.
-  "previews": {
-    "vars": { "SITE_ENV": "preview" },
-    "ratelimits": ${rate(namespaceIds.preview)}
-  }
-}
-`;
-}
+const wrangler = () => wranglerText(c);
 
 function headers() {
   const insights = c.analytics.cloudflareWebAnalytics;
