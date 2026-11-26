@@ -146,6 +146,16 @@
   --color-silver: var(--hl-snow);
   --color-white: var(--hl-snow);
   --color-tint: var(--hl-dusk-deep);
+  /* hairline is the template's quiet divider (rule). rust is its warm warning accent, used for the draft tag: error,
+     the one warning color here, which is 5.7:1 on dusk and keeps it apart from the amber accent. */
+  --color-hairline: var(--hl-rule);
+  --color-rust: var(--hl-error);
+  /* The template's accent serif does not exist here: the quotes use the one typeface. */
+  --font-voice: var(--font-sans);
+  --text-quote: var(--hl-fs-h4);
+  --text-quote--line-height: 1.4;
+  --shadow-chip: 0 10px 20px -10px color-mix(in srgb, var(--hl-night) 60%, transparent);
+  --container-title: 18em;
   --text-tag: 13px;
   --text-tag--line-height: 1;
   --font-ui: var(--font-sans);

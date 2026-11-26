@@ -1,3 +1,4 @@
+import { resolveHref } from "@/blocks/links";
 import { Container } from "@/components/hl/Container";
 import { HlLink } from "@/components/hl/HlLink";
 import { Text } from "@/components/ui/Text";
@@ -22,7 +23,7 @@ export function Notice() {
           {notice.link ? (
             <>
               {" "}
-              <HlLink href={notice.link.href} className="inline-flex min-h-11 items-center font-semibold underline underline-offset-4 focus-visible:outline-silver">
+              <HlLink href={resolveHref(notice.link.href)} className="inline-flex min-h-11 items-center font-semibold underline underline-offset-4 focus-visible:outline-silver">
                 <Text>{notice.link.label}</Text>
               </HlLink>
             </>

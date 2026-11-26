@@ -49,6 +49,11 @@ the lines below are not). Both D1 and D2 are candidates to bring back to the tem
 - **Library blocks read Dusk.** In `src/app/hl.css` (`@theme inline` and `@theme`) the template's names map to Dusk roles:
   `ink` is `night` (dark fill), `ink-2` is `mist` (muted text), `green` is `amber` (accent), `silver` and `white` are
   `snow`, `font-ui` is the one typeface, `rounded-btn` is a pill, `rounded-card` is square (photography stays square).
+  Also mapped: `hairline` is `rule`, `rust` (the template's warm accent, the draft tag) is `error` (5.7:1 on dusk, and
+  apart from the amber accent), `font-voice` is the one typeface (no accent serif here), `text-quote` is the `h4` size,
+  `shadow-chip` is a soft night shadow, `max-w-title` is 18em. `Card` is a dark box (`tint` fill, `rule` border, snow
+  text) because the template's light card made snow text unreadable; `PostBody` links underline in amber; `Notice`
+  resolves its link with `resolveHref` (so `@booking` works).
   The library's type steps (`text-list`, `text-blurb`, `text-item`, `text-card-title`, `text-subhead`) and measures
   (`max-w-intro`, `max-w-narrow`, `max-w-heading`) are set to sizes near the site's own scale. Nothing else in the
   library blocks was changed. `HeroContent` in `PageHero.tsx` is the site's hero text for the library hero block.
@@ -157,7 +162,8 @@ links. `src/lib/thanks-links.ts` is kept as the template has it, and the templat
   (no `brandFiles`), `scripts/make-example-photos.mjs` reads `theme`, `scripts/check-placeholders.mjs` keeps the `theme` keys;
   do not take the template's `hl.css` palette removal, its `color-mix` shadows and glows, `Logo.tsx`, `og.png/route.tsx`
   or `layout.tsx`. To bring brand settings in later: set `BRAND_FIXED` false, add a real `brand.json` in the template's shape,
-  switch `sync-config.mjs` to the template's, and write the tests that now say "fixed" the other way.
+  switch `sync-config.mjs` to the template's, and write the tests that now say "fixed" the other way. The `false` path is
+  untested on this site (the template's own brand tests run on a fixture, `src/brand/fixtures/template-brand.json`).
 
 ## D12. The example items and the blog page are archived
 

@@ -12,7 +12,7 @@ function InlineText({ text }: { text: Inline }) {
         typeof part === "string" ? (
           <Text key={index}>{part}</Text>
         ) : (
-          <HlLink key={index} href={resolveHref(part.href)} className="text-inherit underline decoration-ink/35 underline-offset-quarter-em">
+          <HlLink key={index} href={resolveHref(part.href)} className="text-inherit underline decoration-amber decoration-1 underline-offset-quarter-em">
             <Text>{part.text}</Text>
           </HlLink>
         ),
