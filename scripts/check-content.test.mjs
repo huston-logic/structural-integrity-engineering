@@ -499,7 +499,7 @@ test("embedUrl, watchUrl and origins", () => {
   const vh = parseVideoUrl("https://vimeo.com/76979871/abcdef0123");
   assert.equal(embedUrl(vh), "https://player.vimeo.com/video/76979871?autoplay=1&dnt=1&h=abcdef0123");
   assert.equal(watchUrl(vh), "https://vimeo.com/76979871/abcdef0123");
-  assert.deepEqual([...embedOrigins], ["https://www.youtube-nocookie.com", "https://player.vimeo.com"]);
+  assert.deepEqual([...embedOrigins], ["https://www.youtube-nocookie.com", "https://player.vimeo.com", "https://open.spotify.com", "https://embed.podcasts.apple.com"]);
   for (const provider of videoProviders) assert.notEqual(parseVideoUrl(provider.example), null, provider.name);
 });
 
@@ -528,7 +528,7 @@ test("registry problems: the real registry has none", async () => {
   assert.deepEqual(validateRegistry(registry), []);
   assert.deepEqual(
     libraryBlocks.map((def) => def.type),
-    ["hero", "highlights", "prose", "faq", "closing-cta", "contact-form", "steps", "legal-sections", "video", "video-grid", "photo-text", "gallery"],
+    ["hero", "highlights", "prose", "faq", "closing-cta", "contact-form", "steps", "legal-sections", "video", "video-grid", "photo-text", "gallery", "latest-posts", "post-index", "business-details", "video-list", "episode-list", "testimonials", "team"],
   );
 });
 
@@ -613,4 +613,10 @@ test("alt text equal to the upload's name is refused", () => {
   const problems = run("  img 4411 SHOP front ");
   assert.equal(problems.length, 1);
   assert.match(problems[0], /"image" The description is the file's name; describe what the photo shows\./);
+});
+
+test("check:content judges the whole site and reports the page, block and item counts", async () => {
+  const { execFileSync } = await import("node:child_process");
+  const out = execFileSync("node", ["scripts/check-content.mjs"], { cwd: new URL("..", import.meta.url).pathname, encoding: "utf8" });
+  assert.match(out, /^Content check passed \(\d+ pages, \d+ blocks, \d+ items\)$/m);
 });

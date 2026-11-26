@@ -6,9 +6,9 @@ import { isObject, type Json } from "./json.ts";
 import { deepEqual, type BlockIds } from "./operations.ts";
 import type { ProposalUpload } from "./uploads.ts";
 
-type Entry = { path: string[]; lines: string[] };
+export type Entry = { path: string[]; lines: string[] };
 
-const quote = (value: unknown) => JSON.stringify(value);
+export const quote = (value: unknown) => JSON.stringify(value);
 
 /** The uploads a proposal uses, and which page values (/images/..., /files/...) the site already has. */
 export interface UploadContext {
@@ -17,7 +17,7 @@ export interface UploadContext {
 }
 
 /** The upload context of one buildChangeList call, passed to every helper: nothing is kept between calls. */
-interface Ctx {
+export interface Ctx {
   byValue: ReadonlyMap<string, ProposalUpload>;
   uploads: readonly ProposalUpload[];
   onSite: ReadonlySet<string>;
@@ -30,7 +30,7 @@ export function formatSize(bytes: number): string {
 }
 
 /** A string value as shown: a link to an upload PDF reads as a download, anything else is quoted plain text. */
-function shown(value: unknown, ctx: Ctx): string {
+export function shown(value: unknown, ctx: Ctx): string {
   const upload = typeof value === "string" ? ctx.byValue.get(value) : undefined;
   return upload?.kind === "pdf" ? `Download: ${quote(upload.name)} (PDF, ${formatSize(upload.bytes)})` : quote(value);
 }
@@ -38,7 +38,7 @@ function shown(value: unknown, ctx: Ctx): string {
 const isImageValue = (value: unknown): value is { src: string; alt: string; focus?: string } =>
   isObject(value) && typeof value.src === "string" && typeof value.alt === "string";
 
-function photoText(image: { src: string; alt: string; focus?: unknown }, ctx: Ctx): string {
+export function photoText(image: { src: string; alt: string; focus?: unknown }, ctx: Ctx): string {
   const upload = ctx.byValue.get(image.src);
   const where = upload ? `${quote(upload.name)} (upload ${upload.id})` : image.src;
   const focus = typeof image.focus === "string" ? `, focus: ${image.focus}` : "";
@@ -65,7 +65,7 @@ function imageLines(value: { src: string; alt: string; focus?: unknown }, def: F
   const note = def?.kind === "image" ? fitNote(value, def.shape, ctx) : null;
   return [photoText(value, ctx), ...(note ? [note] : [])];
 }
-const text = (label: string): Field => ({ kind: "text", label, max: 0 });
+export const text = (label: string): Field => ({ kind: "text", label, max: 0 });
 
 const PLACE_NAMES: Record<string, string> = { header: "header menu", footer: "footer menu", legal: "legal menu" };
 const SUBKEY_LABELS: Record<string, string> = { label: "Label", href: "Link", src: "File", alt: "Alt text" };
@@ -104,7 +104,7 @@ function entryField(def: Field | undefined): Field | undefined {
 }
 
 /** Every text leaf of a value, as `Label, entry 2, Label: "text"` lines (a bare value when it has no label path). */
-function leaves(value: unknown, def: Field | undefined, path: string[], out: string[], ctx: Ctx): string[] {
+export function leaves(value: unknown, def: Field | undefined, path: string[], out: string[], ctx: Ctx): string[] {
   if (def?.kind === "image" && isImageValue(value)) {
     const [photo, ...rest] = imageLines(value, def, ctx);
     out.push(path.length ? `${path.join(", ")}: ${photo}` : photo, ...rest);
@@ -123,7 +123,7 @@ function verbLines(verb: string, value: unknown, def: Field | undefined, ctx: Ct
   return [`${verb}:`, ...leaves(value, def, [], [], ctx).map((line) => `  ${line}`)];
 }
 
-function diffValue(before: unknown, after: unknown, def: Field | undefined, path: string[], out: Entry[], ctx: Ctx): void {
+export function diffValue(before: unknown, after: unknown, def: Field | undefined, path: string[], out: Entry[], ctx: Ctx): void {
   if (deepEqual(before, after)) return;
   const container = (value: unknown) => Array.isArray(value) || isObject(value);
   if (def?.kind === "image" && isImageValue(before) && isImageValue(after)) {
@@ -158,7 +158,7 @@ function diffList(before: unknown[], after: unknown[], of: Field | undefined, pa
   added.forEach((item, i) => out.push({ path: [...path, `entry ${start + i + 1}`], lines: verbLines("adds", item, of, ctx) }));
 }
 
-const render = (entries: Entry[]) => entries.flatMap(({ path, lines }) => [`  ${path.join(", ")}:`, ...lines.map((line) => `    ${line}`)]);
+export const render = (entries: Entry[]) => entries.flatMap(({ path, lines }) => [`  ${path.join(", ")}:`, ...lines.map((line) => `    ${line}`)]);
 
 function blockFieldLines(block: Json, def: AnyBlockDefinition | undefined, ctx: Ctx): string[] {
   const root: Field | undefined = def ? { kind: "object", label: "", fields: def.fields } : undefined;
@@ -191,7 +191,7 @@ function menuPhrases(menu: unknown): string[] {
   return menuPlaces(menu).map((place) => `in the ${PLACE_NAMES[place] ?? place} as ${quote(menu.label)}`);
 }
 
-function listAnd(items: string[]): string {
+export function listAnd(items: string[]): string {
   return items.length < 2 ? items.join("") : `${items.slice(0, -1).join(", ")} and ${items[items.length - 1]}`;
 }
 
@@ -202,9 +202,14 @@ export function buildChangeList(
   registry: readonly AnyBlockDefinition[],
   moved: readonly string[] = [],
   uploadContext: UploadContext = { uploads: [], onSite: new Set() },
+  extraSections: readonly string[] = [],
 ): string {
-  const ctx: Ctx = { byValue: new Map(uploadContext.uploads.map((upload) => [pageValueFor(upload.path), upload])), ...uploadContext };
-  return buildSections(before, after, ids, registry, moved, ctx);
+  return buildSections(before, after, ids, registry, moved, makeCtx(uploadContext), extraSections);
+}
+
+/** The upload context one change list is built with. */
+export function makeCtx(uploadContext: UploadContext = { uploads: [], onSite: new Set() }): Ctx {
+  return { byValue: new Map(uploadContext.uploads.map((upload) => [pageValueFor(upload.path), upload])), ...uploadContext };
 }
 
 function buildSections(
@@ -214,6 +219,7 @@ function buildSections(
   registry: readonly AnyBlockDefinition[],
   moved: readonly string[],
   ctx: Ctx,
+  extraSections: readonly string[],
 ): string {
   const definition = (block: unknown) => registry.find((d) => d.type === (isObject(block) ? block.type : undefined));
   const title = (block: unknown) => definition(block)?.title ?? (isObject(block) ? String(block.type) : "unknown");
@@ -289,6 +295,7 @@ function buildSections(
     }
     sections.push(lines.join("\n"));
   }
+  sections.push(...extraSections);
   const added = ctx.uploads
     .filter((upload) => !ctx.onSite.has(pageValueFor(upload.path)))
     .map((upload) =>
@@ -311,14 +318,14 @@ function placeholderCounts(page: unknown): Map<string, number> {
   return counts;
 }
 
-export function addedPlaceholders(before: ReadonlyMap<string, unknown>, after: ReadonlyMap<string, unknown>): string[] {
+export function addedPlaceholders(before: ReadonlyMap<string, unknown>, after: ReadonlyMap<string, unknown>, label: (key: string) => string = (path) => `Page ${path}`): string[] {
   const problems: string[] = [];
   for (const [path, page] of after) {
     const old = before.get(path);
     if (deepEqual(old, page)) continue;
     const was = placeholderCounts(old);
     for (const [found, count] of placeholderCounts(page)) {
-      if (count > (was.get(found) ?? 0)) problems.push(`Page ${path}: adds the placeholder "${found}"; write the real text instead.`);
+      if (count > (was.get(found) ?? 0)) problems.push(`${label(path)}: adds the placeholder "${found}"; write the real text instead.`);
     }
   }
   return problems;

@@ -1,6 +1,8 @@
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { DEFAULT_UPLOADS, type EditorConfig } from "../config.ts";
-import { registry } from "../../src/blocks/definitions.ts";
-import { CONTACT_PATH, fileForPath } from "../../src/blocks/schema.ts";
+import { registry as libraryRegistry } from "../../src/blocks/definitions.ts";
+import { CONTACT_PATH, defineBlock, fileForPath, type AnyBlockDefinition } from "../../src/blocks/schema.ts";
+import { COLLECTION_KINDS } from "../../src/collections/schema.ts";
 import { FakeGitHub } from "./fake-github.ts";
 import { createEditor } from "./service.ts";
 import type { AssetsLike, Editor, EditorDeps } from "./types.ts";
@@ -15,6 +17,7 @@ export const testEditorConfig = (overrides: Partial<EditorConfig> = {}): EditorC
   siteUrl: "https://example.test",
   host: "example.test",
   siteName: "Example Co",
+  timeZone: "UTC",
   workerName: "example-site",
   access: { teamDomain: null, aud: null },
   github: { owner: "example", repo: "site", appId: "1", installationId: "2", botLogin: "editor-bot[bot]" },
@@ -77,6 +80,86 @@ export class FakeAssets implements AssetsLike {
 }
 
 // No page here has a `menu`: on this site the menu is src/content/nav.ts and the validator refuses one (SITE-DIFFERENCES D7).
+const REPO = new URL("../../", import.meta.url);
+const template = (path: string): string => readFileSync(new URL(path, REPO), "utf8");
+
+/**
+ * The example items are shipped "archived" on this site (docs/SITE-DIFFERENCES.md, D12), so a seeded site takes them as
+ * "live", the way the template ships them: the tests then exercise the same states the template's tests do.
+ */
+const asShipped = (text: string): string => text.replace('"status": "archived"', '"status": "live"');
+
+/** Generic settings, so the tests do not depend on this site's real business details. There is no brand file (D11). */
+const SEED_SETTINGS = {
+  "src/content/business.json": JSON.stringify({ name: "[[Business name]]", phone: "[[Phone number]]", email: "", address: [], hours: null, social: [] }, null, 2) + "\n",
+  "src/content/notice.json": JSON.stringify({ text: "", endsOn: null }) + "\n",
+};
+
+/** The example items, so the seeded site tracks the real ones. Posts are left out (see blogFiles). */
+function templateDocuments(): Record<string, string> {
+  const files: Record<string, string> = { ...SEED_SETTINGS };
+  for (const kind of COLLECTION_KINDS) {
+    if (kind === "posts") continue;
+    const dir = `src/content/collections/${kind}`;
+    if (!existsSync(new URL(dir, REPO))) continue;
+    for (const file of readdirSync(new URL(dir, REPO))) if (file.endsWith(".json")) files[`${dir}/${file}`] = asShipped(template(`${dir}/${file}`));
+  }
+  // Example items may hold photos; the seeded site needs those image files to exist, as blogFiles does for posts.
+  for (const text of Object.values(files)) {
+    for (const [, src] of text.matchAll(/"src": "(\/images\/[^"]+)"/g)) files[`public${src}`] = "image-bytes";
+  }
+  return files;
+}
+
+/** A live blog: the template's /blog page and example posts. Posts are live, so the site needs the page (the build rule). */
+export function blogFiles(): Record<string, string> {
+  const files: Record<string, string> = {};
+  const dir = "src/content/collections/posts";
+  if (existsSync(new URL(dir, REPO))) for (const file of readdirSync(new URL(dir, REPO))) if (file.endsWith(".json")) files[`${dir}/${file}`] = asShipped(template(`${dir}/${file}`)).replace('"status": "draft"', '"status": "live"');
+  for (const text of Object.values(files)) {
+    for (const [, src] of text.matchAll(/"src": "(\/images\/[^"]+)"/g)) files[`public${src}`] = "image-bytes";
+  }
+  files["src/content/pages/blog.json"] = existsSync(new URL("src/content/pages/blog.json", REPO))
+    ? asShipped(template("src/content/pages/blog.json"))
+    : JSON.stringify(
+        {
+          path: "/blog",
+          title: "Blog",
+          description: "Posts from the shop.",
+          status: "live",
+          blocks: [
+            { type: "hero", content: { title: "The blog" } },
+            { type: "post-index", content: { emptyText: "No posts yet." } },
+          ],
+        },
+        null,
+        2,
+      ) + "\n";
+  return files;
+}
+
+const stub = (type: string, title: string, fields: object, example: unknown, variants: string[]): AnyBlockDefinition =>
+  defineBlock({
+    type,
+    title,
+    description: title,
+    source: "library",
+    fields,
+    variants: variants.map((name) => ({ name, description: name })),
+    placement: { position: "any", maxPerPage: 1, rhythm: "section" },
+    motion: { entrance: "default" },
+    example,
+  } as never) as unknown as AnyBlockDefinition;
+
+/** The real block registry, plus a stand-in for each list block the library does not have yet (the real one wins once it exists). */
+export const registry: AnyBlockDefinition[] = [
+  ...libraryRegistry,
+  ...[
+    stub("post-index", "Post list", { emptyText: { kind: "text", label: "Text when there are no posts", max: 120 } }, { emptyText: "No posts yet." }, ["list", "cards"]),
+    stub("latest-posts", "Latest posts", { heading: { kind: "text", label: "Heading", max: 90 }, count: { kind: "number", label: "How many", min: 1, max: 6, required: false } }, { heading: "Latest posts" }, ["cards", "list"]),
+  ].filter((block) => !libraryRegistry.some((real) => real.type === block.type)),
+];
+
 const hours = (extra: string[] = []) => ({
   path: "/hours",
   title: "Opening hours",
@@ -151,7 +234,7 @@ export function seedFiles(overrides: Record<string, string> = {}): Record<string
     "public/images/team.png": "png-bytes",
   };
   for (const [file, page] of Object.entries(pages)) files[`src/content/pages/${file}`] = JSON.stringify(page, null, 2) + "\n";
-  return { ...files, ...overrides };
+  return { ...files, ...templateDocuments(), ...overrides };
 }
 
 export const seedSite = (overrides: Record<string, string> = {}): FakeGitHub => new FakeGitHub(seedFiles(overrides));

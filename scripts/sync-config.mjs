@@ -61,8 +61,8 @@ function headers() {
 # when a scheduler or form provider is added.
 # https://challenges.cloudflare.com (script-src, frame-src): Cloudflare Turnstile on the contact form.
 # https://static.cloudflareinsights.com (script-src) and https://cloudflareinsights.com (connect-src): Cloudflare Web Analytics.
-# https://www.youtube-nocookie.com and https://player.vimeo.com (frame-src, and autoplay in Permissions-Policy): the video blocks
-# swap in a player from these two sites when a visitor presses play; the list is embedOrigins in src/blocks/embeds.ts.
+# ${embedOrigins.join(", ")} (frame-src, and autoplay in Permissions-Policy): the video and audio blocks
+# swap in a player from these sites when a visitor presses play; the list is embedOrigins in src/blocks/embeds.ts.
 # The form posts to the same-origin Worker (/api/contact), so form-action stays 'self'.
 # These headers apply to static files only; the Worker sets its own headers on /api/* responses.
 

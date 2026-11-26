@@ -36,6 +36,9 @@ export const hasUploadRef = (value: unknown): boolean => {
   return isObject(value) && Object.values(value).some(hasUploadRef);
 };
 
+/** How a document key reads in a refusal: pages are "/path", items "item:posts/slug", settings "settings:brand". */
+const labelOf = (key: string): string => (key.startsWith("item:") ? `Item ${key.slice(5)}` : key.startsWith("settings:") ? `The ${key.slice(9)} settings` : `Page ${key}`);
+
 const days = (n: number) => `${n} ${n === 1 ? "day" : "days"}`;
 
 export async function resolveUploads(
@@ -68,11 +71,11 @@ export async function resolveUploads(
       return original;
     }
     if (record.kind === "pdf" && slot === "src") {
-      problems.add(`Page ${page}: upload ${id} is a PDF; a PDF goes in a link, not in a photo's place.`);
+      problems.add(`${labelOf(page)}: upload ${id} is a PDF; a PDF goes in a link, not in a photo's place.`);
       return original;
     }
     if (record.kind === "photo" && slot === "href") {
-      problems.add(`Page ${page}: upload ${id} is a photo; a photo goes in a photo's place, not in a link.`);
+      problems.add(`${labelOf(page)}: upload ${id} is a photo; a photo goes in a photo's place, not in a link.`);
       return original;
     }
     const path = uploadRepoPath(record);

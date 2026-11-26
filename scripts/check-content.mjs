@@ -1,5 +1,7 @@
-// `npm run check:content`: judges the page files (src/content/pages/*.json) against the block registry, in plain words.
-// Prints "Content check passed (N pages, M blocks)" or every problem, and exits 1 when there is one.
+// `npm run check:content`: judges the whole site in plain words: the page files (src/content/pages/*.json) against the block registry, the collection
+// items (src/content/collections/<kind>/<slug>.json) and the three settings files (business, brand, notice), with the one site
+// validator the build uses.
+// Prints "Content check passed (N pages, M blocks, K items)" or every problem, and exits 1 when there is one.
 import { existsSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -7,14 +9,21 @@ import { pathToFileURL } from "node:url";
 const root = process.cwd();
 const load = (path) => import(pathToFileURL(join(root, path)).href);
 const { registry } = await load("src/blocks/definitions.ts");
-const { validatePages, validateRegistry } = await load("src/blocks/validate.ts");
+const { validateRegistry } = await load("src/blocks/validate.ts");
+const { validateSite } = await load("src/collections/site-validate.ts");
+const { readItemFiles, readSettingsFiles } = await load("src/lib/content-files.ts");
 const { readPageFiles } = await load("src/lib/page-files.ts");
 
 const pdfs = new Set(existsSync(join(root, "public/files")) ? readdirSync(join(root, "public/files")).filter((name) => name.endsWith(".pdf")) : []);
 const repo = { imageExists: (src) => existsSync(join(root, "public", src)), fileExists: (href) => pdfs.has(href.replace(/^\/files\//, "")) };
 const files = readPageFiles(root);
+const items = readItemFiles(root);
+const settings = readSettingsFiles(root);
+const settingsErrors = Object.fromEntries(Object.entries(settings).flatMap(([name, { error }]) => (error === undefined ? [] : [[name, error]])));
+const site = { pages: files, items, business: settings.business.data, brand: settings.brand.data, notice: settings.notice.data, settingsErrors };
 const { catalogProblem } = await import("./blocks-catalog.mjs");
-const problems = [...validateRegistry(registry, repo), ...validatePages(files, registry, repo)];
+// No thanks-page links are passed here (docs/SITE-DIFFERENCES.md D5).
+const problems = [...validateRegistry(registry, repo), ...validateSite(site, registry, repo)];
 const stale = catalogProblem(registry, root);
 if (stale) problems.push(stale);
 
@@ -24,5 +33,5 @@ if (problems.length > 0) {
   process.exitCode = 1;
 } else {
   const blocks = files.reduce((sum, { data }) => sum + (Array.isArray(data?.blocks) ? data.blocks.length : 0), 0);
-  console.log(`Content check passed (${files.length} pages, ${blocks} blocks)`);
+  console.log(`Content check passed (${files.length} pages, ${blocks} blocks, ${items.length} items)`);
 }

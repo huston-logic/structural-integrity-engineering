@@ -1,13 +1,16 @@
 import { pathForFile } from "../../src/blocks/schema.ts";
+import { todayIn } from "../../src/settings/notice.ts";
 import { log } from "../env.ts";
 import { pageValueFor, uploadRepoPath } from "../uploads/paths.ts";
 import type { UploadRecord } from "../uploads/types.ts";
-import { formatSize, addedPlaceholders, buildChangeList, matchBlockIds } from "./change-list.ts";
+import { formatSize, addedPlaceholders, buildChangeList, makeCtx, matchBlockIds } from "./change-list.ts";
+import { documentSections } from "./change-list-documents.ts";
+import { combineDocuments, documentLabel, documentsMoved, finishLogo, splitDocuments, touchedKeys, touchesBrand } from "./documents.ts";
 import { GitHubError, toBase64, type CommitFile, type Pull } from "./github.ts";
 import { isObject } from "./json.ts";
-import { applyOperations, deepEqual } from "./operations.ts";
-import { catalogResult, guideResult, overviewResult, pageResult } from "./read-tools.ts";
-import { filesFor, isPageFile, readSite, validateSet, type Pending } from "./site-reader.ts";
+import { applyOperations, deepEqual, type BlockIds } from "./operations.ts";
+import { catalogResult, collectionResult, collectionsResult, guideResult, itemResult, overviewResult, pageResult, settingsResult } from "./read-tools.ts";
+import { filesFor, isCommittablePath, isPageFile, itemFilesFor, itemKeyOf, readSite, settingNameOf, settingsFilesFor, validateSet, type Pending, type Snapshot } from "./site-reader.ts";
 import { BRANCH_PREFIX, changeTitle, createStatusReader, deployedReader, editorPulls, isEditorPull, statusLine, type ChangeStatus } from "./status.ts";
 import { GITHUB_DOWN, type ChangeView, type Editor, type EditorDeps, type Owner, type ProposalView, type ToolResult, type UploadView } from "./types.ts";
 import { hasUploadRef, resolveUploads, type ProposalUpload } from "./uploads.ts";
@@ -57,6 +60,9 @@ interface Proposal {
   imagesTree: string;
   /** The public/files tree when proposed. Absent in drafts made before uploads existed (the check is then skipped). */
   filesTree?: string;
+  /** The git tree of src/content/collections and the blob of each settings file when proposed. Absent in older drafts (the check is then skipped). */
+  collectionsTree?: string;
+  settingsShas?: Record<string, string>;
   /** The uploads this change puts on the site; their bytes are read from the inbox at preview and publish. */
   uploads: ProposalUpload[];
   files: { path: string; content: string }[];
@@ -73,11 +79,13 @@ const defuse = (text: string): string => text.replace(/@/g, "@​");
 /** A stored draft, or null when any field the tools rely on is missing or the wrong type (treated as expired). */
 function parseProposal(value: unknown, id: string): Proposal | null {
   if (!isObject(value) || value.id !== id) return null;
-  const { kind, summary, createdAt, email, baseCommit, pagesTree, imagesTree, filesTree, uploads, files, changeList, undoOf, withdraw, preview } = value;
+  const { kind, summary, createdAt, email, baseCommit, pagesTree, imagesTree, filesTree, collectionsTree, settingsShas, uploads, files, changeList, undoOf, withdraw, preview } = value;
   const strings = [summary, createdAt, email, baseCommit, pagesTree, imagesTree, changeList];
   if (typeof kind !== "string" || !KINDS.includes(kind) || !strings.every((item) => typeof item === "string")) return null;
   if (!Array.isArray(files) || !files.every((file) => isObject(file) && typeof file.path === "string" && typeof file.content === "string")) return null;
   if (filesTree !== undefined && typeof filesTree !== "string") return null;
+  if (collectionsTree !== undefined && typeof collectionsTree !== "string") return null;
+  if (settingsShas !== undefined && !(isObject(settingsShas) && Object.values(settingsShas).every((sha) => typeof sha === "string"))) return null;
   if (uploads !== undefined && !(Array.isArray(uploads) && uploads.every(isProposalUpload))) return null;
   if (undoOf !== undefined && !isCount(undoOf)) return null;
   if (kind === "withdraw" ? !isCount(withdraw) : withdraw !== undefined) return null;
@@ -144,6 +152,10 @@ export function createEditor(deps: EditorDeps): Editor {
   /** The files a proposal commits: its pages, then each upload's bytes read from the inbox and checked against the proposal. */
   async function filesToCommit(proposal: Proposal): Promise<CommitFile[] | ToolResult> {
     const files: CommitFile[] = [...proposal.files];
+    if (files.some((file) => !isCommittablePath(file.path)) || proposal.uploads.some((upload) => !isCommittablePath(upload.path))) {
+      log("editor_path_refused");
+      return error("This proposal would change a file the editor is not allowed to change, so nothing was written. Propose it again, or ask " + AGENCY_NAME + ".");
+    }
     for (const upload of proposal.uploads) {
       const bytes = inbox ? await inbox.file(upload.id) : null;
       if (!bytes || (await sha256Hex(bytes)) !== upload.sha256) {
@@ -231,35 +243,79 @@ export function createEditor(deps: EditorDeps): Editor {
     return null;
   }
 
+  /** The calendar date at the site's time zone; UTC if the zone name is not one Intl knows. */
+  function today(): string {
+    try {
+      return todayIn(config.timeZone, now());
+    } catch {
+      return now().toISOString().slice(0, 10);
+    }
+  }
+
+  /** The files and the change list for a set of pages, items and settings as they would be after a change. */
+  function describe(
+    snapshot: Snapshot,
+    after: Map<string, unknown>,
+    docs: { items: Map<string, unknown>; settings: Map<string, unknown> },
+    touched: { pages: string[]; items: string[]; settings: string[] },
+    extra: { ids: BlockIds; moved?: string[]; uploads?: ProposalUpload[]; onSite?: Set<string> },
+  ): { files: { path: string; content: string }[]; changeList: string } {
+    const uploads = extra.uploads ?? [];
+    const onSite = extra.onSite ?? new Set<string>();
+    const sections = documentSections(
+      { before: snapshot, after: docs, touchedItems: touched.items, touchedSettings: touched.settings, touchedPages: touched.pages, pages: after, today: today() },
+      makeCtx({ uploads, onSite }),
+      registry,
+    );
+    return {
+      files: [...filesFor(snapshot, after, touched.pages), ...itemFilesFor(docs.items, touched.items), ...settingsFilesFor(docs.settings, touched.settings)],
+      changeList: buildChangeList(snapshot.pages, after, extra.ids, registry, extra.moved ?? [], { uploads, onSite }, sections),
+    };
+  }
+
   async function undoMerged(pull: Pull, owner: Owner): Promise<ToolResult> {
     const merge = pull.mergeCommitSha;
     if (merge === null) return error(`I can't find where change ${pull.number} landed on the site, so I can't undo it. Ask ${AGENCY_NAME}.`);
     const snapshot = await readSite(github);
-    const paths = (await github.pullFiles(pull.number)).map((file) => file.path).filter(isPageFile);
+    const changed = (await github.pullFiles(pull.number)).map((file) => file.path);
     const parent = await github.commitParent(merge);
     const after = new Map(snapshot.pages);
+    const items = new Map(snapshot.items);
+    const settings = new Map(snapshot.settings);
     const problems: string[] = [];
-    for (const path of paths) {
+    for (const path of changed) {
+      const item = itemKeyOf(path);
+      const setting = settingNameOf(path);
+      if (!isPageFile(path) && item === null && setting === null) continue;
+      const name = item ?? setting ?? pathForFile(path);
       const [current, atMerge, before] = await Promise.all([github.fileAt(snapshot.commit, path), github.fileAt(merge, path), github.fileAt(parent, path)]);
       if (current === null) continue;
       if (current !== atMerge) {
-        problems.push(`A later change touched ${pathForFile(path)} after change ${pull.number}. Undo the later change first.`);
+        problems.push(`A later change touched ${name} after change ${pull.number}. Undo the later change first.`);
         continue;
       }
       try {
+        if (before === null && setting !== null) {
+          problems.push(`${name} did not exist before change ${pull.number}, so it cannot be put back. Ask ${AGENCY_NAME}.`);
+          continue;
+        }
         const restored: unknown = before === null ? { ...(JSON.parse(current) as Record<string, unknown>), status: "archived" } : JSON.parse(before);
-        const own = isObject(restored) && typeof restored.path === "string" ? restored.path : pathForFile(path);
-        after.set(own, restored);
+        if (item !== null) items.set(item, restored);
+        else if (setting !== null) settings.set(setting, restored);
+        else after.set(isObject(restored) && typeof restored.path === "string" ? restored.path : pathForFile(path), restored);
       } catch {
-        problems.push(`${pathForFile(path)} cannot be read, so it cannot be restored. Ask ${AGENCY_NAME}.`);
+        problems.push(`${name} cannot be read, so it cannot be restored. Ask ${AGENCY_NAME}.`);
       }
     }
     if (problems.length > 0) return error(problems.join("\n"), { problems });
-    const touched = [...after.keys()].filter((path) => !deepEqual(snapshot.pages.get(path), after.get(path)));
-    if (touched.length === 0) return { text: `Change ${pull.number} has already been undone, so there is nothing to change.`, data: { change: pull.number } };
-    const invalid = validateSet(snapshot, after, registry, thanksLinks);
+    const differs = (was: ReadonlyMap<string, unknown>, now: ReadonlyMap<string, unknown>) => [...now.keys()].filter((key) => !deepEqual(was.get(key), now.get(key)));
+    const touched = { pages: differs(snapshot.pages, after), items: differs(snapshot.items, items), settings: differs(snapshot.settings, settings) };
+    if (touched.pages.length + touched.items.length + touched.settings.length === 0) {
+      return { text: `Change ${pull.number} has already been undone, so there is nothing to change.`, data: { change: pull.number } };
+    }
+    const invalid = validateSet(snapshot, after, registry, thanksLinks, undefined, { items, settings });
     if (invalid.length > 0) return refusal(invalid);
-    const changeList = buildChangeList(snapshot.pages, after, matchBlockIds(snapshot.pages, after), registry);
+    const { files, changeList } = describe(snapshot, after, { items, settings }, touched, { ids: matchBlockIds(snapshot.pages, after) });
     return store({
       kind: "undo",
       summary: `Undo change ${pull.number}`,
@@ -268,8 +324,10 @@ export function createEditor(deps: EditorDeps): Editor {
       pagesTree: snapshot.pagesTree,
       imagesTree: snapshot.imagesTree,
       filesTree: snapshot.filesTree,
+      collectionsTree: snapshot.collectionsTree,
+      settingsShas: snapshot.settingsShas,
       uploads: [],
-      files: filesFor(snapshot, after, touched),
+      files,
       changeList,
       undoOf: pull.number,
     });
@@ -306,7 +364,8 @@ export function createEditor(deps: EditorDeps): Editor {
     if (
       snapshot.pagesTree !== proposal.pagesTree ||
       snapshot.imagesTree !== proposal.imagesTree ||
-      (proposal.filesTree !== undefined && snapshot.filesTree !== proposal.filesTree)
+      (proposal.filesTree !== undefined && snapshot.filesTree !== proposal.filesTree) ||
+      documentsMoved(snapshot, proposal)
     ) {
       return error("The site changed since this was proposed. Propose it again.");
     }
@@ -383,6 +442,22 @@ export function createEditor(deps: EditorDeps): Editor {
       return catalogResult(registry);
     },
 
+    async collections() {
+      return guarded(async () => collectionsResult(await readSite(github)), () => "GitHub could not be reached right now, so I can't read the collections. Try again in a minute.");
+    },
+
+    async collection(kind) {
+      return guarded(async () => collectionResult(String(kind), await readSite(github)), () => "GitHub could not be reached right now, so I can't read the collection. Try again in a minute.");
+    },
+
+    async item(kind, slug) {
+      return guarded(async () => itemResult(String(kind), String(slug), await readSite(github)), () => "GitHub could not be reached right now, so I can't read the item. Try again in a minute.");
+    },
+
+    async settings(name) {
+      return guarded(async () => settingsResult(String(name), await readSite(github)), () => "GitHub could not be reached right now, so I can't read the settings. Try again in a minute.");
+    },
+
     async guide() {
       return guarded(async () => {
         const head = await github.headOfMain();
@@ -396,24 +471,40 @@ export function createEditor(deps: EditorDeps): Editor {
       if (bad) return error(bad);
       return guarded(async () => {
         const snapshot = await readSite(github);
-        const applied = applyOperations(snapshot.pages, input.operations);
+        const applied = applyOperations(snapshot.pages, input.operations, snapshot);
         if (!applied.ok) return refusal(applied.problems);
-        if (applied.touched.length === 0) return refusal(["The operations change nothing on the site."]);
+        const touched = { pages: applied.touched, items: applied.touchedItems, settings: applied.touchedSettings };
+        if (touched.pages.length + touched.items.length + touched.settings.length === 0) return refusal(["The operations change nothing on the site."]);
+        if (touched.settings.includes("brand") && config.workersSubdomain === null) {
+          return refusal([`Brand changes need a preview first, and previews are not set up on this site yet. ${AGENCY_NAME} can make this change for you.`]);
+        }
         let after = applied.after;
+        let docs = { items: applied.items, settings: applied.settings };
         let uploads: ProposalUpload[] = [];
         let pending: Pending | undefined;
         if (hasUploadRef(input.operations)) {
           if (!inbox) return error(`${NO_UPLOADS} Ask ${AGENCY_NAME}.`);
-          const resolved = await resolveUploads(applied.after, applied.touched, inbox, now());
+          const resolved = await resolveUploads(combineDocuments(applied.after, applied.items, applied.settings), touchedKeys(touched.pages, touched.items, touched.settings), inbox, now());
           if (!resolved.ok) return refusal(resolved.problems);
-          after = resolved.after;
+          const split = splitDocuments(resolved.after);
+          after = split.pages;
+          docs = { items: split.items, settings: split.settings };
           uploads = resolved.uploads;
+          const logo = finishLogo(docs.settings, uploads);
+          if (logo.problems.length > 0) return refusal(logo.problems);
+          docs = { items: docs.items, settings: logo.settings };
           const values = (kind: ProposalUpload["kind"]) => new Set(uploads.filter((u) => u.kind === kind).map((u) => pageValueFor(u.path)));
           pending = { images: values("photo"), files: values("pdf"), names: resolved.names };
         }
-        const problems = [...addedPlaceholders(snapshot.pages, after), ...validateSet(snapshot, after, registry, thanksLinks, pending)];
+        const problems = [
+          ...addedPlaceholders(snapshot.pages, after),
+          ...addedPlaceholders(snapshot.items, docs.items, documentLabel),
+          ...addedPlaceholders(snapshot.settings, docs.settings, documentLabel),
+          ...validateSet(snapshot, after, registry, thanksLinks, pending, docs),
+        ];
         if (problems.length > 0) return refusal(problems);
         const onSite = new Set([...snapshot.images, ...snapshot.files]);
+        const built = describe(snapshot, after, docs, touched, { ids: applied.ids, moved: applied.moved, uploads, onSite });
         return store({
           kind: "change",
           summary: input.summary.trim(),
@@ -422,9 +513,11 @@ export function createEditor(deps: EditorDeps): Editor {
           pagesTree: snapshot.pagesTree,
           imagesTree: snapshot.imagesTree,
           filesTree: snapshot.filesTree,
+          collectionsTree: snapshot.collectionsTree,
+          settingsShas: snapshot.settingsShas,
           uploads,
-          files: filesFor(snapshot, after, applied.touched),
-          changeList: buildChangeList(snapshot.pages, after, applied.ids, registry, applied.moved, { uploads, onSite }),
+          files: built.files,
+          changeList: built.changeList,
         });
       });
     },
@@ -437,6 +530,7 @@ export function createEditor(deps: EditorDeps): Editor {
       return guarded(async () => {
         let preview = proposal.preview;
         if (!preview) {
+          if (documentsMoved(await readSite(github), proposal)) return error("The site changed since this was proposed. Propose it again.");
           const used = Number(await kv.get(previewsKey())) || 0;
           if (used >= config.dailyChangeLimit) return error(`This site has had ${used} previews today, the daily limit. Publish or try tomorrow.`);
           await sweep();
@@ -468,6 +562,9 @@ export function createEditor(deps: EditorDeps): Editor {
       if (!proposal) return error(EXPIRED);
       const words = typeof confirmation === "string" ? confirmation.trim() : "";
       if (words.length < 1 || words.length > 500) return error("Pass the owner's own words saying yes, 1 to 500 characters, as the confirmation.");
+      if (proposal.kind !== "withdraw" && touchesBrand(proposal.files) && proposal.preview === undefined) {
+        return error("This change touches the brand settings, which change how every page looks, so it can't be published before the owner has seen it. Run preview_change for this proposal, give the owner the preview link, and publish after they have looked and said yes.");
+      }
       const opened = { value: false };
       return guarded(
         () => (proposal.kind === "withdraw" ? publishWithdraw(proposal) : publishChange(proposal, words, opened)),

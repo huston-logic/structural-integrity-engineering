@@ -5,7 +5,10 @@
 // Tier 3 = everything else (code, settings, security, packages, workflows, blocks). A change that touches any tier 3 file
 // stops for Grant, whatever the request said. Editing this file is itself tier 3.
 //
-// No imports and no TypeScript syntax: plain Node loads it directly.
+// Plain Node loads it directly: no TypeScript syntax. The only imports are the two import-free lists of settings and
+// generated files, shared with the Worker and the build.
+import { GENERATED_BRAND_FILES } from "../src/brand/generated.ts";
+import { SITE_SETTINGS_NAMES, settingsPath } from "../src/settings/names.ts";
 
 export const rules = {
   // ---- Tier 1 ---------------------------------------------------------------------------------------------------
@@ -38,6 +41,20 @@ export const rules = {
   denyProperties: ["constructor", "__proto__", "prototype"],
   /** Method names that turn any function value into a generic call primitive. Denied when READ (x.call) or destructured, not as data keys. */
   denyMethodReads: ["call", "apply", "bind", "__lookupGetter__", "__lookupSetter__", "__defineGetter__", "__defineSetter__"],
+  /** The folder of collection items: src/content/collections/<kind>/<slug>.json. The kinds and the slug rule are in src/collections/schema.ts (a test keeps the two in step). */
+  itemDir: "src/content/collections/",
+  /** An item file: exactly one folder (the kind) below the collections folder. The kind and the slug are judged by check-change-scope.mjs. */
+  itemFile: /^src\/content\/collections\/([^/]+)\/([^/]+)\.json$/,
+  /** The settings files this site has (business and notice: brand is fixed here, SITE-DIFFERENCES D11). Tier 1 when they pass the content check at the head commit. */
+  settingsFiles: SITE_SETTINGS_NAMES.map(settingsPath),
+  /** Files generated from brand.json. Tier 1 only when byte-equal to what brand.json generates at the head commit. None while brand is fixed, so brand.json and the files it would generate are tier 3. */
+  generatedFiles: [...GENERATED_BRAND_FILES],
+  /** The settings file whose change reaches every page, and so needs a preview before the yes. */
+  brandFile: "src/content/brand.json",
+  /** Why deleting (or renaming) an item or a settings file is tier 3. */
+  itemArchiveReason: 'items are archived, not deleted: set its status to "archived" instead (a settings file is never deleted)',
+  /** Why a generated brand file that is not what brand.json generates is tier 3. */
+  generatedMismatchReason: "a generated brand file that does not match brand.json. Change brand.json and run `npm run sync:config`, never edit this file by hand",
   /** Why deleting (or renaming) a page file is tier 3. */
   archiveReason: 'pages are archived, not deleted: set its status to "archived" instead',
 
@@ -91,6 +108,7 @@ export const rules = {
     [/^src\/blocks\/|^src\/site-blocks\//, "a block's design (code)"],
     [/^src\/lib\//, "site code"],
     [/^src\/content\/(site|providers|auto-reply|contact-fields)\.ts$/, "site wiring, not copy"],
+    [/^src\/content\/collections\//, "not an item file: an item is src/content/collections/<kind>/<slug>.json, with a known kind and a slug of lowercase words joined by hyphens, directly in that folder"],
     [/^src\/content\/pages\//, "not a page file: a page is src/content/pages/<name>.json, lowercase words joined by hyphens (-- for a /), directly in that folder"],
     [/./, "not on the client-change allow-list"],
   ],

@@ -106,6 +106,38 @@ function reachablePages(path, sources, pageRoutes) {
 const NO_VISUAL_EFFECT = /^(?:docs|scripts|tests|\.github|\.claude|worker)\/|\.md$|\.test\.(?:ts|mjs)$|^src\/lib\/routes\.ts$/;
 const BLOCK_CODE = /^src\/(?:blocks|site-blocks)\//;
 export const SHOWCASE_ROUTE = "/blocks";
+export const BLOG_ROUTE = "/blog";
+/** Files that restyle or relabel every page: the settings files and the files generated from brand.json. */
+const WHOLE_SITE_FILES = [...rules.settingsFiles, ...rules.generatedFiles];
+
+/** The kind and slug of an item file ("src/content/collections/posts/spring.json"), or null. */
+export function itemForFile(path) {
+  const match = rules.itemFile.exec(path);
+  return match ? { kind: match[1], slug: match[2] } : null;
+}
+
+/** { [kind/slug]: status } for item files, from [{ path, text }] (the text of each item file). A file that is not valid JSON is skipped. */
+export function itemInfoFromTexts(entries) {
+  const info = {};
+  for (const { path, text } of entries) {
+    const item = itemForFile(path);
+    if (!item) continue;
+    try {
+      const data = JSON.parse(text);
+      if (typeof data === "object" && data !== null && !Array.isArray(data)) info[`${item.kind}/${item.slug}`] = data.status;
+    } catch {
+      continue;
+    }
+  }
+  return info;
+}
+
+/** { [kind]: [block types] }: the block types whose definition reads its items from that collection. `registry` is the block registry. */
+export function collectionBlockTypes(registry) {
+  const byKind = {};
+  for (const def of registry) if (typeof def.collection === "string") (byKind[def.collection] ??= []).push(def.type);
+  return byKind;
+}
 
 /**
  * What the report needs to know about each page file: { [route]: { status, types } }, where `types` lists the block types the
@@ -133,7 +165,7 @@ export function pageInfoFromTexts(entries) {
  * `pagesBase` are pageInfoFromTexts results for the two sides. A route that is a page file on neither side (the thanks
  * page, the showcase) is taken to be there on both. Returns [{ route, slug, before, after, reason }].
  */
-export function affectedPages({ files, sources, pageRoutes = {}, allRoutes, pagesHead = {}, pagesBase = {} }) {
+export function affectedPages({ files, sources, pageRoutes = {}, allRoutes, pagesHead = {}, pagesBase = {}, itemsHead = {}, itemsBase = {}, collectionTypes = {} }) {
   const entries = new Map();
   // A route with no page file on that side may still be a page there: a code page, or (when converting a site to blocks)
   // a page that only became a file on this branch. The screenshot step asks that side's build and skips a 404.
@@ -149,7 +181,23 @@ export function affectedPages({ files, sources, pageRoutes = {}, allRoutes, page
   for (const { status, path } of files) {
     const own = routeForPageFile(path);
     const inBlock = BLOCK_FOLDER.test(path);
-    if (own) {
+    const item = itemForFile(path);
+    if (item) {
+      // A post has its own page and the blog index; any item shows on every page that lists its collection.
+      if (item.kind === "posts") {
+        const key = `posts/${item.slug}`;
+        const before = status !== "A" && itemsBase[key] === "live";
+        const after = status !== "D" && itemsHead[key] === "live";
+        const why = status === "A" ? "new post" : status === "D" ? "post deleted" : before && !after ? "post archived or unpublished" : !before && after ? "post published or restored" : `${path} changed`;
+        mark(`${BLOG_ROUTE}/${item.slug}`, why, { before, after });
+        mark(BLOG_ROUTE, `${path} changed (the blog lists this post)`);
+      }
+      const types = collectionTypes[item.kind] ?? [];
+      const lists = (pages) => Object.keys(pages).filter((route) => pages[route].types.some((type) => types.includes(type)));
+      for (const route of new Set([...lists(pagesHead), ...lists(pagesBase)])) mark(route, `${path} changed (this page lists ${item.kind})`);
+    } else if (WHOLE_SITE_FILES.includes(path)) {
+      for (const route of allRoutes) mark(route, `${path} changed (it reaches every page)`);
+    } else if (own) {
       const baseLive = liveAt(pagesBase, own);
       const headLive = liveAt(pagesHead, own);
       if (status === "A") mark(own, "new page file", { before: baseLive, after: headLive });
@@ -238,6 +286,12 @@ async function readRoutes() {
 function pageInfoAt(ref) {
   const names = String(realGit(["ls-tree", "--name-only", "-z", ref, "--", rules.pagesDir])).split("\0").filter((name) => name.endsWith(".json"));
   return pageInfoFromTexts(names.map((name) => ({ file: name.slice(rules.pagesDir.length), text: String(realGit(["show", `${ref}:${name}`])) })));
+}
+
+/** itemInfoFromTexts for the item files at a git ref. */
+function itemInfoAt(ref) {
+  const names = String(realGit(["ls-tree", "-r", "--name-only", "-z", ref, "--", rules.itemDir])).split("\0").filter((name) => itemForFile(name));
+  return itemInfoFromTexts(names.map((path) => ({ path, text: String(realGit(["show", `${ref}:${path}`])) })));
 }
 
 function buildBaseSite(base, head, log) {
@@ -359,14 +413,20 @@ export async function main({ argv, env = process.env, log = console.log }) {
   const sources = readSources();
   let pagesBase;
   let pagesHead;
+  let itemsBase;
+  let itemsHead;
   try {
-    pagesBase = pageInfoAt(String(realGit(["merge-base", args.base, args.head])).trim());
+    const mergeBase = String(realGit(["merge-base", args.base, args.head])).trim();
+    pagesBase = pageInfoAt(mergeBase);
     pagesHead = pageInfoAt(args.head);
+    itemsBase = itemInfoAt(mergeBase);
+    itemsHead = itemInfoAt(args.head);
   } catch (error) {
     log(`Change report could not read the page files from git: ${safe(error.stderr?.toString().trim() || error.message)}`);
     return 2;
   }
-  const pages = affectedPages({ files: change.files, sources, allRoutes: await readRoutes(), pagesHead, pagesBase });
+  const { registry } = await import(pathToFileURL(join(root, "src/blocks/definitions.ts")).href);
+  const pages = affectedPages({ files: change.files, sources, allRoutes: await readRoutes(), pagesHead, pagesBase, itemsHead, itemsBase, collectionTypes: collectionBlockTypes(registry) });
   log(scopeText, "");
   log(`${pages.length} page(s) to photograph: ${pages.map((p) => p.route).join(", ") || "none"}`);
 

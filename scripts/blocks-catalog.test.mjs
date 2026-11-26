@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { CONTACT_PATH, defineBlock } from "../src/blocks/schema.ts";
+import { BRAND_FIXED_MESSAGE } from "../src/settings/names.ts";
 import {
   END_MARKER,
   LANES_FILE,
@@ -61,7 +62,7 @@ const registry = [hero, gallery];
 
 test("catalog has the expected shape and key order", () => {
   const catalog = buildCatalog(registry);
-  assert.deepEqual(Object.keys(catalog), ["version", "generatedBy", "pageRules", "blocks"]);
+  assert.deepEqual(Object.keys(catalog), ["version", "generatedBy", "pageRules", "blocks", "collections", "settings"]);
   assert.equal(catalog.version, 1);
   assert.equal(catalog.generatedBy, "npm run blocks:catalog");
   assert.equal(catalog.blocks.length, 2);
@@ -158,4 +159,87 @@ test("an image field shows its shape, and the page rules cover focus and files",
   const md = renderBlocksMarkdown(catalog);
   assert.match(md, /a picture under \/images\/ with real alt text, shape 3:2/);
   assert.match(md, /- \*\*Files\.\*\* A link may point to a PDF under \/files\//);
+});
+
+// ---- collections, settings and the new field kinds ---------------------------------------------------------------
+
+test("the new field kinds are described in plain words with their limits", () => {
+  const block = defineBlock({
+    type: "kinds",
+    title: "Kinds",
+    description: "Every new field kind.",
+    source: "library",
+    fields: {
+      when: { kind: "date", label: "When" },
+      count: { kind: "number", label: "Count", min: 0, max: 999 },
+      episode: { kind: "audio", label: "Episode" },
+      body: { kind: "body", label: "Body", maxParts: 200, maxChars: 40000 },
+    },
+    variants: [{ name: "default", description: "Plain." }],
+    placement: { position: "any", maxPerPage: 1, rhythm: "section" },
+    motion: { entrance: "default" },
+    example: { when: "2026-01-01", count: 1, episode: "https://open.spotify.com/episode/4rOoJ6Egrf8K2IrywzwOMk", body: [] },
+  });
+  const catalog = buildCatalog([block]);
+  const fields = catalog.blocks[0].fields;
+  assert.deepEqual([fields[1].min, fields[1].max], [0, 999]);
+  assert.deepEqual([fields[3].maxParts, fields[3].maxChars], [200, 40000]);
+  const md = renderBlocksMarkdown(catalog);
+  assert.match(md, /\| `when` \| When \| yes \| a date, YYYY-MM-DD \|/);
+  assert.match(md, /\| `count` \| Count \| yes \| a whole number from 0 to 999 \|/);
+  assert.match(md, /\| `episode` \| Episode \| yes \| a Spotify or Apple Podcasts episode link \|/);
+  assert.match(md, /\| `body` \| Body \| yes \| up to 200 parts and 40000 characters: headings, paragraphs, lists, quotes and photos \|/);
+});
+
+test("the catalog has a Collections section: every kind with fields, limits, sort and an example", () => {
+  const catalog = buildCatalog([hero]);
+  assert.deepEqual(catalog.collections.map((c) => c.kind), ["posts", "videos", "episodes", "testimonials", "team"]);
+  const posts = catalog.collections[0];
+  assert.match(posts.sort, /Newest date first/);
+  assert.equal(posts.fields.find((f) => f.name === "body").kind, "body");
+  assert.equal(posts.example.status, "live");
+  const md = renderBlocksMarkdown(catalog);
+  assert.match(md, /^## Collections$/m);
+  assert.match(md, /^### Posts \(`posts`\)$/m);
+  assert.match(md, /\*\*File\.\*\* `src\/content\/collections\/team\/<slug>\.json`/);
+  assert.match(md, /\*\*Sort\.\*\* By the item's order number/);
+  assert.match(md, /\| `date` \| Date\. The day the post was written, like 2026-03-27\. \| yes \| a date, YYYY-MM-DD \|/);
+  assert.match(md, /\| `order` \| Order\. Lower numbers come first\. \| yes \| a whole number from 0 to 999 \|/);
+});
+
+test("the catalog has a Settings section: business, brand (roles, contrast, fonts) and notice (the template's entry, with brand switched on)", () => {
+  const catalog = buildCatalog([hero], false);
+  const { business, brand, notice } = catalog.settings;
+  assert.deepEqual(business.fields.map((f) => f.name), ["name", "phone", "email", "address", "hours", "hoursNote", "social"]);
+  assert.deepEqual(brand.colorRoles.map((r) => r.role), ["brand", "accent", "neutrals"]);
+  assert.deepEqual(brand.colorRoles[0].tokens, ["green", "greenDeep", "greenEdge", "tint", "glow", "mint"]);
+  assert.deepEqual(Object.keys(brand.fonts), ["display", "body", "accent"]);
+  assert.ok(brand.fonts.display.some((f) => f.id === "outfit"));
+  assert.match(brand.contrastRule, /4\.5 to 1/);
+  assert.deepEqual(notice.fields.map((f) => f.name), ["text", "link", "endsOn"]);
+  const md = renderBlocksMarkdown(catalog);
+  assert.match(md, /^## Settings$/m);
+  assert.match(md, /^### Business \(`src\/content\/business\.json`\)$/m);
+  assert.match(md, /^### Brand \(`src\/content\/brand\.json`\)$/m);
+  assert.match(md, /\*\*Contrast rule\.\*\*/);
+  assert.match(md, /^- `display`: outfit \(Outfit\)|^- `display`: outfit, /m);
+  assert.match(md, /^### Notice \(`src\/content\/notice\.json`\)$/m);
+});
+
+test("on this site brand is fixed: the Settings section says so and lists no colors, fonts or logo rules (D11)", () => {
+  const catalog = buildCatalog([hero]);
+  assert.deepEqual(catalog.settings.brand, { fixed: true, description: BRAND_FIXED_MESSAGE });
+  assert.deepEqual(Object.keys(catalog.settings), ["business", "brand", "notice"]);
+  const md = renderBlocksMarkdown(catalog);
+  assert.match(md, /^### Business \(`src\/content\/business\.json`\)$/m);
+  assert.match(md, /^### Brand$/m);
+  assert.match(md, /On this site the colors, fonts and logo are set by Huston Logic/);
+  assert.match(md, /^### Notice \(`src\/content\/notice\.json`\)$/m);
+  assert.doesNotMatch(md, /Contrast rule|set_brand_color|palette\.css/);
+});
+
+test("the page rules name the audio providers next to the video ones", () => {
+  const rules = buildCatalog([hero]).pageRules;
+  assert.deepEqual(rules.audio.providers, ["Spotify", "Apple Podcasts"]);
+  assert.match(renderBlocksMarkdown(buildCatalog([hero])), /- \*\*Audio\.\*\* An episode address must be from Spotify or Apple Podcasts/);
 });

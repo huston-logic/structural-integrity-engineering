@@ -5,7 +5,8 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { rules } from "./change-scope-rules.mjs";
 import { evaluateChange, formatReport } from "./check-change-scope.mjs";
-import { affectedPages, buildReportMarkdown, extractOptions, findImporters, pageInfoFromTexts, routeForPageFile, slugForRoute } from "./change-report.mjs";
+import { affectedPages, buildReportMarkdown, collectionBlockTypes, extractOptions, findImporters, itemForFile, itemInfoFromTexts, pageInfoFromTexts, routeForPageFile, slugForRoute } from "./change-report.mjs";
+import { registry } from "../src/blocks/definitions.ts";
 
 const allRoutes = ["/", "/services", "/about", "/contact", "/privacy", "/contact/thanks", "/blocks"];
 const pageRoutes = {
@@ -264,4 +265,65 @@ test("the markdown report says so when no page is affected", () => {
 test("the markdown report's code fence cannot be closed by backticks inside the scope text", () => {
   const md = buildReportMarkdown({ scopeText: "evil ``` still inside\n## fake heading", base: "a", head: "b", pages: [], viewports: [] });
   assert.match(md, /````text\nevil ``` still inside\n## fake heading\n````\n/);
+});
+
+// ---- collections and settings (ruling 29) ----------------------------------------------------------------------
+
+const blogPages = { ...pagesBefore, "/": live("hero", "latest-posts"), "/blog": live("hero", "post-index"), "/team": live("hero", "team"), "/podcast": live("hero", "episode-list") };
+const routesOf = (list) => list.map((p) => p.route);
+const collectionTypes = { posts: ["latest-posts", "post-index"], team: ["team"], episodes: ["episode-list"] };
+const itemPages = (files, { head = {}, base = {} } = {}) =>
+  affectedPages({ files, sources, pageRoutes, allRoutes: [...allRoutes, "/blog", "/team", "/podcast"], pagesHead: blogPages, pagesBase: blogPages, itemsHead: head, itemsBase: base, collectionTypes });
+
+test("itemForFile and itemInfoFromTexts read the kind, slug and status", () => {
+  assert.deepEqual(itemForFile("src/content/collections/posts/spring.json"), { kind: "posts", slug: "spring" });
+  assert.equal(itemForFile("src/content/collections/posts/deep/spring.json"), null);
+  assert.equal(itemForFile("src/content/pages/home.json"), null);
+  const info = itemInfoFromTexts([
+    { path: "src/content/collections/posts/a.json", text: '{"status":"live"}' },
+    { path: "src/content/collections/posts/b.json", text: "{" },
+    { path: "src/content/collections/team/c.json", text: '{"status":"draft"}' },
+  ]);
+  assert.deepEqual(info, { "posts/a": "live", "team/c": "draft" });
+});
+
+test("collectionBlockTypes comes from the registry: each list block's collection", () => {
+  const types = collectionBlockTypes(registry);
+  assert.ok(types.posts.includes("post-index") && types.posts.includes("latest-posts"));
+  assert.deepEqual(types.team, ["team"]);
+});
+
+test("a post maps to its own page, the blog and every page listing posts", () => {
+  const result = itemPages(change(["M", "src/content/collections/posts/spring.json"]), { head: { "posts/spring": "live" }, base: { "posts/spring": "live" } });
+  assert.deepEqual(routesOf(result), ["/", "/blog", "/blog/spring"]);
+  const own = result.find((p) => p.route === "/blog/spring");
+  assert.equal(own.before, true);
+  assert.equal(own.after, true);
+});
+
+test("a new, archived or restored post shows like a page does: no before, or no after", () => {
+  const added = itemPages(change(["A", "src/content/collections/posts/new.json"]), { head: { "posts/new": "live" } });
+  const post = added.find((p) => p.route === "/blog/new");
+  assert.deepEqual([post.before, post.after, post.reason], [false, true, "new post"]);
+  const archived = itemPages(change(["M", "src/content/collections/posts/old.json"]), { head: { "posts/old": "archived" }, base: { "posts/old": "live" } });
+  const gone = archived.find((p) => p.route === "/blog/old");
+  assert.deepEqual([gone.before, gone.after, gone.reason], [true, false, "post archived or unpublished"]);
+  const draft = itemPages(change(["M", "src/content/collections/posts/wip.json"]), { head: { "posts/wip": "draft" }, base: { "posts/wip": "draft" } });
+  assert.equal(draft.some((p) => p.route === "/blog/wip"), false, "a draft post has no page to photograph");
+  const restored = itemPages(change(["M", "src/content/collections/posts/back.json"]), { head: { "posts/back": "live" }, base: { "posts/back": "archived" } });
+  assert.equal(restored.find((p) => p.route === "/blog/back").reason, "post published or restored");
+});
+
+test("any other item maps to every page holding a list block of its kind, and no other page", () => {
+  assert.deepEqual(routesOf(itemPages(change(["M", "src/content/collections/team/sam.json"]))), ["/team"]);
+  assert.deepEqual(routesOf(itemPages(change(["A", "src/content/collections/episodes/e1.json"]))), ["/podcast"]);
+  assert.deepEqual(routesOf(itemPages(change(["M", "src/content/collections/videos/v.json"]))), []);
+});
+
+test("business.json, brand.json, notice.json, palette.css and fonts.ts reach every page", () => {
+  for (const path of ["src/content/business.json", "src/content/brand.json", "src/content/notice.json", "src/app/palette.css", "src/lib/fonts.ts"]) {
+    const result = itemPages(change(["M", path]));
+    assert.deepEqual(routesOf(result), [...allRoutes, "/blog", "/team", "/podcast"].sort(), path);
+    assert.match(result[0].reason, /it reaches every page/);
+  }
 });

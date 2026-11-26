@@ -31,6 +31,12 @@ export interface Editor {
   page(path: string): Promise<ToolResult>;
   catalog(): Promise<ToolResult>;
   guide(): Promise<ToolResult>;
+  /** Each kind of item with its counts, and the three settings files' short state. */
+  collections(): Promise<ToolResult>;
+  collection(kind: string): Promise<ToolResult>;
+  item(kind: string, slug: string): Promise<ToolResult>;
+  /** One settings file: "business", "brand" or "notice". */
+  settings(name: string): Promise<ToolResult>;
   propose(input: { summary: string; operations: unknown }, owner: Owner): Promise<ToolResult>;
   preview(proposalId: string): Promise<ToolResult>;
   publish(proposalId: string, confirmation: string, owner: Owner): Promise<ToolResult>;
