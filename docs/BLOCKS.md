@@ -1088,7 +1088,7 @@ A deep band with a heading and a ruled list of the work, each with an optional l
 | `items` | Work | yes | 1 to 10 items |
 | `items[].title` | Title | yes | up to 70 characters |
 | `items[].body` | Detail. Leave out for a list of names alone; the titles then show larger. | no | up to 200 characters |
-| `photos` | Photos | yes | 1 to 2 items, each a picture under /images/ with real alt text, shape 3:2 |
+| `photos` | Photos | yes | 1 to 2 items, each a picture under /images/ with real alt text, shape 4:5 |
 
 **Motion:** No entrance motion. This site's sections reveal themselves with CSS (reveal and reveal-zoom in hl.css), so a second entrance would double it.
 
@@ -1194,7 +1194,7 @@ A portrait photo beside a heading and a paragraph about a person.
 | --- | --- | --- | --- |
 | `heading` | Heading | yes | up to 60 characters |
 | `body` | Paragraph | yes | up to 600 characters |
-| `photo` | Portrait. A new photo needs a line in src/content/photos.ts. | yes | a picture under /images/ with real alt text, shape 4:5 |
+| `photo` | Portrait. Shown whole, not trimmed: a portrait close to 4:5 (the current one is 3:4) keeps the layout. A new photo needs a line in src/content/photos.ts. | yes | a picture under /images/ with real alt text, shape 4:5 |
 
 **Motion:** No entrance motion. This site's sections reveal themselves with CSS (reveal and reveal-zoom in hl.css), so a second entrance would double it.
 
