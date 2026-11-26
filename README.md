@@ -158,6 +158,8 @@ The contact page has no scheduler column (the copy deck gives it none), and ever
 
 The form on `/contact-us` (`src/components/hl/ContactForm.tsx`) posts JSON to `POST /api/contact`, handled by a small Worker script, `worker/contact.ts`. `wrangler.jsonc` runs the Worker **only for `/api/*`** (`run_worker_first`); every page and file is still the static export in `./out`.
 
+**The site editor.** The same Worker also serves the site editor when `editor.enabled` is turned on in `site.config.ts`: the owner's sign-in and owner page (`/owner`), and the MCP endpoint (`/mcp`) that their AI app connects to. It is off by default (it is off on this site), and it runs only on the live domain, never on previews. Setup and what it does are in [docs/EDITING.md](docs/EDITING.md). The site's voice for the owner's AI app is in [docs/VOICE-GUIDE.md](docs/VOICE-GUIDE.md).
+
 **What one submission does**, in order: same-origin check, JSON only, at most 16 KB; rate limit (5 per minute per IP, the `CONTACT_RATE_LIMIT` binding); spam-trap field (`company_fax`, refused with an honest error); the same validation as the form (`src/lib/contact-validation.ts`); Cloudflare Turnstile verified server-side (hostname and `action: "contact"` must match). Then it saves the submission to the destination (`contact.destination`: Dylan's Google Sheet by default, or the client's Pipeline app copy with `"pipeline"`), emails the submission to dylan@structural-integrity-engineering.com (Reply-To = the visitor) with a line saying whether it was saved, and sends the visitor the automatic reply (the deck's "Thanks. Your request is in..." line and a signature, no booking link). The notification is **plain text only**, through Resend, from `<contact.fromName> <contact.siteEmail>`. The automatic reply is multipart (HTML + plain text, same words) from `<contact.replyFromName> <contact.siteEmail>`, with `Auto-Submitted: auto-replied` and `X-Auto-Response-Suppress: All` headers. Cells starting with `= + - @` (or a tab or carriage return) get a leading `'` before they are written, with either Sheet writer.
 
 **Where the Worker gets its values.** Every client-specific value comes from `site.config.ts` through `worker/config.ts`: `business.name`, `owner.name` and `owner.role`, `domain.url`, `domain.workerName` and `domain.previewHostSuffix` (to tell the production host from branch previews), `contact.siteEmail`, `fromName`, `replyFromName`, `sheetTabs`, `sheetWriter`, `destination` and `pipelineUrl` (the Pipeline app copy's origin, read only when the destination is `"pipeline"`), and the colors and tagline in the reply's signature. The rate limit is generated into `wrangler.jsonc` as the `CONTACT_RATE_LIMIT` binding: `contact.rateLimit` holds the `limit` and `periodSeconds`, and `contact.rateLimitIds` holds the two namespace ids (unique to the site in its Cloudflare account, registered in [docs/HOSTING.md](docs/HOSTING.md); `npm run check:config` rejects the template's `1001` and `1002`). While `siteEmail` is `null` (the starter template), the Worker answers 502 (logged as `config_incomplete`) before it saves anything or sends any mail. The tests build the Worker from a fixture config of obviously fake values (`createWorker` in `worker/contact.ts`), never the real one.
@@ -263,7 +265,7 @@ npx wrangler dev --port 4823 --ip localhost --var SITE_ENV:development --var TUR
 
 ## Deploy to Cloudflare Workers
 
-Merging a pull request into `main` deploys the site automatically through Cloudflare Workers Builds. Other branches get preview URLs (Cloudflare Worker Previews, configured by the `previews` block in `wrangler.jsonc`). Never run `wrangler deploy` by hand. The Worker config is `wrangler.jsonc`: static assets from `./out`, plus the contact form Worker (`worker/contact.ts`), which wrangler bundles at deploy time. The build and deploy commands did not change when the Worker was added.
+Merging a pull request into `main` deploys the site automatically through Cloudflare Workers Builds. Other branches get preview URLs (Cloudflare Worker Previews, configured by the `previews` block in `wrangler.jsonc`). Never run `wrangler deploy` by hand. The Worker config is `wrangler.jsonc`: static assets from `./out`, plus the Worker (entry `worker/index.ts`: the contact form, and the site editor when `editor.enabled` is on, see `docs/EDITING.md`), which wrangler bundles at deploy time. The build and deploy commands did not change when the Worker was added.
 
 Current settings in the Cloudflare dashboard (read by the owner on 2026-11-12, so check them if they may have changed):
 
@@ -342,7 +344,7 @@ src/
   content/        typed copy and site settings (single source of truth)
   lib/            fonts, metadata, Organization JSON-LD (homepage only), routes and text-token helpers
 scripts/          placeholder gate, static preview server, redirect checker (check-redirects.mjs)
-worker/           contact form Worker (POST /api/contact) and its tests
+worker/           contact form Worker (POST /api/contact), the site editor when it is on (docs/EDITING.md), and their tests
 public/_headers   Cloudflare Workers security and cache headers (static files)
 public/_redirects Cloudflare Workers redirects from old-site URLs (empty until launch)
 ```

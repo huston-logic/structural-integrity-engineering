@@ -9,8 +9,20 @@ Each item has one mark:
 - **Coming**: planned, not available yet.
 - **Huston Logic builds it**: this needs design, setup or a build by Huston Logic first.
 
-Today a change is made on its own branch (a separate copy of the site) and checked before it goes live. Chatting with
-your AI to make changes directly, including signing in to do it, is coming in a later update.
+You will be able to change your site by chatting with your AI app. Huston Logic has not turned this on for your site yet.
+Once it is on, you sign in at `https://structural-integrity-engineering.com/owner`. That page shows the changes waiting
+for your yes, your recent changes (with Withdraw or Undo), and how to connect your AI app.
+
+## How a change works
+
+1. Ask your AI app for the change in plain words.
+2. Read the list it shows. It lists exactly what will change, with the old and new words.
+3. Say yes. The change goes live in a few minutes (about 5, after the same checks as every other change). Until your
+   AI app says it is live, it is not.
+4. Ask "is it live yet?" to check.
+5. Ask "undo that" to take a change back (a change still being checked is withdrawn instead). The undo shows a list
+   too, and you say yes to it.
+6. Anything outside these lanes is passed to Huston Logic.
 
 ## Lane 1: Do it yourself by chatting
 
@@ -22,8 +34,7 @@ Ask for any of these in plain words.
   description of what it shows. The description is for people who cannot see the photo.
 - **Add, remove or reorder sections** on a page, using the sections listed below. Works today.
 - **Add a new page** made from those sections. Works today.
-- **Add a page to the menu.** The menu has a header, a footer and a legal line. Works today.
-- **Archive a page.** An archived page leaves the site and the menu. Nothing is deleted, and you can ask for the page
+- **Archive a page.** An archived page leaves the site (Huston Logic takes it out of the menu). Nothing is deleted, and you can ask for the page
   back at any time. Works today.
 - **Change prices, contact details and your privacy text** written in your pages. These are your business facts.
   Huston Logic does not review them before they go live. Works today. (The email address and booking link the whole
@@ -93,6 +104,9 @@ These need Huston Logic. Ask, and Huston Logic will tell you what it takes.
 - **Logins and members areas.** Huston Logic builds it.
 - **A store.** Huston Logic builds it.
 - **Domain and email setup.** Huston Logic builds it.
+- **Change the menu.** On your site the header and footer menu is set by Huston Logic, not by the pages. Your AI app
+  cannot add a page to it, remove one or reorder it; a page file that tries is refused with a plain message. Ask Huston
+  Logic. Huston Logic builds it.
 - **The site-wide email address, booking link or LinkedIn link.** These are settings, not page text. Huston Logic
   changes them.
 - **Changes to how the contact form sends notes.** Huston Logic builds it.
