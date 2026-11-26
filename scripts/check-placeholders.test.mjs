@@ -1,5 +1,5 @@
-// Tests for scripts/check-placeholders.mjs: how the launch gate treats contact.schedulerUrl and contact.linkedInUrl.
-// The script is copied into a throwaway folder with a fixture site.config.ts (the real config, with the two settings
+// Tests for scripts/check-placeholders.mjs: how the launch gate treats contact.schedulerUrl. (The LinkedIn link is a social entry in src/content/business.json now, D13.)
+// The script is copied into a throwaway folder with a fixture site.config.ts (the real config, with the setting
 // changed), so nothing in the repo is read or written.
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
@@ -32,19 +32,19 @@ function gate(overrides) {
   }
 }
 
-test("a fully set config with a booking link and LinkedIn URL passes", () => {
-  const result = gate({ schedulerUrl: "https://cal.example/book", linkedInUrl: "https://linkedin.com/in/x" });
+test("a fully set config with a booking link passes", () => {
+  const result = gate({ schedulerUrl: "https://cal.example/book" });
   assert.equal(result.status, 0, result.output);
 });
 
-test('"none" is a deliberate answer for the booking link and LinkedIn', () => {
-  const result = gate({ schedulerUrl: "none", linkedInUrl: "none" });
+test('"none" is a deliberate answer for the booking link', () => {
+  const result = gate({ schedulerUrl: "none" });
   assert.equal(result.status, 0, result.output);
 });
 
 test("null (not decided) fails and names the setting", () => {
-  for (const key of ["schedulerUrl", "linkedInUrl"]) {
-    const result = gate({ schedulerUrl: "none", linkedInUrl: "none", [key]: null });
+  for (const key of ["schedulerUrl"]) {
+    const result = gate({ schedulerUrl: "none", [key]: null });
     assert.equal(result.status, 1);
     assert.match(result.output, new RegExp(`contact\\.${key} is still null`));
   }
@@ -52,7 +52,7 @@ test("null (not decided) fails and names the setting", () => {
 
 test('a string that is neither "none" nor an http(s) URL fails', () => {
   for (const bad of ["None", "n/a", "cal.example/book", "[[Booking link]]", ""]) {
-    const result = gate({ schedulerUrl: bad, linkedInUrl: "none" });
+    const result = gate({ schedulerUrl: bad });
     assert.equal(result.status, 1, `schedulerUrl ${JSON.stringify(bad)}`);
     assert.match(result.output, /contact\.schedulerUrl/);
   }

@@ -149,6 +149,30 @@ first. Then stop.
 END OF BRIEF
 ```
 
+## Move blog posts, videos, testimonials, team, business details and brand
+
+Use this after the conversion, for a site that has old copy in its pages or in `site.config.ts` (`theme`, `owner.phone`,
+`contact.linkedInUrl`). Nothing is deleted. Each value is copied exactly, then checked by `npm run check:content`.
+
+- **Blog posts, videos, podcast episodes, testimonials and team members** go in one JSON file each, under
+  `src/content/collections/<kind>/<slug>.json` (kinds: `posts`, `videos`, `episodes`, `testimonials`, `team`). Each file
+  holds `"status"` (`draft`, `live` or `archived`) and the fields the owner gave. Put a post that was already on the old
+  site as `live` only when it is ready to show. Write a testimonial only with the quote and the named source the client
+  gave you. Do not write a team member the client did not name.
+- **Business details** (name, phone, public email, address, hours, social links) go in `src/content/business.json`. The
+  LinkedIn link becomes a social entry. The phone number and the LinkedIn link leave `site.config.ts`.
+- **Brand** goes in `src/content/brand.json`: the 13 colors from `theme.colors`, and the three fonts from `theme.fonts`.
+  A font must be on the curated list in `src/brand/fonts.ts`. A font that is not on it is a Huston Logic change. The logo
+  stays `null` (the business name as text) until the client uploads one.
+- **Notice** goes in `src/content/notice.json`. Leave `text` empty unless the client asks for a notice.
+- **Blog page.** `src/content/pages/blog.json` comes with the collections port (see "Add collections and brand settings"
+  in [EDITING.md](EDITING.md)). Its text is `[[placeholders]]` until the client gives the words.
+
+Then run `npm run sync:config`, which writes `src/app/palette.css` and `src/lib/fonts.ts` from `brand.json`, and
+`npm run check:config`. Remove `theme`, `brand.logo`, `owner.phone` and `contact.linkedInUrl` from `site.config.ts`.
+Add `business.timeZone` (the client's IANA zone), and set `contact.emailColors` and `editor.pageColors` to the same
+colors as `brand.json`.
+
 ## Then add the site editor
 
 Once the conversion is merged and live, the owner can change the pages by chatting with their AI app. That is the site editor. It is off by default and needs its own setup: a GitHub App, a sign-in gate and a few settings. [docs/EDITING.md](EDITING.md) has the steps and a ready-to-paste message for a Claude Code session. Keep it out of the conversion pull request.

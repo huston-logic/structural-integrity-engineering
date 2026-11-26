@@ -6,7 +6,8 @@ import { readPageFiles } from "./page-files.ts";
 
 // Every page's title and description: the page files in src/content/pages (one per page) and the thank-you page, which is
 // still a route (src/content/seo.ts). The same rules as before the pages became files.
-const pages = readPageFiles().map(({ file, data }) => {
+// Only live pages are built, so an archived page file (src/content/pages/blog.json, D12) has no title to check yet.
+const pages = readPageFiles().filter(({ data }) => (data as { status?: string }).status === "live").map(({ file, data }) => {
   const page = data as { title: string; description: string };
   return [file.replace(/\.json$/, ""), { title: page.title, description: page.description }] as const;
 });

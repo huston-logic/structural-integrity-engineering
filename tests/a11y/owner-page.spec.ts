@@ -2,12 +2,11 @@ import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
 import { siteConfig } from "../../site.config";
 import { renderConfirm, renderConsent, renderMessage, renderOwnerHome, renderRemoveConfirm, type PageBase, type UploadsSection } from "../../worker/editor/owner-page";
-import { ownerTheme } from "../../worker/editor/theme";
 
 // Same tag set as site.a11y.spec.ts.
 const TAGS = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa", "best-practice"];
 
-const base: PageBase = { siteName: "Example Co", siteUrl: "https://example.test", email: "owner@example.test", theme: ownerTheme(siteConfig.theme.colors) };
+const base: PageBase = { siteName: "Example Co", siteUrl: "https://example.test", email: "owner@example.test", theme: siteConfig.editor.pageColors };
 const proposal = {
   id: "p1",
   summary: "Update the opening hours",

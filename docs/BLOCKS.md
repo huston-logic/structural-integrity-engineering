@@ -24,7 +24,230 @@ type, optionally a variant, and fill in its content.
 - **Links.** Allowed: An internal path (/name) or a path with an anchor (/name#anchor) that points to a live page, and to an anchor that exists on it. An https:// address. A mailto: address. A tel: number. "@booking": the site's booking link (the scheduler when set, otherwise /contact-us#book). Never: `javascript:`, `data:`, `http:`, `//host`, or any other kind of address (a `//host` address has no scheme).
 - **Images.** An image is { src, alt } with an optional focus: center, top, bottom, left or right. The file must exist under /images/ and be a jpg, png or webp. Each image slot has a shape (3:2, 4:3, 4:5, 1:1 or 16:9) and the picture is cropped to it; focus says which part to keep. The alt text must really describe the picture, so it can't be empty or only a generic word. Formats: jpg, png, webp. Alt text that is only one of these words is rejected: image, img, photo, picture, graphic, icon, logo, alt, alt text, todo, tbd, untitled, placeholder.
 - **Files.** A link may point to a PDF under /files/ that exists, such as /files/price-sheet-k3x9q2mz.pdf. Visitors download it.
-- **Video.** A video address must be from YouTube or Vimeo. The player is rebuilt from the video's id, not from the address that was pasted. Allowed player origins: https://www.youtube-nocookie.com, https://player.vimeo.com.
+- **Video.** A video address must be from YouTube or Vimeo. The player is rebuilt from the video's id, not from the address that was pasted. Allowed player origins: https://www.youtube-nocookie.com, https://player.vimeo.com, https://open.spotify.com, https://embed.podcasts.apple.com.
+- **Audio.** An episode address must be from Spotify or Apple Podcasts. The player is rebuilt from the episode's id, not from the address that was pasted.
+
+## Collections
+
+A collection is a list of items of one kind. Each item is one JSON file, `src/content/collections/<kind>/<slug>.json`, holding its `status` and its fields. List blocks and the blog show them. Items are archived, never deleted.
+
+### Posts (`posts`)
+
+Blog posts. Each one is a page at /blog/<slug>, listed newest first on /blog.
+
+- **File.** `src/content/collections/posts/<slug>.json`. Lowercase words and digits joined by hyphens, 1 to 60 characters. It is the file name and, for a post, the address (/blog/<slug>).
+- **Status.** Every item has a status: draft (built only outside production), live, or archived (never shown, never deleted).
+- **Sort.** Newest date first.
+
+| Field | What it is | Required | Limits |
+| --- | --- | --- | --- |
+| `title` | Title | yes | up to 90 characters |
+| `description` | Summary. The search description, and the summary shown in lists. | yes | up to 170 characters |
+| `date` | Date. The day the post was written, like 2026-03-27. | yes | a date, YYYY-MM-DD |
+| `updated` | Updated. Only when the post was changed later. | no | a date, YYYY-MM-DD |
+| `image` | Photo | no | a picture under /images/ with real alt text, shape 3:2 |
+| `body` | Post | yes | up to 200 parts and 40000 characters: headings, paragraphs, lists, quotes and photos |
+
+**Example:**
+
+```json
+{
+  "status": "live",
+  "title": "[[Post title]]",
+  "description": "[[A sentence that says what the post is about]]",
+  "date": "2026-03-27",
+  "image": {
+    "src": "/images/examples/vase-and-pears.jpg",
+    "alt": "A pale blue vase beside a blue pear and a rust-red pear on a table"
+  },
+  "body": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "[[A heading that opens the first section]]"
+    },
+    {
+      "type": "paragraph",
+      "text": [
+        "[[A paragraph that explains the first idea. Questions? ]]",
+        {
+          "text": "Get in touch",
+          "href": "/contact-us"
+        },
+        "."
+      ]
+    },
+    {
+      "type": "list",
+      "style": "bullet",
+      "items": [
+        "[[First point]]",
+        "[[Second point]]"
+      ]
+    },
+    {
+      "type": "quote",
+      "text": "[[A short quote worth pulling out]]",
+      "source": "[[Who said it]]"
+    },
+    {
+      "type": "photo",
+      "image": {
+        "src": "/images/examples/window-light.jpg",
+        "alt": "Soft light falling through a window onto a wooden table"
+      },
+      "caption": "[[A caption for the photo]]"
+    }
+  ]
+}
+```
+
+### Videos (`videos`)
+
+Videos from YouTube or Vimeo. A video plays on the page only when a visitor presses play.
+
+- **File.** `src/content/collections/videos/<slug>.json`. Lowercase words and digits joined by hyphens, 1 to 60 characters. It is the file name and, for a post, the address (/blog/<slug>).
+- **Status.** Every item has a status: draft (built only outside production), live, or archived (never shown, never deleted).
+- **Sort.** Newest date first.
+
+| Field | What it is | Required | Limits |
+| --- | --- | --- | --- |
+| `title` | Title | yes | up to 90 characters |
+| `url` | Video address. A YouTube or Vimeo address. | yes | a YouTube or Vimeo address |
+| `caption` | Caption | no | up to 200 characters |
+| `date` | Date | yes | a date, YYYY-MM-DD |
+
+**Example:**
+
+```json
+{
+  "status": "live",
+  "title": "[[Video title]]",
+  "url": "https://www.youtube.com/watch?v=aqz-KE-bpKQ",
+  "caption": "[[A sentence that says what to expect]]",
+  "date": "2026-03-27"
+}
+```
+
+### Podcast episodes (`episodes`)
+
+Podcast episodes from Spotify or Apple Podcasts. An episode plays on the page only when a visitor presses play.
+
+- **File.** `src/content/collections/episodes/<slug>.json`. Lowercase words and digits joined by hyphens, 1 to 60 characters. It is the file name and, for a post, the address (/blog/<slug>).
+- **Status.** Every item has a status: draft (built only outside production), live, or archived (never shown, never deleted).
+- **Sort.** Newest date first.
+
+| Field | What it is | Required | Limits |
+| --- | --- | --- | --- |
+| `title` | Title | yes | up to 90 characters |
+| `url` | Episode address. A Spotify or Apple Podcasts episode address. | yes | a Spotify or Apple Podcasts episode link |
+| `summary` | Summary | no | up to 300 characters |
+| `date` | Date | yes | a date, YYYY-MM-DD |
+
+**Example:**
+
+```json
+{
+  "status": "live",
+  "title": "[[Episode title]]",
+  "url": "https://open.spotify.com/episode/4rOoJ6Egrf8K2IrywzwOMk",
+  "summary": "[[A sentence or two about the episode]]",
+  "date": "2026-03-27"
+}
+```
+
+### Testimonials (`testimonials`)
+
+Quotes from named clients, in the order you choose. Never write one the client did not say.
+
+- **File.** `src/content/collections/testimonials/<slug>.json`. Lowercase words and digits joined by hyphens, 1 to 60 characters. It is the file name and, for a post, the address (/blog/<slug>).
+- **Status.** Every item has a status: draft (built only outside production), live, or archived (never shown, never deleted).
+- **Sort.** By the item's order number (lower first), then by its name.
+
+| Field | What it is | Required | Limits |
+| --- | --- | --- | --- |
+| `quote` | Quote. Only words the client really said. | yes | up to 600 characters |
+| `name` | Name. The named person who said it. | yes | up to 80 characters |
+| `role` | Role | no | up to 60 characters |
+| `organization` | Business | no | up to 80 characters |
+| `order` | Order. Lower numbers come first. | yes | a whole number from 0 to 999 |
+
+**Example:**
+
+```json
+{
+  "status": "live",
+  "quote": "[[Client quote, from a named client]]",
+  "name": "[[Client name]]",
+  "role": "[[Client role]]",
+  "organization": "[[Client business]]",
+  "order": 1
+}
+```
+
+### Team (`team`)
+
+The people on the team, in the order you choose.
+
+- **File.** `src/content/collections/team/<slug>.json`. Lowercase words and digits joined by hyphens, 1 to 60 characters. It is the file name and, for a post, the address (/blog/<slug>).
+- **Status.** Every item has a status: draft (built only outside production), live, or archived (never shown, never deleted).
+- **Sort.** By the item's order number (lower first), then by its name.
+
+| Field | What it is | Required | Limits |
+| --- | --- | --- | --- |
+| `name` | Name | yes | up to 80 characters |
+| `role` | Role | yes | up to 60 characters |
+| `bio` | Bio | no | up to 400 characters |
+| `photo` | Photo | no | a picture under /images/ with real alt text, shape 4:5 |
+| `order` | Order. Lower numbers come first. | yes | a whole number from 0 to 999 |
+
+**Example:**
+
+```json
+{
+  "status": "live",
+  "name": "[[Team member name]]",
+  "role": "[[Team member role]]",
+  "bio": "[[Two sentences about this person]]",
+  "photo": {
+    "src": "/images/examples/jug-and-cups.jpg",
+    "alt": "A tall blue jug beside two small cups on a table"
+  },
+  "order": 1
+}
+```
+
+## Settings
+
+Two files hold the site-wide settings. Each is one JSON object and is checked by `npm run check:content`. The brand is not a setting on this site.
+
+### Business (`src/content/business.json`)
+
+The business details every page can show: name, phone, email, address, hours and social links.
+
+| Field | Required | Rule |
+| --- | --- | --- |
+| `name` | yes | The business name, up to 80 characters. |
+| `phone` | yes | A phone number: 7 to 20 digits, spaces and + ( ) - . only. "" for none. |
+| `email` | yes | One email address. "" for none. |
+| `address` | yes | Up to 4 address lines, each up to 80 characters. [] for none. |
+| `hours` | yes | null (no hours shown) or all seven days (monday, tuesday, wednesday, thursday, friday, saturday, sunday), each "closed" or { "opens": "09:00", "closes": "17:00" } in 24-hour time, closing after opening. |
+| `hoursNote` | no | A note under the hours, up to 120 characters. |
+| `social` | yes | Up to 8 links, each { "network", "url" }. Networks: instagram, facebook, linkedin, youtube, tiktok, x, pinterest, threads. The address must be https:// and on that network's own site. |
+
+### Brand
+
+On this site the colors, fonts and logo are set by Huston Logic, so they cannot be changed here. Ask Huston Logic.
+
+### Notice (`src/content/notice.json`)
+
+A one-line notice above the header, with an optional link and last day.
+
+| Field | Required | Rule |
+| --- | --- | --- |
+| `text` | yes | The notice, up to 120 characters. "" for no notice. |
+| `link` | no | { label, href }: the link words (up to 40 characters) and a link (see Page rules). It needs notice text. |
+| `endsOn` | yes | The last day it shows, YYYY-MM-DD, or null for no end date. |
 
 ## Hero (`hero`)
 
@@ -522,6 +745,220 @@ Two to twelve photos in a grid, each with an optional caption. The photos do not
       }
     }
   ]
+}
+```
+
+## Latest posts (`latest-posts`)
+
+The newest blog posts, with a heading and an optional link to all of them. It updates by itself when a post is added, and is left out of the page while there is no post.
+
+**Where it can go:** anywhere, once.
+
+**Variants** (set with `variant`; the first is used when it is left out):
+
+- `cards` (default): Each post is a card with its photo on top (a tinted panel with the date when it has no photo), then the date, title and summary.
+- `list`: Each post is a row with its date, title and summary, divided by soft lines.
+
+**Fields** (inside `content`):
+
+| Field | What it is | Required | Limits |
+| --- | --- | --- | --- |
+| `heading` | Heading | yes | up to 90 characters |
+| `intro` | Introduction | no | up to 200 characters |
+| `count` | How many posts. From 1 to 6. Three when left empty. | no | a whole number from 1 to 6 |
+| `action` | Link to all posts | no | button words up to 40 characters, and a link |
+
+**Motion:** Rises gently into place as it scrolls into view (it shows at once for visitors who prefer reduced motion).
+
+**Example:**
+
+```json
+{
+  "heading": "A short heading for the newest posts",
+  "intro": "One sentence that says what the posts are about.",
+  "count": 3,
+  "action": {
+    "label": "All posts →",
+    "href": "/blog"
+  }
+}
+```
+
+## Post index (`post-index`)
+
+The list of every blog post, newest first, ten to a page, with links to newer and older pages. It belongs on the blog page only, once.
+
+**Where it can go:** anywhere, once; it sits close under the hero.
+
+**Variants** (set with `variant`; the first is used when it is left out):
+
+- `list` (default): Each post is a row with its date, title and summary, divided by soft lines.
+- `cards`: The posts are cards in a grid, each with its photo on top (a tinted panel with the date when it has no photo).
+
+**Fields** (inside `content`):
+
+| Field | What it is | Required | Limits |
+| --- | --- | --- | --- |
+| `emptyText` | Text while there are no posts. Shown on the blog page when no post is live yet. | yes | up to 160 characters |
+
+**Motion:** Rises gently into place as it scrolls into view (it shows at once for visitors who prefer reduced motion).
+
+**Example:**
+
+```json
+{
+  "emptyText": "No posts yet. The first one is on its way."
+}
+```
+
+## Business details (`business-details`)
+
+A heading and the business's address, phone, email and opening hours, read from the business details settings (business.json), so they are written once and stay the same everywhere. Parts that are empty are left out.
+
+**Where it can go:** anywhere, once.
+
+**Variants** (set with `variant`; the first is used when it is left out):
+
+- `columns` (default): Address, contact and hours side by side on wide screens, stacked on phones.
+- `compact`: Address, contact and hours in one narrow column.
+
+**Fields** (inside `content`):
+
+| Field | What it is | Required | Limits |
+| --- | --- | --- | --- |
+| `heading` | Heading | yes | up to 90 characters |
+
+**Motion:** Rises gently into place as it scrolls into view (it shows at once for visitors who prefer reduced motion).
+
+**Example:**
+
+```json
+{
+  "heading": "Where to find me"
+}
+```
+
+## Video list (`video-list`)
+
+The newest videos from your Videos collection, side by side, each with its title and caption. Add videos in the collection; this block shows them.
+
+**Where it can go:** anywhere, up to 2 times.
+
+**Needs JavaScript:** The play button swaps in the player only when it is pressed, so nothing loads from YouTube or Vimeo before that.
+
+**Variants** (set with `variant`; the first is used when it is left out):
+
+- `two-column` (default): The videos sit in two columns (one column on phones).
+- `three-column`: The videos sit in three columns on wide screens (with three or more videos), two on tablets, one on phones.
+
+**Fields** (inside `content`):
+
+| Field | What it is | Required | Limits |
+| --- | --- | --- | --- |
+| `heading` | Heading. Names the group of videos for everyone, including screen reader users. | yes | up to 90 characters |
+| `intro` | Intro | no | up to 240 characters |
+| `count` | How many. The newest this many videos are shown. Twelve when left empty. | no | a whole number from 1 to 24 |
+
+**Motion:** Rises gently into place as it scrolls into view (it shows at once for visitors who prefer reduced motion).
+
+**Example:**
+
+```json
+{
+  "heading": "A short heading that introduces the videos",
+  "intro": "A sentence that says what the videos are about.",
+  "count": 6
+}
+```
+
+## Podcast episodes (`episode-list`)
+
+The newest episodes from your Podcast episodes collection, each with its date and summary. Add episodes in the collection; this block shows them.
+
+**Where it can go:** anywhere, up to 2 times.
+
+**Needs JavaScript:** The play button swaps in the Spotify or Apple Podcasts player only when it is pressed, so nothing loads from them before that.
+
+**Variants** (set with `variant`; the first is used when it is left out):
+
+- `list` (default): One row per episode with its player beside the text on wide screens (below it on phones).
+- `compact`: One row per episode with its date and a link that opens the episode on Spotify or Apple Podcasts. No player.
+
+**Fields** (inside `content`):
+
+| Field | What it is | Required | Limits |
+| --- | --- | --- | --- |
+| `heading` | Heading. Names the list of episodes for everyone, including screen reader users. | yes | up to 90 characters |
+| `intro` | Intro | no | up to 240 characters |
+| `count` | How many. The newest this many episodes are shown. Ten when left empty. | no | a whole number from 1 to 24 |
+
+**Motion:** Rises gently into place as it scrolls into view (it shows at once for visitors who prefer reduced motion).
+
+**Example:**
+
+```json
+{
+  "heading": "A short heading that introduces the episodes",
+  "intro": "A sentence that says what the show is about.",
+  "count": 3
+}
+```
+
+## Testimonials (`testimonials`)
+
+Quotes from named clients, taken from your Testimonials collection in the order you set there. Every quote shows who said it.
+
+**Where it can go:** anywhere, up to 2 times.
+
+**Variants** (set with `variant`; the first is used when it is left out):
+
+- `grid` (default): The quotes sit in cards, two across on tablets and three across on wide screens (one column on phones).
+- `feature`: The first quote is large, in the accent serif. Any others sit in a row beneath it.
+
+**Fields** (inside `content`):
+
+| Field | What it is | Required | Limits |
+| --- | --- | --- | --- |
+| `heading` | Heading | yes | up to 90 characters |
+| `count` | How many. The first this many quotes are shown. All of them (up to twelve) when left empty. | no | a whole number from 1 to 12 |
+
+**Motion:** Rises gently into place as it scrolls into view (it shows at once for visitors who prefer reduced motion).
+
+**Example:**
+
+```json
+{
+  "heading": "A short heading above what clients say",
+  "count": 3
+}
+```
+
+## Team (`team`)
+
+The people from your Team collection, in the order you set there, with a photo, name, role and short bio.
+
+**Where it can go:** anywhere, once.
+
+**Variants** (set with `variant`; the first is used when it is left out):
+
+- `grid` (default): A card per person with a tall photo (a tinted panel with their initials when there is no photo), name, role and bio.
+- `list`: Names and roles in two columns, no photos.
+
+**Fields** (inside `content`):
+
+| Field | What it is | Required | Limits |
+| --- | --- | --- | --- |
+| `heading` | Heading | yes | up to 90 characters |
+| `intro` | Intro | no | up to 240 characters |
+
+**Motion:** Rises gently into place as it scrolls into view (it shows at once for visitors who prefer reduced motion).
+
+**Example:**
+
+```json
+{
+  "heading": "A short heading that introduces the people",
+  "intro": "A sentence about who you work with."
 }
 ```
 

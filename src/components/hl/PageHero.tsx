@@ -5,7 +5,8 @@ import { Eyebrow } from "./Eyebrow";
 import { PageDrawing, type PageDrawingName } from "./PageDrawing";
 
 type HeroTextProps = {
-  eyebrow?: string;
+  /** A string is rendered with `Text`; a node (for example a date in a `time`) is used as given. */
+  eyebrow?: ReactNode;
   /** The page's single H1. A string is rendered with `Text`, so [[placeholders]] show as markers. */
   title: ReactNode;
   intro?: ReactNode;
@@ -30,7 +31,7 @@ export function HeroCopy({ eyebrow, title, intro, children, headingLevel = "h1",
     <div>
       {eyebrow ? (
         <Eyebrow>
-          <Text>{eyebrow}</Text>
+          {asText(eyebrow)}
         </Eyebrow>
       ) : null}
       <Heading id={headingId} className={`${eyebrow ? "mt-4 " : ""}max-w-em-16 text-title`}>

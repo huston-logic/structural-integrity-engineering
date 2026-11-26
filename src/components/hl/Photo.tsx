@@ -24,13 +24,22 @@ type PhotoProps = {
   /** The `sizes` attribute: how wide the photo is at each screen width. */
   sizes: string;
   className?: string;
+  /** True for a photo that is the page's largest first-screen element (a post's lead photo): it loads at once, first. */
+  lead?: boolean;
 };
 
 /** A photo cropped to its slot's shape (never stretched). The box holds its space before the file arrives, so nothing shifts. */
-export function Photo({ image, shape, sizes, className = "" }: PhotoProps) {
+export function Photo({ image, shape, sizes, className = "", lead = false }: PhotoProps) {
   return (
     <div className={`relative w-full overflow-hidden rounded-card bg-tint ${ASPECT[shape]} ${className}`}>
-      <Image src={image.src} alt={image.alt} fill sizes={sizes} className={`object-cover ${FOCUS[image.focus ?? "center"]}`} />
+      <Image
+        src={image.src}
+        alt={image.alt}
+        fill
+        sizes={sizes}
+        className={`object-cover ${FOCUS[image.focus ?? "center"]}`}
+        preload={lead}
+      />
     </div>
   );
 }

@@ -49,6 +49,11 @@ the lines below are not). Both D1 and D2 are candidates to bring back to the tem
 - **Library blocks read Dusk.** In `src/app/hl.css` (`@theme inline` and `@theme`) the template's names map to Dusk roles:
   `ink` is `night` (dark fill), `ink-2` is `mist` (muted text), `green` is `amber` (accent), `silver` and `white` are
   `snow`, `font-ui` is the one typeface, `rounded-btn` is a pill, `rounded-card` is square (photography stays square).
+  Also mapped: `hairline` is `rule`, `rust` (the template's warm accent, the draft tag) is `error` (5.7:1 on dusk, and
+  apart from the amber accent), `font-voice` is the one typeface (no accent serif here), `text-quote` is the `h4` size,
+  `shadow-chip` is a soft night shadow, `max-w-title` is 18em. `Card` is a dark box (`tint` fill, `rule` border, snow
+  text) because the template's light card made snow text unreadable; `PostBody` links underline in amber; `Notice`
+  resolves its link with `resolveHref` (so `@booking` works).
   The library's type steps (`text-list`, `text-blurb`, `text-item`, `text-card-title`, `text-subhead`) and measures
   (`max-w-intro`, `max-w-narrow`, `max-w-heading`) are set to sizes near the site's own scale. Nothing else in the
   library blocks was changed. `HeroContent` in `PageHero.tsx` is the site's hero text for the library hero block.
@@ -127,3 +132,69 @@ links. `src/lib/thanks-links.ts` is kept as the template has it, and the templat
 - **Re-apply on a port:** the `shape` on each site block's image field; the two lines in `hl.css`; `CONTACT_PATH` and no
   `menu` in the upload tests' fixtures (`uploads-acceptance.test.ts`, `owner-uploads.test.ts`); `pages.ts` and
   `check-content.mjs` pass no thanks-page links (D5).
+
+## D11. Brand stays fixed (no brand.json)
+
+- **What:** the template moved colors, fonts and the logo to `src/content/brand.json` so the owner can change them by chat.
+  Here they stay as they were: `theme.colors`, `theme.fonts` and `brand.logo` in `site.config.ts`, with `npm run sync:config`
+  still writing the `:root` palette in `src/app/hl.css` and `src/lib/fonts.ts` from them. There is no `brand.json`, no
+  `src/app/palette.css`, and no editor tool can change a color, a font or the logo.
+- **Why:** the template's brand settings need its 13 color names and its curated fonts (Manrope is allowed for headings only),
+  and its logo is an uploaded raster image. This site has the 8 Dusk colors, one typeface and an SVG mark, so moving them
+  would change every page. The rule is "no visible change to any page".
+- **One switch:** `BRAND_FIXED` in `src/settings/names.ts` (import-free, so the build, the scripts and the Worker read it). It
+  gives `SITE_SETTINGS_NAMES` (`business` and `notice`: the settings files this site has), the empty
+  `GENERATED_BRAND_FILES` (`src/brand/generated.ts`), and the one message `BRAND_FIXED_MESSAGE`: "On this site the colors,
+  fonts and logo are set by Huston Logic, so they cannot be changed here. Ask Huston Logic."
+- **Where it acts:** `validateSite` (`src/collections/site-validate.ts`) skips brand and refuses a `brand.json` that appears;
+  the editor (`worker/editor/operations.ts`) refuses `set_brand_color`, `set_font` and any `set`, `insert_item` or
+  `remove_item` on the brand settings with that message, `get_settings` for brand and `list_collections`
+  (`worker/editor/read-tools.ts`) say it, the editor's instructions item 15 tells the AI not to propose it,
+  `worker/editor/site-reader.ts` never reads or commits `brand.json`, `palette.css` or `fonts.ts`; the scope rules
+  (`scripts/change-scope-rules.mjs`) have no brand file, so those three are tier 3; the catalog says brand is fixed
+  (`buildSettings` in `scripts/blocks-catalog.mjs`). `docs/EDITING-LANES.md` puts brand colors, fonts and the logo in Lane 3.
+- **Kept as the template has them (so a later port stays easy):** `src/brand/`, `src/settings/brand.ts` and their tests, run
+  on the template's own default brand in `src/brand/fixtures/template-brand.json` (used by tests only, never by the site);
+  the generators in `scripts/config-rules.mjs` (`brandFiles`, `driftedFiles`).
+- **The OG image route and the layout's `themeColor` keep this site's versions** (they read `theme.colors`). `Logo.tsx` keeps
+  the drawn mark and takes only the business name from `business.json`.
+- **Re-apply on a port:** `BRAND_FIXED` and what reads it (the files named above); `scripts/sync-config.mjs` is this site's own
+  (no `brandFiles`), `scripts/make-example-photos.mjs` reads `theme`, `scripts/check-placeholders.mjs` keeps the `theme` keys;
+  do not take the template's `hl.css` palette removal, its `color-mix` shadows and glows, `Logo.tsx`, `og.png/route.tsx`
+  or `layout.tsx`. To bring brand settings in later: set `BRAND_FIXED` false, add a real `brand.json` in the template's shape,
+  switch `sync-config.mjs` to the template's, and write the tests that now say "fixed" the other way. The `false` path is
+  untested on this site (the template's own brand tests run on a fixture, `src/brand/fixtures/template-brand.json`).
+
+## D12. The example items and the blog page are archived
+
+- **What:** the template ships `src/content/pages/blog.json` and one example item per kind (post, video, episode, testimonial,
+  team member) as `live` with `[[placeholders]]`. Here every one has `"status": "archived"` and `blog.json` has no `menu` (D7).
+  Nothing is deleted; an owner can restore them by chat. The example post's link goes to `CONTACT_PATH` (D1).
+- **Why:** live, they would put a `/blog` page, an example post and a feed full of placeholders on Dylan's site.
+- **Nothing under `/blog` is built.** The blog route (`src/app/(site)/blog/[[...path]]/page.tsx`) must generate at least one
+  address for a static export, so with `blog.json` archived it generates `/blog` and Next writes a 404 shell there and an
+  empty `/blog/feed.xml`. `scripts/finish-build.mjs` removes `blog.html`, `blog.txt` and `blog/` from `out/` after the build
+  when no live page has the path `/blog`. `src/lib/routes.ts` already leaves an archived page out of the sitemap, the a11y
+  scan and Lighthouse. The validator does not force `/blog` live: it asks for a live `/blog` only when a post is live.
+  Residue: each page's embedded route tree (`"s":["blocks","blog",...]`, invisible) names `blog` as a route.
+- **Tests:** `scripts/finish-build.test.mjs`, `src/lib/routes.test.ts`, `src/lib/seo.test.ts` (live pages only),
+  `src/collections/validate.test.ts` (the shipped examples are `archived`), and the editor's `test-support.ts` seeds the examples
+  as `live` (`asShipped`) so the template's tests keep exercising the same states.
+- **To restore:** set `blog.json` to `live` (and add `menu` links in `nav.ts` if wanted), and the posts that are ready to `live`.
+
+## D13. Business details are in `src/content/business.json`
+
+- **What:** the public phone number, public email, address, hours and social links moved out of `site.config.ts`
+  (`owner.phone` and `contact.linkedInUrl` are gone) to `src/content/business.json`, values copied exactly: name "Structural
+  Integrity Engineering", phone "(907) 350-3456", email "dylan@structural-integrity-engineering.com", no address, no hours,
+  no social links (there was no LinkedIn page). `contact.siteEmail` stays in `site.config.ts` (where notifications go).
+  `business.timeZone` is "America/Denver". `src/content/notice.json` is `{ "text": "", "endsOn": null }`: no notice, and the
+  `Notice` component (in `SiteChrome`) renders nothing for it.
+- **Who reads it:** the footer, the contact page hero and band, the steps block's email line, the contact form's error line
+  (the server blocks pass it in as `direct`), the logo's text and label, `og:site_name` and the OG alt, and the homepage
+  JSON-LD name and email. `src/lib/direct-contact.ts` is the one reader for phone and email; it keeps this site's
+  `telHref` (`tel:+1...`), not the template's digits-only one, so the links do not change.
+- **Wiring colors:** `contact.emailColors` (the auto-reply) holds the Dusk values the email always used, and
+  `editor.pageColors` holds `ownerTheme(theme.colors)` (D8); `worker/editor/theme.test.ts` keeps the two equal.
+- **Re-apply on a port:** `directContact()` in the footer, contact hero and band, steps block and the contact blocks; `Logo.tsx`
+  and `Footer.tsx` stay this site's; the Worker's auto-reply reads `contact.emailColors`, with no `schedulerUrl`.

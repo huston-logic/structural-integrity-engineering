@@ -11,7 +11,6 @@ import { editorActive, isEditorPath, missingBindings } from "./editor/gate.ts";
 import { plainText } from "./http.ts";
 import { handleMcp } from "./editor/mcp.ts";
 import { handleOwner } from "./editor/owner-routes.ts";
-import { ownerTheme } from "./editor/theme.ts";
 
 type ProviderEnv = EditorEnv & { OAUTH_PROVIDER?: OAuthHelpers };
 
@@ -60,7 +59,7 @@ function createProvider(origin: string): OAuthProvider<ProviderEnv> {
           editor: buildEditor(workerConfig, env),
           config,
           oauth,
-          theme: ownerTheme(siteConfig.theme.colors),
+          theme: siteConfig.editor.pageColors,
           ...(env.EDITOR_RATE_LIMIT ? { rateLimit: env.EDITOR_RATE_LIMIT } : {}),
         });
       },

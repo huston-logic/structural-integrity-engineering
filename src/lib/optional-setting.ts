@@ -1,5 +1,5 @@
 /**
- * Optional provider settings (`contact.schedulerUrl`, `contact.linkedInUrl`). Three states:
+ * Optional provider settings (`contact.schedulerUrl`). Three states:
  * a real URL (shown), "none" (the owner has decided there is none: pages omit it and the launch gate passes) and
  * null (not decided yet: the launch gate fails). Import-free, because the contact Worker bundles it.
  */

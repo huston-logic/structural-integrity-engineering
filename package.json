@@ -22,7 +22,7 @@
     "report:changes": "node --disable-warning=ExperimentalWarning --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/change-report.mjs",
     "strip:images": "node scripts/strip-image-metadata.mjs",
     "test:scripts": "node --disable-warning=ExperimentalWarning --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test \"scripts/*.test.mjs\"",
-    "test:worker": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test \"worker/*.test.ts\" \"worker/editor/*.test.ts\" \"worker/uploads/*.test.ts\" \"src/lib/*.test.ts\"",
+    "test:worker": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test \"worker/*.test.ts\" \"worker/editor/*.test.ts\" \"worker/uploads/*.test.ts\" \"src/lib/*.test.ts\" \"src/blocks/*.test.ts\" \"src/collections/*.test.ts\" \"src/brand/*.test.ts\" \"src/settings/*.test.ts\"",
     "test:a11y": "playwright test",
     "test:lighthouse": "lhci autorun",
     "check": "npm run check:fast && npm run build",

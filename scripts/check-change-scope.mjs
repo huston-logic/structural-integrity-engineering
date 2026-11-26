@@ -17,6 +17,9 @@ import { rules as defaultRules } from "./change-scope-rules.mjs";
 import { contentModuleProblem } from "./change-scope-code.mjs";
 import { registry } from "../src/blocks/definitions.ts";
 import { validatePages as realValidatePages } from "../src/blocks/validate.ts";
+import { validateSite as realValidateSite, SITE_SETTINGS_NAMES } from "../src/collections/site-validate.ts";
+import { COLLECTION_KINDS, SLUG_RE } from "../src/collections/schema.ts";
+import { brandFiles } from "./config-rules.mjs";
 import { imageAltCheck } from "./image-alt.mjs";
 import { inspectMetadata } from "./image-metadata.mjs";
 import { pdfProblem } from "./pdf-check.mjs";
@@ -65,6 +68,9 @@ export function parseHunkLines(patch) {
 // ---- reading the change from git ------------------------------------------------------------------------------
 
 const isPageFile = (path, rules) => rules.pageFile.test(path);
+const isItemFile = (path, rules) => rules.itemFile.test(path);
+const isSettingsFile = (path, rules) => rules.settingsFiles.includes(path);
+const isGeneratedFile = (path, rules) => rules.generatedFiles.includes(path);
 
 const isCodeFile = (path, rules) => (rules.contentFile.test(path) && !rules.contentWiring.includes(path)) || rules.tier1Files.includes(path);
 
@@ -129,7 +135,7 @@ export function gatherChange({ base, head, git, rules = defaultRules }) {
     }
     // --text: git must not hide the added lines of a file it thinks is binary (for example, one that contains a NUL byte).
     Object.assign(file, parseHunkLines(git(["diff", "-U0", "--no-renames", "--text", range, "--", path])));
-    const needsContent = file.status !== "D" && !special && isCodeFile(path, rules);
+    const needsContent = file.status !== "D" && !special && (isCodeFile(path, rules) || isGeneratedFile(path, rules));
     if (needsContent) file.content = String(git(["show", `${head}:${path}`]));
     return file;
   });
@@ -140,11 +146,19 @@ export function gatherChange({ base, head, git, rules = defaultRules }) {
       ((isPageFile(f.path, rules) && ["A", "M"].includes(f.status)) ||
         ((f.path.startsWith(rules.imageDir) || f.path.startsWith(rules.fileDir)) && ["D", "M"].includes(f.status))),
   );
-  if (!touchesPages) return { files, imageRefs, fileRefs };
+  // An item, a settings file or a generated brand file added or edited means the whole site is judged (the settings and items too).
+  const touchesSite = files.some(
+    (f) =>
+      !SPECIAL_MODES.includes(f.mode) &&
+      ["A", "M"].includes(f.status) &&
+      (isItemFile(f.path, rules) || isSettingsFile(f.path, rules) || isGeneratedFile(f.path, rules)),
+  );
+  if (!touchesPages && !touchesSite) return { files, imageRefs, fileRefs };
   return {
     files,
     imageRefs,
     fileRefs,
+    site: readSiteAt(head, git, rules),
     pages: readPagesAt(head, git, rules),
     headImages: listAt(head, rules.imageDir, git, true),
     headFiles: listAt(head, rules.fileDir, git, true),
@@ -174,13 +188,66 @@ function readPagesAt(head, git, rules) {
     });
 }
 
+/** The JSON text parsed like src/lib/content-files.ts does: `error` says why it could not be read. */
+function parseJsonText(raw) {
+  const text = String(raw).replace(/^\uFEFF/, "");
+  if (text.trim() === "") return { data: undefined, error: "is empty. The file holds one JSON object." };
+  try {
+    return { data: JSON.parse(text) };
+  } catch (cause) {
+    return { data: undefined, error: `is not valid JSON (${cause.message}). Look for a missing or extra comma, quote or bracket.` };
+  }
+}
+
+/** The item files (one folder below the collections folder) and the settings files at `head`, read like src/lib/content-files.ts reads them. */
+function readSiteAt(head, git, rules) {
+  const items = listAt(head, rules.itemDir, git, true)
+    .map((path) => ({ path, match: rules.itemFile.exec(path) }))
+    .filter(({ match }) => match !== null)
+    .sort((a, b) => (a.path < b.path ? -1 : 1))
+    .map(({ path, match }) => {
+      const { data, error } = parseJsonText(git(["show", `${head}:${path}`]));
+      return { kind: match[1], slug: match[2], data, ...(error !== undefined ? { error } : {}) };
+    });
+  const present = new Set(String(git(["ls-tree", "--name-only", "-z", head, "--", ...rules.settingsFiles])).split("\0").filter(Boolean));
+  const site = { items, settingsErrors: {} };
+  for (const name of SITE_SETTINGS_NAMES) {
+    const path = `src/content/${name}.json`;
+    if (!present.has(path)) {
+      site[name] = undefined;
+      continue;
+    }
+    const { data, error } = parseJsonText(git(["show", `${head}:${path}`]));
+    site[name] = data;
+    if (error !== undefined) site.settingsErrors[name] = error;
+  }
+  return site;
+}
+
 // ---- the rules, applied to a change ---------------------------------------------------------------------------
 
 function tier3Reason(path, rules) {
   return rules.tier3Labels.find(([pattern]) => pattern.test(path))[1];
 }
 
-function classify(file, rules) {
+/** True when the generated brand file at the head commit is exactly what brand.json (at the head commit) generates. */
+function generatedMatches(file, site) {
+  try {
+    const expected = brandFiles(site.brand)[file.path];
+    return typeof expected === "string" && file.content === expected;
+  } catch {
+    return false;
+  }
+}
+
+function itemProblem(path, rules) {
+  const [, kind, slug] = rules.itemFile.exec(path);
+  if (!COLLECTION_KINDS.includes(kind)) return `"${kind}" is not a collection. The collections are: ${COLLECTION_KINDS.join(", ")}`;
+  if (!SLUG_RE.test(slug)) return `the slug "${slug}" must be lowercase words and digits joined by hyphens, 1 to 60 characters`;
+  return null;
+}
+
+function classify(file, rules, site) {
   const { path, status } = file;
   if (status === "T" || (status !== "D" && SPECIAL_MODES.includes(file.mode))) {
     return { ok: false, reason: "symbolic links, submodules and file type changes are not allowed" };
@@ -196,6 +263,16 @@ function classify(file, rules) {
   if (path.startsWith(rules.imageDir)) return { ok: true };
   if (path.startsWith(rules.fileDir)) return rules.pdfFile.test(path) ? { ok: true } : { ok: false, reason: rules.fileNameReason };
   if (isPageFile(path, rules)) return status === "D" ? { ok: false, reason: rules.archiveReason } : { ok: true };
+  if (isItemFile(path, rules)) {
+    if (status === "D") return { ok: false, reason: rules.itemArchiveReason };
+    const problem = itemProblem(path, rules);
+    return problem ? { ok: false, reason: problem } : { ok: true };
+  }
+  if (isSettingsFile(path, rules)) return status === "D" ? { ok: false, reason: rules.itemArchiveReason } : { ok: true };
+  if (isGeneratedFile(path, rules)) {
+    if (status === "D") return { ok: false, reason: rules.generatedMismatchReason };
+    return generatedMatches(file, site ?? {}) ? { ok: true } : { ok: false, reason: rules.generatedMismatchReason };
+  }
   return { ok: false, reason: tier3Reason(path, rules) };
 }
 
@@ -242,11 +319,17 @@ function pdfProblems(file, fileRefs) {
  * The pure core: takes { files, imageRefs, fileRefs, pages, headImages, headFiles } and returns the verdict. No git, no disk.
  * `validate` is the content check (default: the real one), so tests can run it on fake pages.
  */
-export function evaluateChange({ files, imageRefs = {}, fileRefs = {}, pages, headImages = [], headFiles = [] }, rules = defaultRules, validate = realValidatePages) {
-  const result = { tier: 1, outside: [], imageProblems: [], altProblems: [], fileProblems: [], contentProblems: [], images: [], placeholders: [], fileCount: files.length };
+export function evaluateChange(
+  { files, imageRefs = {}, fileRefs = {}, pages, site, headImages = [], headFiles = [] },
+  rules = defaultRules,
+  validate = realValidatePages,
+  validateSite = realValidateSite,
+) {
+  const result = { tier: 1, outside: [], imageProblems: [], altProblems: [], fileProblems: [], contentProblems: [], images: [], placeholders: [], brandChange: false, fileCount: files.length };
 
   for (const file of files) {
-    const verdict = classify(file, rules);
+    const verdict = classify(file, rules, site);
+    if (file.path === rules.brandFile || (isGeneratedFile(file.path, rules) && verdict.ok)) result.brandChange = true;
     if (!verdict.ok) result.outside.push({ path: safe(file.path), reason: safe(verdict.reason) });
 
     if (file.path.startsWith(rules.imageDir)) {
@@ -282,7 +365,9 @@ export function evaluateChange({ files, imageRefs = {}, fileRefs = {}, pages, he
     const present = new Set(headImages);
     const presentFiles = new Set(headFiles);
     const repo = { imageExists: (src) => present.has(`public${src}`), fileExists: (href) => presentFiles.has(`public${href}`) };
-    for (const problem of validate(pages, registry, repo)) result.contentProblems.push(safe(problem));
+    // With the items and settings read, the whole site is judged; without them (a test with fake pages) only the pages are.
+    const problems = site ? validateSite({ pages, ...site }, registry, repo) : validate(pages, registry, repo);
+    for (const problem of problems) result.contentProblems.push(safe(problem));
   }
   if (result.outside.length > 0) result.tier = 3;
   return result;
@@ -314,6 +399,7 @@ export function formatReport(result, { mode = "strict", base, head } = {}) {
     lines.push(`Tier 3: this change needs Grant. ${plural(result.outside.length, "file")} outside what a client change may touch:`);
     lines.push(...list(result.outside.map((o) => `  - ${o.path} (${o.reason})`)));
   }
+  if (result.brandChange) lines.push("", "Brand change: touches every page; it needs a preview before the yes.");
   if (result.images.length > 0) {
     lines.push("", "Images in this change (read the alt text: does it say what the picture shows?):");
     lines.push(...list(result.images.map((image) => `  - ${image.path}: ${image.alts.length > 0 ? `alt ${image.alts.map((alt) => JSON.stringify(alt)).join(", ")}` : "no usable alt text"}`)));

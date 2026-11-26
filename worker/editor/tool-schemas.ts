@@ -22,6 +22,23 @@ export interface InputSchema {
 export const noArguments: InputSchema = { type: "object", properties: {}, required: [], additionalProperties: false };
 
 const pagePath = { type: "string", description: 'A page path such as "/hours".' };
+const itemKey = { type: "string", description: 'An item as "<collection>/<slug>", such as "posts/new-inspection-service".' };
+const settingsName = { enum: ["business", "brand", "notice"], description: "One of the settings files." };
+const collectionName = { enum: ["posts", "videos", "episodes", "testimonials", "team"], description: "One of the collections." };
+const slug = { type: "string", description: "Lowercase words and digits joined by hyphens, 1 to 60 characters." };
+/** What a set, insert_item or remove_item changes: exactly one of page, item or settings. */
+const target = {
+  page: { type: "string", description: 'A page path such as "/hours".' },
+  item: { ...itemKey, description: 'An item as "<collection>/<slug>", such as "posts/new-inspection-service". Pointers may not reach /status (use set_item_status).' },
+  settings: { ...settingsName, description: 'A settings file. In "brand" only /logo may be set this way (colors and fonts have their own operations).' },
+};
+const targeted = (properties: Record<string, unknown>) => ({
+  type: "object",
+  properties: { ...properties, ...target },
+  required: Object.keys(properties),
+  additionalProperties: false,
+  anyOf: [{ required: ["page"] }, { required: ["item"] }, { required: ["settings"] }],
+});
 const position = (what: string) => ({ type: "integer", minimum: 1, description: `${what} (1-based, as the owner sees it).` });
 const pointer = {
   type: "string",
@@ -36,9 +53,9 @@ const strict = (properties: Record<string, unknown>) => ({
 
 /** One schema per operation kind, as worker/editor/operations.ts accepts them. */
 const operationSchemas: Record<string, unknown>[] = [
-  strict({ op: { const: "set" }, page: pagePath, pointer, value: { description: "The new value. Null removes an optional field." } }),
-  strict({ op: { const: "insert_item" }, page: pagePath, pointer, at: position("Where the new item goes in the list"), value: { description: "The new list item." } }),
-  strict({ op: { const: "remove_item" }, page: pagePath, pointer, at: position("The list item to remove") }),
+  targeted({ op: { const: "set" }, pointer, value: { description: "The new value. Null removes an optional field." } }),
+  targeted({ op: { const: "insert_item" }, pointer, at: position("Where the new item goes in the list"), value: { description: "The new list item." } }),
+  targeted({ op: { const: "remove_item" }, pointer, at: position("The list item to remove") }),
   strict({
     op: { const: "insert_block" },
     page: pagePath,
@@ -60,6 +77,15 @@ const operationSchemas: Record<string, unknown>[] = [
   }),
   strict({ op: { const: "archive_page" }, page: pagePath }),
   strict({ op: { const: "restore_page" }, page: pagePath }),
+  strict({
+    op: { const: "add_item" },
+    collection: collectionName,
+    slug,
+    item: { type: "object", description: 'The new item: "status" ("draft" or "live"; draft unless the owner said to publish) and its fields, as get_collection lists them.' },
+  }),
+  strict({ op: { const: "set_item_status" }, item: itemKey, status: { enum: ["draft", "live", "archived"], description: "draft: save as a draft; live: publish or restore; archived: archive." } }),
+  strict({ op: { const: "set_brand_color" }, role: { enum: ["brand", "accent"] }, value: { type: "string", pattern: "^#[0-9a-fA-F]{6}$", description: "A #rrggbb color. It is refused if any text or button would stop being readable." } }),
+  strict({ op: { const: "set_font" }, role: { enum: ["display", "body", "accent"] }, font: { type: "string", description: "A font id from get_settings (brand)." } }),
 ];
 
 const uploadId: Prop = { type: "string", pattern: "^[a-z0-9]{8}$", description: "An upload id from list_uploads." };
@@ -84,6 +110,17 @@ export const schemas = {
     required: ["summary", "operations"],
     additionalProperties: false,
   },
+  getCollection: { type: "object", properties: { collection: { type: "string", pattern: "^(posts|videos|episodes|testimonials|team)$", description: "One of posts, videos, episodes, testimonials, team." } }, required: ["collection"], additionalProperties: false },
+  getItem: {
+    type: "object",
+    properties: {
+      collection: { type: "string", pattern: "^(posts|videos|episodes|testimonials|team)$", description: "One of posts, videos, episodes, testimonials, team." },
+      slug: { type: "string", minLength: 1, maxLength: 60, description: "The item's slug." },
+    },
+    required: ["collection", "slug"],
+    additionalProperties: false,
+  },
+  getSettings: { type: "object", properties: { name: { type: "string", pattern: "^(business|brand|notice)$", description: "business, brand or notice." } }, required: ["name"], additionalProperties: false },
   upload: { type: "object", properties: { upload_id: uploadId }, required: ["upload_id"], additionalProperties: false },
   preview: { type: "object", properties: { proposal_id: proposalId }, required: ["proposal_id"], additionalProperties: false },
   publish: {

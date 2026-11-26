@@ -4,8 +4,8 @@ import { confirmation } from "./contact-fields.ts";
 /**
  * The automatic reply the contact Worker sends, as HTML and plain text with the same words. The words are the copy deck's
  * "After sending" line (`confirmation` in contact-fields.ts); there is no booking link and no visitor input in it at all.
- * The signature (names, email, domain, tagline) and the inline colors come from site.config.ts. This module imports only
- * import-free files, because the Worker bundles it.
+ * The signature (names, email, domain, tagline) and the inline colors (`contact.emailColors`) come from site.config.ts.
+ * This module imports only import-free files, because the Worker bundles it.
  */
 
 /** In the site's voice; Grant approves these two lines in the PR. */
@@ -17,8 +17,7 @@ export interface AutoReplyConfig {
   business: { name: string; tagline: string };
   owner: { name: string; role: string };
   domain: { url: string };
-  contact: { siteEmail: string | null };
-  theme: { colors: { night: string; dusk: string; duskDeep: string; rule: string; mist: string } };
+  contact: { siteEmail: string | null; emailColors: { green: string; ink: string; ink2: string; rust: string; line: string } };
 }
 
 function escapeHtml(value: string): string {
@@ -32,12 +31,8 @@ function displayHost(url: string): string {
 
 /** Builds the reply content. It never throws: placeholder or null config values just show up as text (or are left out). */
 export function buildAutoReply(config: AutoReplyConfig) {
-  const { business, owner, domain, contact, theme } = config;
-  // The email is read on a light background, so it takes the darker tokens: night text, rule (6:1 on white) for the
-  // quieter lines, dusk links, the tagline in dusk-deep and a mist separator. Amber and snow are for the dark site and
-  // would fail contrast on white.
-  const t = theme.colors;
-  const c = { ink: t.night, ink2: t.rule, green: t.dusk, rust: t.duskDeep, line: t.mist };
+  const { business, owner, domain, contact } = config;
+  const c = contact.emailColors;
   const email = contact.siteEmail;
   const host = displayHost(domain.url);
   const role = `${owner.role}, ${business.name}`;

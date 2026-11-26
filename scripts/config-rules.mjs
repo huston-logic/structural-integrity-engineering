@@ -2,6 +2,9 @@
 // each form destination needs. Pure functions over a config object, so they have tests (config-rules.test.mjs).
 // Names only, never values (docs/SECRETS.md).
 import { isHttpsOrigin } from "../worker/pipeline-url.ts"; // the same rule the Worker applies before it sends the secret
+import { fontsModule } from "../src/brand/fonts.ts";
+import { FONTS_PATH, PALETTE_PATH } from "../src/brand/generated.ts";
+import { paletteCss } from "../src/brand/palette.ts";
 
 const DESTINATIONS = ["sheet", "pipeline"];
 const WRITERS = ["apps-script", "service-account"];
@@ -252,4 +255,36 @@ export function configProblems(c) {
     }
   }
   return [...problems, ...editorProblems(c), ...uploadsProblems(c)];
+}
+
+/**
+ * The two files generated from src/content/brand.json: the palette and the fonts module. A brand that does not pass the
+ * generators (a color that is not #rrggbb, a font that is not curated) throws a plain error; the full judgement of
+ * brand.json (contrast, logo) is `npm run check:content`.
+ */
+export function brandFiles(brand) {
+  return { [PALETTE_PATH]: paletteCss(brand.colors), [FONTS_PATH]: fontsModule(brand.fonts) };
+}
+
+/** First differing lines of two texts, for a drift report. */
+export function diffLines(expected, actual) {
+  const a = actual.split("\n");
+  const e = expected.split("\n");
+  const out = [];
+  for (let i = 0; i < Math.max(a.length, e.length) && out.length < 12; i++) {
+    if (a[i] !== e[i]) {
+      out.push(`    line ${i + 1}`, `      committed: ${a[i] ?? "(missing)"}`, `      generated: ${e[i] ?? "(missing)"}`);
+    }
+  }
+  return out.join("\n");
+}
+
+/** One entry per generated file whose committed text (`read(path)`, or null when missing) differs from what is generated. */
+export function driftedFiles(generated, read) {
+  const drifted = [];
+  for (const [path, expected] of Object.entries(generated)) {
+    const actual = read(path) ?? "";
+    if (actual !== expected) drifted.push(`  - ${path}\n${diffLines(expected, actual)}`);
+  }
+  return drifted;
 }

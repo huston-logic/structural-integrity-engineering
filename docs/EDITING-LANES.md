@@ -43,6 +43,18 @@ Ask for any of these in plain words.
   site uses, in the header, footer and contact form, are site settings: see Lane 3.)
 - **Add a YouTube or Vimeo video**, or a grid of videos. Works today. Upload the video to YouTube or Vimeo first, not to
   your site: uploads refuse video files.
+- **Write blog posts.** Ask for a post in plain words, in your voice. A new post is saved as a draft. Ask to publish it,
+  archive it or restore it. A post has its own page, is listed on your blog and is in your feed. Works today.
+- **Show your latest posts** on any page, or list every post on your blog page. Works today.
+- **Add videos** to your videos, from YouTube or Vimeo, and show them in a list. Works today.
+- **Add podcast episodes** from Spotify or Apple Podcasts, and show them in a list. Works today.
+- **Add testimonials.** You give the quote and the name of the person who said it. The AI app never writes a quote or
+  a name you did not give it. Works today.
+- **Add team members.** A name, a role, an optional bio and an optional photo. Works today.
+- **Change your business details**: phone number, email address, address, opening hours and social links. They show in
+  the header and footer and on any page with a business details section. Works today.
+- **Put up a site notice**: one short line at the top of every page, with an optional link and an optional last day.
+  Take it down whenever you like. Works today.
 
 ### The check on every change
 
@@ -73,6 +85,13 @@ Each section below is one block you can place on a page. The list says what each
 - **Video grid**: Two to six videos from YouTube or Vimeo side by side, each with a title and a short caption. (You can choose a look: **two-column**, the videos sit in two columns, one column on phones; **three-column**, the videos sit in three columns on wide screens, with three or more videos, two on tablets, one on phones.)
 - **Photo with text**: One photo beside a heading, a few paragraphs and an optional button. Good for an about section, a place or a service. (You can choose a look: **photo-start**, the photo sits on the left on wide screens, the text on the right. On phones the photo is above the text; **photo-end**, the photo sits on the right on wide screens, the text on the left. On phones the photo is above the text.)
 - **Photo gallery**: Two to twelve photos in a grid, each with an optional caption. The photos do not open larger. (You can choose a look: **three-column**, the photos sit three across on wide screens and two across on tablets and phones; **two-column**, the photos sit two across on wide screens and tablets, and one across on phones.)
+- **Latest posts**: The newest blog posts, with a heading and an optional link to all of them. It updates by itself when a post is added, and is left out of the page while there is no post. (You can choose a look: **cards**, each post is a card with its photo on top, a tinted panel with the date when it has no photo, then the date, title and summary; **list**, each post is a row with its date, title and summary, divided by soft lines.)
+- **Post index**: The list of every blog post, newest first, ten to a page, with links to newer and older pages. It belongs on the blog page only, once. (You can choose a look: **list**, each post is a row with its date, title and summary, divided by soft lines; **cards**, the posts are cards in a grid, each with its photo on top, a tinted panel with the date when it has no photo.)
+- **Business details**: A heading and the business's address, phone, email and opening hours, read from the business details settings (business.json), so they are written once and stay the same everywhere. Parts that are empty are left out. (You can choose a look: **columns**, address, contact and hours side by side on wide screens, stacked on phones; **compact**, address, contact and hours in one narrow column.)
+- **Video list**: The newest videos from your Videos collection, side by side, each with its title and caption. Add videos in the collection; this block shows them. (You can choose a look: **two-column**, the videos sit in two columns, one column on phones; **three-column**, the videos sit in three columns on wide screens, with three or more videos, two on tablets, one on phones.)
+- **Podcast episodes**: The newest episodes from your Podcast episodes collection, each with its date and summary. Add episodes in the collection; this block shows them. (You can choose a look: **list**, one row per episode with its player beside the text on wide screens, below it on phones; **compact**, one row per episode with its date and a link that opens the episode on Spotify or Apple Podcasts. No player.)
+- **Testimonials**: Quotes from named clients, taken from your Testimonials collection in the order you set there. Every quote shows who said it. (You can choose a look: **grid**, the quotes sit in cards, two across on tablets and three across on wide screens, one column on phones; **feature**, the first quote is large, in the accent serif. Any others sit in a row beneath it.)
+- **Team**: The people from your Team collection, in the order you set there, with a photo, name, role and short bio. (You can choose a look: **grid**, a card per person with a tall photo, a tinted panel with their initials when there is no photo, name, role and bio; **list**, names and roles in two columns, no photos.)
 - **Home hero**: The home page's first screen: a centered headline, a line under it and a button, in the sky of a dusk photo with an amber line drawing on the house.
 - **Photo hero**: A page top with the headline and a line on the left and a photo on the right that carries the page's amber line drawing.
 - **Service page hero**: The top of a service page: the headline and a line, the overview paragraph, and a hero photo that carries the page's amber line drawing.
@@ -113,6 +132,11 @@ These need Huston Logic. Ask, and Huston Logic will tell you what it takes.
 - **Change the menu.** On your site the header and footer menu is set by Huston Logic, not by the pages. Your AI app
   cannot add a page to it, remove one or reorder it; a page file that tries is refused with a plain message. Ask Huston
   Logic. Huston Logic builds it.
-- **The site-wide email address, booking link or LinkedIn link.** These are settings, not page text. Huston Logic
-  changes them.
+- **The notification email address (where the contact form sends notes) or the booking link.** These are settings, not
+  page text. Huston Logic changes them. (Your public email address and social links are in your business details, in
+  Lane 1.)
+- **Brand colors, fonts and the logo.** On your site these are set by Huston Logic: the colors, the typeface and the
+  logo are part of the design, and your AI app refuses a request to change them with a plain message. Ask Huston Logic.
+  Huston Logic builds it.
+- **Background and text colors, spacing, shape and motion.** The design sets these. Huston Logic changes them.
 - **Changes to how the contact form sends notes.** Huston Logic builds it.

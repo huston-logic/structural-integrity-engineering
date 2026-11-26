@@ -1,12 +1,13 @@
 import { Container } from "@/components/hl/Container";
 import { TextLink } from "@/components/hl/TextLink";
 import { Text } from "@/components/ui/Text";
-import { siteConfig } from "@/content/site";
+import { directContact } from "@/lib/direct-contact";
 import type { BlockProps } from "@/blocks/types";
 import type { ContentOf } from "@/blocks/schema";
 import type { stepsDefinition } from "./definition";
 
 export function StepsBlock({ content, anchor, headingId }: BlockProps<ContentOf<typeof stepsDefinition.fields>>) {
+  const { email } = directContact();
   return (
     <section id={anchor} aria-labelledby={headingId} className="scroll-mt-24">
       <Container>
@@ -31,9 +32,9 @@ export function StepsBlock({ content, anchor, headingId }: BlockProps<ContentOf<
         {content.emailLabel ? (
           <p className="mt-8 flex flex-wrap items-center gap-x-2 text-control">
             <Text>{content.emailLabel}</Text>{" "}
-            {siteConfig.email ? (
-              <TextLink inline href={`mailto:${siteConfig.email}`}>
-                {siteConfig.email}
+            {email ? (
+              <TextLink inline href={`mailto:${email}`}>
+                {email}
               </TextLink>
             ) : null}
           </p>

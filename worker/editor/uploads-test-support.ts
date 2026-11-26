@@ -1,4 +1,4 @@
-import { DEFAULT_UPLOADS } from "../config.ts";
+import { DEFAULT_UPLOADS, type EditorConfig } from "../config.ts";
 import { createFakeImages, type FakeImagesOptions } from "../uploads/fake-images.ts";
 import { createFakeR2, type FakeR2 } from "../uploads/fake-r2.ts";
 import { createUploadStore, type UploadStore } from "../uploads/store.ts";
@@ -18,7 +18,7 @@ export interface UploadsEditor extends TestEditor {
   r2: FakeR2;
 }
 
-export function makeUploadsEditor(options: { github?: FakeGitHub; images?: FakeImagesOptions; uploads?: Partial<UploadsConfig> } = {}): UploadsEditor {
+export function makeUploadsEditor(options: { github?: FakeGitHub; images?: FakeImagesOptions; uploads?: Partial<UploadsConfig>; config?: Partial<EditorConfig> } = {}): UploadsEditor {
   const r2 = createFakeR2();
   const images = createFakeImages({ webpSizes: [100 * 1024], ...options.images });
   let counter = 0;
@@ -31,7 +31,7 @@ export function makeUploadsEditor(options: { github?: FakeGitHub; images?: FakeI
     now: () => (held.test as TestEditor).now.value,
     randomId: () => `up${String(++counter).padStart(6, "0")}`,
   });
-  const test = (held.test = makeTestEditor({ ...(options.github ? { github: options.github } : {}), deps: { uploads: store } }));
+  const test = (held.test = makeTestEditor({ ...(options.github ? { github: options.github } : {}), ...(options.config ? { config: options.config } : {}), deps: { uploads: store } }));
   return { ...test, store, r2 };
 }
 

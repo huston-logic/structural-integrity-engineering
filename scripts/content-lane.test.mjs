@@ -111,3 +111,19 @@ test("CLI exits 2 with a message on stderr when git fails", () => {
   assert.deepEqual(out, []);
   assert.match(errs[0], /could not read the git history/);
 });
+
+test("a change to brand.json, a generated brand file, an item or business.json means scan everything", () => {
+  const pages = { "/about": page() };
+  const aboutFile = f("src/content/pages/about.json");
+  for (const path of [
+    "src/content/brand.json",
+    "src/app/palette.css",
+    "src/lib/fonts.ts",
+    "src/content/business.json",
+    "src/content/notice.json",
+    "src/content/collections/posts/spring-news.json",
+  ]) {
+    assert.equal(lane([f(path)], pages, pages), null, path);
+    assert.equal(lane([aboutFile, f(path, "A")], pages, pages), null, `${path} beside a page file`);
+  }
+});

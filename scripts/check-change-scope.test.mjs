@@ -7,6 +7,10 @@ import { dirname, join } from "node:path";
 import { test } from "node:test";
 import { CONTACT_PATH, fileForPath } from "../src/blocks/schema.ts";
 import { rules } from "./change-scope-rules.mjs";
+import { brandFiles } from "./config-rules.mjs";
+import { ITEM_DIR } from "../src/collections/schema.ts";
+import { GENERATED_BRAND_FILES } from "../src/brand/generated.ts";
+import { SETTINGS_NAMES, SITE_SETTINGS_NAMES } from "../src/collections/site-validate.ts";
 import { SECRET, app1Exif, jpeg as makeJpeg, png as makePng, pngText, webp as makeWebp } from "./image-fixtures.mjs";
 import {
   decide,
@@ -523,6 +527,7 @@ function makeRepo(setup) {
   write("src/content/pages/home.json", pageText("/"));
   write(`src/content/pages/${fileForPath(CONTACT_PATH)}`, pageText(CONTACT_PATH));
   write("src/content/pages/about.json", pageText("/about"));
+  for (const name of ["business", "notice"]) write(`src/content/${name}.json`, readFileSync(new URL(`../src/content/${name}.json`, import.meta.url)));
   git(["add", "-A"]);
   commit("base");
   git(["checkout", "-q", "-b", "change/test"]);
@@ -759,6 +764,8 @@ test("gatherChange reads every page file and the image list at the head commit w
     "show HEAD:src/content/pages/broken.json": "{",
     "ls-tree -r --name-only -z HEAD -- public/images/": "public/images/a.jpg\0public/images/team/b.png\0",
     "ls-tree -r --name-only -z HEAD -- public/files/": "public/files/menu.pdf\0",
+    "ls-tree -r --name-only -z HEAD -- src/content/collections/": "",
+    "ls-tree --name-only -z HEAD -- src/content/business.json src/content/notice.json": "",
   };
   const change = gatherChange({ base: "origin/main", head: "HEAD", git: fakeGit(table) });
   assert.deepEqual(change.headFiles, ["public/files/menu.pdf"]);
@@ -766,7 +773,7 @@ test("gatherChange reads every page file and the image list at the head commit w
   assert.match(change.pages[0].error, /^is not valid JSON/);
   assert.deepEqual(change.pages[1].data, JSON.parse(home));
   assert.deepEqual(change.headImages, ["public/images/a.jpg", "public/images/team/b.png"]);
-  const result = evaluateChange(change, rules, () => []);
+  const result = evaluateChange(change, rules, () => [], () => []);
   assert.deepEqual(result.contentProblems, []);
 });
 
@@ -1083,4 +1090,148 @@ test("real git: deleting a PDF passes", () => {
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
+});
+
+// ---- collections, settings and the generated brand files (rulings 28 to 30) --------------------------------------------
+
+// Brand is fixed on this site (docs/SITE-DIFFERENCES.md, D11): the real rules have no brand file and no generated files, so
+// the template's brand rules are tested with a copy of the rules where brand is switched on, on the template's default brand.
+const brandJson = JSON.parse(readFileSync(new URL("../src/brand/fixtures/template-brand.json", import.meta.url), "utf8"));
+const generated = brandFiles(brandJson);
+const brandRules = { ...rules, settingsFiles: SETTINGS_NAMES.map((name) => `src/content/${name}.json`), generatedFiles: Object.keys(generated) };
+const withSite = (files, extra = {}) => evaluateChange({ files, site: { items: [], settingsErrors: {} }, pages: [], ...extra }, rules, () => [], () => []);
+const withBrandSite = (files, extra = {}) => evaluateChange({ files, site: { items: [], brand: brandJson, settingsErrors: {} }, pages: [], ...extra }, brandRules, () => [], () => []);
+const item = (path, status = "M") => file(path, status, { content: undefined });
+const outsidePaths = (result) => result.outside.map((o) => o.path);
+
+test("rules: the item folder and the settings files match the shared constants, and brand is fixed (D11)", () => {
+  assert.equal(rules.itemDir, `${ITEM_DIR}/`);
+  assert.deepEqual(rules.settingsFiles, SITE_SETTINGS_NAMES.map((name) => `src/content/${name}.json`));
+  assert.deepEqual(rules.settingsFiles, ["src/content/business.json", "src/content/notice.json"]);
+  assert.deepEqual(rules.generatedFiles, [...GENERATED_BRAND_FILES]);
+  assert.deepEqual(rules.generatedFiles, []);
+});
+
+test("an item file under a known kind with a good slug is tier 1, whether new or edited", () => {
+  const result = withSite([item("src/content/collections/posts/spring-news.json", "A"), item("src/content/collections/team/sam.json")]);
+  assert.equal(result.tier, 1);
+  assert.deepEqual(result.outside, []);
+});
+
+test("business.json and notice.json are tier 1; brand.json is not, because brand is fixed here", () => {
+  assert.equal(withSite([item("src/content/business.json"), item("src/content/notice.json")]).tier, 1);
+  const brand = withSite([item("src/content/brand.json", "A"), item("src/app/palette.css", "A"), item("src/lib/fonts.ts")]);
+  assert.equal(brand.tier, 3);
+  assert.deepEqual(outsidePaths(brand), ["src/content/brand.json", "src/app/palette.css", "src/lib/fonts.ts"]);
+});
+
+test("with brand switched on (the template's rules), all three settings files are tier 1", () => {
+  assert.equal(withBrandSite([item("src/content/business.json"), item("src/content/notice.json"), item("src/content/brand.json")]).tier, 1);
+});
+
+test("a deleted item or a deleted settings file is tier 3 with the archive reason", () => {
+  const result = withSite([item("src/content/collections/posts/old.json", "D"), item("src/content/notice.json", "D")]);
+  assert.equal(result.tier, 3);
+  assert.deepEqual(outsidePaths(result), ["src/content/collections/posts/old.json", "src/content/notice.json"]);
+  assert.match(result.outside[0].reason, /archived, not deleted/);
+});
+
+test("a renamed item (a delete plus an add) is tier 3", () => {
+  const result = withSite([item("src/content/collections/posts/old.json", "D"), item("src/content/collections/posts/new.json", "A")]);
+  assert.deepEqual(outsidePaths(result), ["src/content/collections/posts/old.json"]);
+});
+
+test("an unknown kind, a bad slug, a nested file and any other file under collections are tier 3", () => {
+  const result = withSite([
+    item("src/content/collections/recipes/pie.json", "A"),
+    item("src/content/collections/posts/Bad_Slug.json", "A"),
+    item("src/content/collections/posts/deep/nested.json", "A"),
+    item("src/content/collections/posts/notes.txt", "A"),
+    item("src/content/collections/readme.json", "A"),
+  ]);
+  assert.equal(result.tier, 3);
+  assert.equal(result.outside.length, 5);
+  assert.match(result.outside[0].reason, /"recipes" is not a collection/);
+  assert.match(result.outside[1].reason, /slug "Bad_Slug"/);
+  assert.match(result.outside[2].reason, /not an item file/);
+});
+
+test("generated palette.css and fonts.ts are tier 1 only when byte-equal to what brand.json generates", () => {
+  const same = withBrandSite([file("src/app/palette.css", "M", { content: generated["src/app/palette.css"] }), file("src/lib/fonts.ts", "M", { content: generated["src/lib/fonts.ts"] })]);
+  assert.equal(same.tier, 1);
+  const edited = withBrandSite([file("src/app/palette.css", "M", { content: generated["src/app/palette.css"].replace(brandJson.colors.green, "#000000") })]);
+  assert.equal(edited.tier, 3);
+  assert.match(edited.outside[0].reason, /a generated brand file that does not match brand\.json/);
+  const fonts = withBrandSite([file("src/lib/fonts.ts", "M", { content: `${generated["src/lib/fonts.ts"]}// hand edit\n` })]);
+  assert.equal(fonts.tier, 3);
+});
+
+test("a generated file with no brand.json to compare to is tier 3, and a deleted one too", () => {
+  const nothing = evaluateChange({ files: [file("src/app/palette.css", "M", { content: generated["src/app/palette.css"] })] }, brandRules, () => [], () => []);
+  assert.equal(nothing.tier, 3);
+  const broken = evaluateChange({ files: [file("src/app/palette.css", "M", { content: generated["src/app/palette.css"] })], site: { items: [], brand: { colors: {} } } }, brandRules, () => [], () => []);
+  assert.equal(broken.tier, 3);
+  assert.equal(withBrandSite([file("src/lib/fonts.ts", "D")]).tier, 3);
+});
+
+test("a brand change is marked in the report: it touches every page and needs a preview", () => {
+  const brand = withBrandSite([item("src/content/brand.json")]);
+  assert.equal(brand.brandChange, true);
+  assert.match(formatReport(brand, { mode: "strict" }), /Brand change: touches every page; it needs a preview before the yes\./);
+  const colors = withBrandSite([file("src/app/palette.css", "M", { content: generated["src/app/palette.css"] })]);
+  assert.equal(colors.brandChange, true);
+  const other = withBrandSite([item("src/content/business.json")]);
+  assert.equal(other.brandChange, false);
+  assert.doesNotMatch(formatReport(other, { mode: "strict" }), /Brand change/);
+});
+
+test("with the site read, the whole site is judged: a problem in an item is a blocking content problem", () => {
+  let seen;
+  const validateSite = (input) => {
+    seen = input;
+    return ["src/content/collections/posts/spring-news.json: \"title\" is required."];
+  };
+  const result = evaluateChange({ files: [item("src/content/collections/posts/spring-news.json", "A")], pages: [{ file: "home.json", data: {} }], site: { items: [], brand: brandJson } }, rules, () => [], validateSite);
+  assert.equal(seen.pages.length, 1);
+  assert.equal(seen.brand, brandJson);
+  assert.equal(result.tier, 1);
+  assert.deepEqual(decide(result, "strict").reasons, ["content problem"]);
+});
+
+test("a new [[placeholder]] in an item or in business.json blocks like one in a page file", () => {
+  const added = (path) => item(path, "M");
+  const result = withSite([{ ...added("src/content/collections/posts/a.json"), added: ['"title": "[[todo]]"'] }, { ...added("src/content/business.json"), added: ['"phone": "[[phone]]"'] }]);
+  assert.deepEqual(result.placeholders.map((p) => p.text), ["[[todo]]", "[[phone]]"]);
+});
+
+test("an image used in an item with alt text next to it counts as a use", () => {
+  const url = "/images/team/sam.jpg";
+  const itemRef = [{ path: "src/content/collections/team/sam.json", content: JSON.stringify({ status: "live", name: "Sam", photo: { src: url, alt: "Sam at the front desk" } }) }];
+  const ok = evaluateChange({ files: [image("public/images/team/sam.jpg", jpg)], imageRefs: { "public/images/team/sam.jpg": itemRef } }, rules);
+  assert.deepEqual(ok.altProblems, []);
+  const bare = [{ path: "src/content/collections/team/sam.json", content: JSON.stringify({ photo: { src: url } }) }];
+  const bad = evaluateChange({ files: [image("public/images/team/sam.jpg", jpg)], imageRefs: { "public/images/team/sam.jpg": bare } }, rules);
+  assert.equal(bad.altProblems.length, 1);
+});
+
+test("real git: gatherChange reads items and settings at the head commit, and the whole site is checked", () => {
+  const { code, report } = inRepo(({ write }) => {
+    write("src/content/collections/posts/bad-post.json", "{}\n");
+    write("src/content/notice.json", "{ not json");
+  });
+  assert.equal(code, 1, report);
+  assert.match(report, /src\/content\/collections\/posts\/bad-post\.json/);
+  assert.match(report, /src\/content\/notice\.json is not valid JSON/);
+  assert.doesNotMatch(report, /business\.json/);
+});
+
+test("real git: a brand.json or a palette.css is tier 3 on this site, whatever it holds", () => {
+  const { code, report } = inRepo(({ write }) => {
+    write("src/content/brand.json", `${JSON.stringify(brandJson, null, 2)}\n`);
+    write("src/app/palette.css", brandFiles(brandJson)["src/app/palette.css"]);
+  });
+  assert.equal(code, 1, report);
+  assert.match(report, /Tier 3/);
+  assert.match(report, /src\/content\/brand\.json/);
+  assert.match(report, /src\/app\/palette\.css/);
 });

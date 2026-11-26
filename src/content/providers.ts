@@ -9,7 +9,6 @@ import { siteConfig as base } from "../../site.config.ts";
 export const providers = {
   email: base.contact.siteEmail as string | null,
   schedulerUrl: base.contact.schedulerUrl as string | null,
-  linkedInUrl: base.contact.linkedInUrl as string | null,
   /** Cloudflare Turnstile site key for the contact form. Public by design: it ships in the page. */
   turnstileSiteKey: base.contact.turnstileSiteKey as string | null,
 };

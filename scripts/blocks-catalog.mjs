@@ -4,7 +4,14 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
-import { embedOrigins, videoProviders } from "../src/blocks/embeds.ts";
+import { audioProviders, embedOrigins, videoProviders } from "../src/blocks/embeds.ts";
+import { collections } from "../src/collections/definitions.ts";
+import { CONTRAST_PAIRS } from "../src/brand/contrast-pairs.ts";
+import { COMPANION_TOKENS } from "../src/brand/derive.ts";
+import { CURATED_FONTS, FONT_ROLES } from "../src/brand/fonts.ts";
+import { LOGO_MAX_RATIO, LOGO_MIN_HEIGHT, LOGO_MIN_WIDTH } from "../src/settings/brand.ts";
+import { SOCIAL_NETWORKS, WEEKDAYS } from "../src/settings/business.ts";
+import { BRAND_FIXED, BRAND_FIXED_MESSAGE } from "../src/settings/names.ts";
 import { BOOKING_LINK, CONTACT_PATH, GENERIC_ALT_WORDS, MENU_PLACES, REQUIRED_LIVE, RESERVED_PATHS } from "../src/blocks/schema.ts";
 import { DESCRIPTION_MAX, MAX_BLOCKS, MAX_HEADER_LINKS, MENU_LABEL_MAX, PAGE_KEYS, TITLE_MAX } from "../src/blocks/validate.ts";
 
@@ -16,6 +23,7 @@ export const START_MARKER = "<!-- blocks:start -->";
 export const END_MARKER = "<!-- blocks:end -->";
 
 const providerNames = videoProviders.map((p) => p.name);
+const audioNames = audioProviders.map((p) => p.name);
 
 export function pageRules() {
   return {
@@ -69,6 +77,11 @@ export function pageRules() {
       rule: `A video address must be from ${providerNames.join(" or ")}. The player is rebuilt from the video's id, not from the address that was pasted. Allowed player origins: ${embedOrigins.join(", ")}.`,
       examples: videoProviders.map((p) => p.example),
     },
+    audio: {
+      providers: [...audioNames],
+      rule: `An episode address must be from ${audioNames.join(" or ")}. The player is rebuilt from the episode's id, not from the address that was pasted.`,
+      examples: audioProviders.map((p) => p.example),
+    },
     reservedPaths: [...RESERVED_PATHS],
     requiredLivePages: [...REQUIRED_LIVE],
     limits: { maxBlocksPerPage: MAX_BLOCKS, titleMax: TITLE_MAX, descriptionMax: DESCRIPTION_MAX },
@@ -105,6 +118,14 @@ function describeField(name, field) {
   if (field.kind === "text") {
     if (field.min !== undefined) out.min = field.min;
     out.max = field.max;
+  }
+  if (field.kind === "number") {
+    out.min = field.min;
+    out.max = field.max;
+  }
+  if (field.kind === "body") {
+    out.maxParts = field.maxParts;
+    out.maxChars = field.maxChars;
   }
   if (field.kind === "image") out.shape = field.shape;
   if (field.kind === "action") out.labelMax = field.labelMax;
@@ -143,12 +164,81 @@ export function buildBlock(def) {
   };
 }
 
-export function buildCatalog(registry) {
+/** Each collection: what it is, its fields with limits, how it is sorted and an example item. */
+export function buildCollections() {
+  return collections.map((c) => ({
+    kind: c.kind,
+    title: c.title,
+    singular: c.singular,
+    description: c.description,
+    file: `src/content/collections/${c.kind}/<slug>.json`,
+    slug: "Lowercase words and digits joined by hyphens, 1 to 60 characters. It is the file name and, for a post, the address (/blog/<slug>).",
+    status: "Every item has a status: draft (built only outside production), live, or archived (never shown, never deleted).",
+    fields: Object.entries(c.fields).map(([n, f]) => describeField(n, f)),
+    sort: c.sort === "date" ? "Newest date first." : "By the item's order number (lower first), then by its name.",
+    labelField: c.labelField,
+    example: { status: c.example[0].status, ...c.example[0].data },
+  }));
+}
+
+/**
+ * The settings files: what the owner may change in each. Brand is fixed on this site (docs/SITE-DIFFERENCES.md, D11), so
+ * its entry says so and lists no colors, fonts or logo rules; `brandFixed` false gives the template's full entry.
+ */
+export function buildSettings(brandFixed = BRAND_FIXED) {
+  const roleToken = { brand: ["green", ...COMPANION_TOKENS], accent: ["rust"] };
+  return {
+    business: {
+      file: "src/content/business.json",
+      description: "The business details every page can show: name, phone, email, address, hours and social links.",
+      fields: [
+        { name: "name", required: true, rule: "The business name, up to 80 characters." },
+        { name: "phone", required: true, rule: 'A phone number: 7 to 20 digits, spaces and + ( ) - . only. "" for none.' },
+        { name: "email", required: true, rule: 'One email address. "" for none.' },
+        { name: "address", required: true, rule: "Up to 4 address lines, each up to 80 characters. [] for none." },
+        { name: "hours", required: true, rule: `null (no hours shown) or all seven days (${WEEKDAYS.join(", ")}), each "closed" or { "opens": "09:00", "closes": "17:00" } in 24-hour time, closing after opening.` },
+        { name: "hoursNote", required: false, rule: "A note under the hours, up to 120 characters." },
+        { name: "social", required: true, rule: `Up to 8 links, each { "network", "url" }. Networks: ${SOCIAL_NETWORKS.map((n) => n.id).join(", ")}. The address must be https:// and on that network's own site.` },
+      ],
+    },
+    brand: brandFixed
+      ? { fixed: true, description: BRAND_FIXED_MESSAGE }
+      : {
+      file: "src/content/brand.json",
+      description: "The colors, fonts and logo. src/app/palette.css and src/lib/fonts.ts are generated from it (npm run sync:config); never edit them by hand.",
+      colorRoles: [
+        { role: "brand", tokens: roleToken.brand, rule: "The brand color is `green`; its five companions are derived from it, keeping their lightness and softness and taking its hue." },
+        { role: "accent", tokens: roleToken.accent, rule: "The accent color is `rust`." },
+        { role: "neutrals", tokens: ["silver", "silver2", "white", "ink", "ink2", "line"], rule: "Text and background colors that Huston Logic sets; they are not changed by chat." },
+      ],
+      colorFormat: "#rrggbb",
+      contrastRule: `Every foreground and background pair the design puts together must keep its contrast: ${CONTRAST_PAIRS.filter((p) => p.min === 4.5).length} text pairs need 4.5 to 1, and ${CONTRAST_PAIRS.filter((p) => p.min === 3).length} pairs (large text, icons, control edges, the focus ring) need 3 to 1. A color that fails is refused with the nearest one that works.`,
+      fonts: Object.fromEntries(FONT_ROLES.map((role) => [role, CURATED_FONTS[role].map((f) => ({ id: f.id, label: f.label }))])),
+      fontRule: "Each role takes one of its listed fonts, by id. The first of each role is the template default.",
+      logo: {
+        rule: `null (the business name is shown as text) or { src, alt, width, height }: an uploaded photo like /images/uploads/k3x9q2mz.webp with real alt text, at least ${LOGO_MIN_WIDTH} by ${LOGO_MIN_HEIGHT} pixels, between square and ${LOGO_MAX_RATIO} times wider than tall.`,
+      },
+    },
+    notice: {
+      file: "src/content/notice.json",
+      description: "A one-line notice above the header, with an optional link and last day.",
+      fields: [
+        { name: "text", required: true, rule: 'The notice, up to 120 characters. "" for no notice.' },
+        { name: "link", required: false, rule: "{ label, href }: the link words (up to 40 characters) and a link (see Page rules). It needs notice text." },
+        { name: "endsOn", required: true, rule: "The last day it shows, YYYY-MM-DD, or null for no end date." },
+      ],
+    },
+  };
+}
+
+export function buildCatalog(registry, brandFixed = BRAND_FIXED) {
   return {
     version: 1,
     generatedBy: "npm run blocks:catalog",
     pageRules: pageRules(),
     blocks: registry.map(buildBlock),
+    collections: buildCollections(),
+    settings: buildSettings(brandFixed),
   };
 }
 
@@ -190,6 +280,14 @@ function limitsWords(f) {
       return `a picture under /images/ with real alt text, shape ${f.shape}`;
     case "video":
       return `a ${providerNames.join(" or ")} address`;
+    case "date":
+      return "a date, YYYY-MM-DD";
+    case "number":
+      return `a whole number from ${f.min} to ${f.max}`;
+    case "audio":
+      return `a ${audioNames.join(" or ")} episode link`;
+    case "body":
+      return `up to ${f.maxParts} parts and ${f.maxChars} characters: headings, paragraphs, lists, quotes and photos`;
     case "boolean":
       return "yes or no";
     case "choice":
@@ -233,6 +331,7 @@ function pageRulesMarkdown(r) {
   lines.push(`- **Images.** ${r.images.rule} Formats: ${r.images.formats.join(", ")}. Alt text that is only one of these words is rejected: ${r.images.genericAltWords.join(", ")}.`);
   lines.push(`- **Files.** ${r.files.rule}`);
   lines.push(`- **Video.** ${r.video.rule}`);
+  lines.push(`- **Audio.** ${r.audio.rule}`);
   lines.push("");
   return lines;
 }
@@ -250,6 +349,53 @@ function blockMarkdown(b) {
   return lines;
 }
 
+function collectionsMarkdown(list) {
+  const lines = [
+    "## Collections",
+    "",
+    "A collection is a list of items of one kind. Each item is one JSON file, `src/content/collections/<kind>/<slug>.json`, holding its `status` and its fields. List blocks and the blog show them. Items are archived, never deleted.",
+    "",
+  ];
+  for (const c of list) {
+    lines.push(`### ${c.title} (\`${c.kind}\`)`, "", c.description, "");
+    lines.push(`- **File.** \`${c.file}\`. ${c.slug}`, `- **Status.** ${c.status}`, `- **Sort.** ${c.sort}`, "");
+    lines.push("| Field | What it is | Required | Limits |", "| --- | --- | --- | --- |");
+    for (const f of c.fields) lines.push(...fieldRows(f, f.name));
+    lines.push("", "**Example:**", "", "```json", JSON.stringify(c.example, null, 2), "```", "");
+  }
+  return lines;
+}
+
+function settingRows(fields) {
+  return ["| Field | Required | Rule |", "| --- | --- | --- |", ...fields.map((f) => `| \`${f.name}\` | ${f.required ? "yes" : "no"} | ${cell(f.rule)} |`)];
+}
+
+function settingsMarkdown(settings) {
+  const { business, brand, notice } = settings;
+  const lines = [
+    "## Settings",
+    "",
+    brand.fixed
+      ? "Two files hold the site-wide settings. Each is one JSON object and is checked by `npm run check:content`. The brand is not a setting on this site."
+      : "Three files hold the site-wide settings. Each is one JSON object and is checked by `npm run check:content`.",
+    "",
+  ];
+  lines.push(`### Business (\`${business.file}\`)`, "", business.description, "", ...settingRows(business.fields), "");
+  if (brand.fixed) {
+    lines.push("### Brand", "", brand.description, "");
+    lines.push(`### Notice (\`${notice.file}\`)`, "", notice.description, "", ...settingRows(notice.fields), "");
+    return lines;
+  }
+  lines.push(`### Brand (\`${brand.file}\`)`, "", brand.description, "");
+  lines.push("**Colors** (`colors`, each written as `#rrggbb`):", "");
+  for (const r of brand.colorRoles) lines.push(`- **${r.role}:** ${r.tokens.map((t) => `\`${t}\``).join(", ")}. ${r.rule}`);
+  lines.push("", `**Contrast rule.** ${brand.contrastRule}`, "", `**Fonts** (\`fonts\`). ${brand.fontRule}`, "");
+  for (const [role, list] of Object.entries(brand.fonts)) lines.push(`- \`${role}\`: ${list.map((f) => `${f.id}${f.label !== f.id ? ` (${f.label})` : ""}`).join(", ")}`);
+  lines.push("", `**Logo** (\`logo\`). ${brand.logo.rule}`, "");
+  lines.push(`### Notice (\`${notice.file}\`)`, "", notice.description, "", ...settingRows(notice.fields), "");
+  return lines;
+}
+
 export function renderBlocksMarkdown(catalog) {
   const lines = [
     "# Blocks",
@@ -264,6 +410,8 @@ export function renderBlocksMarkdown(catalog) {
     "type, optionally a variant, and fill in its content.",
     "",
     ...pageRulesMarkdown(catalog.pageRules),
+    ...collectionsMarkdown(catalog.collections),
+    ...settingsMarkdown(catalog.settings),
     ...catalog.blocks.flatMap(blockMarkdown),
   ];
   return `${lines.join("\n").replace(/\n+$/, "")}\n`;
