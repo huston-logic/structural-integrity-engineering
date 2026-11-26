@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { describe, test } from "node:test";
 import { confirmation, contactFields } from "../content/contact-fields.ts";
 import { formWords } from "../content/forms.ts";
@@ -34,6 +35,19 @@ describe("contact.json", () => {
     });
     assert.equal(fields.find((f) => f.id === "email")?.max, contactFields.find((f) => f.key === "email")?.maxLength);
   });
+  test("each field's error words are the contact page's (noteForm.errors), so a drift fails here", () => {
+    // contact.ts imports through the "@/" alias, which Node's test runner cannot resolve, so its errors block is read as text.
+    const source = readFileSync(new URL("../content/contact.ts", import.meta.url), "utf8");
+    const block = /errors: \{([^}]*)\}/.exec(source)?.[1] ?? "";
+    const pageError = (key: string) => new RegExp(`${key}: "([^"]*)"`).exec(block)?.[1];
+    for (const spec of contactFields) {
+      const field = contactDefinition().fields.find((f) => f.id === ID_OF[spec.key]);
+      assert.ok(field?.error, spec.key);
+      assert.equal(field.error, pageError(spec.key), spec.key);
+    }
+    // The phone message promises 7 to 15 digits, which is validateContact's rule.
+    assert.match(pageError("phone") ?? "", /7 to 15 digits/);
+  });
   test("the button and the thank-you line are the copy deck's", () => {
     assert.equal(contactJson.button, "Send request");
     assert.equal(contactJson.thanks, `${confirmation.heading} ${confirmation.body}`);
@@ -65,6 +79,14 @@ describe("the contact form's validator and the shared form validator judge the s
     sameFailures({ ...valid, email: "nope" });
     sameFailures({ ...valid, phone: "call me" });
     sameFailures({ ...valid, phone: "12345" });
+  });
+  test("the phone limits differ on purpose: the contact form allows 7 to 15 digits, form files 7 to 20", () => {
+    // The contact route (worker/contact.ts) uses validateContact only, never the form-file validator, so the stricter
+    // contact rule stands there. A 16-digit phone is refused by it, and the contact page's message says "7 to 15 digits".
+    const sixteen = "1234567890123456";
+    const own = validateContact({ ...valid, phone: sixteen });
+    assert.equal(own.ok, false);
+    if (!own.ok) assert.deepEqual(own.fields, ["phone"]);
   });
   test("text is cleaned alike", () => {
     const own = validateContact({ ...valid, firstName: " Ada\n", scope: "Line one\r\nLine two" });

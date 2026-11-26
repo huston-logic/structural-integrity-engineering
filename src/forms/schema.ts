@@ -1,5 +1,5 @@
 // Forms: one JSON file per form (src/content/forms/<id>.json) built from a fixed set of field types. Import-free apart
-// from sibling shared modules, so Node scripts, Next and the Worker share it (docs/superpowers/specs/2026-11-25-forms-and-downloads-design.md).
+// from sibling shared modules, so Node scripts, Next and the Worker share it (huston-logic/site-template: docs/superpowers/specs/2026-11-25-forms-and-downloads-design.md).
 import { SLUG_RE } from "../collections/schema.ts";
 
 export const FIELD_TYPES = ["short-text", "long-text", "email", "phone", "dropdown", "checkbox", "consent"] as const;

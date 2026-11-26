@@ -6,7 +6,7 @@ import { seedSite } from "./test-support.ts";
 import { aiApp, makeUploadsEditor, pdfBytes, type Called, type UploadsEditor } from "./uploads-test-support.ts";
 
 /**
- * The acceptance sayings of the forms run (spec: docs/superpowers/specs/2026-11-25-forms-and-downloads-design.md, "Goals"),
+ * The acceptance sayings of the forms run (spec: huston-logic/site-template: docs/superpowers/specs/2026-11-25-forms-and-downloads-design.md, "Goals"),
  * each played as the owner's AI app calling the MCP endpoint on the fake GitHub. A test checks the change list's words and the
  * files a publish commits; a refusal checks the plain-words reason.
  */

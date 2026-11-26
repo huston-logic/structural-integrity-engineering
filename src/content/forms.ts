@@ -16,6 +16,8 @@ export const formWords = {
     checkbox: "Please tick this box.",
     consent: "Please tick this box to go on.",
   },
+  /** Read out by screen readers while a form is sending. */
+  sending: "Sending your note.",
   sendErrors: {
     notVerified: "That didn't go through. Please try again.",
     rateLimited: "Too many tries in a row. Wait a minute and try again.",

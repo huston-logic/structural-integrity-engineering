@@ -86,7 +86,7 @@ export const siteConfig = {
     rateLimitIds: { production: "2201", preview: "2202" },
   },
   /**
-   * The caps for the forms owners add (docs/superpowers/specs/2026-11-25-forms-and-downloads-design.md, "Settings").
+   * The caps for the forms owners add (huston-logic/site-template: docs/superpowers/specs/2026-11-25-forms-and-downloads-design.md, "Settings").
    * Owner-only file: a chat change can never raise them. `maxForms` counts live form files; `maxAnswerChars` is the most
    * characters one form's fields may allow in all; `maxBodyBytes` is the Worker's body limit for a form post (the contact
    * form keeps its own 16 KB).
@@ -138,7 +138,7 @@ export const siteConfig = {
     /** Pull request checks that never count when judging whether a change is stuck. */
     ignoredChecks: ["change-report", "change-scope", "Workers Builds"] as string[],
     /**
-     * The owner's upload inbox (photos and PDFs). Settings and their reasons: docs/superpowers/specs/2026-11-25-uploads-and-photos-design.md
+     * The owner's upload inbox (photos and PDFs). Settings and their reasons: huston-logic/site-template: docs/superpowers/specs/2026-11-25-uploads-and-photos-design.md
      * ("Settings"). Needs a private R2 bucket and the Images binding, so it stays off until that setup is done.
      */
     uploads: {

@@ -78,7 +78,6 @@ function ChipRow({
   onSelect,
   error,
   describedBy,
-  errorId,
   children,
 }: {
   field: FormField;
@@ -88,7 +87,6 @@ function ChipRow({
   onSelect: (value: string) => void;
   error?: string;
   describedBy?: string;
-  errorId: string;
   children: ReactNode;
 }) {
   return (
@@ -103,7 +101,6 @@ function ChipRow({
               value={option.value}
               checked={selected === option.value}
               onChange={() => onSelect(option.value)}
-              aria-describedby={error ? errorId : undefined}
               className="peer sr-only"
             />
             <span
@@ -141,15 +138,16 @@ export type FieldViewProps = {
 
 /** One field of a form: its label, control, help and error line, from the field's own settings. */
 export function FieldView({ field, ids, label, error, rich, placeholder, oneLine, emptyChoice, chips }: FieldViewProps) {
-  const described = [field.help ? ids.help : undefined, error ? ids.error : undefined].filter(Boolean).join(" ") || undefined;
+  const hasLine = canFail(field);
+  const described = [field.help ? ids.help : undefined, hasLine && error ? ids.error : undefined].filter(Boolean).join(" ") || undefined;
   const invalid = error ? ("true" as const) : undefined;
   const required = field.required ? ({ required: true, "aria-required": "true" } as const) : {};
   const help = field.help ? <Help id={ids.help} text={field.help} rich={rich} /> : null;
-  const line = canFail(field) ? <ErrorLine id={ids.error} message={error} /> : null;
+  const line = hasLine ? <ErrorLine id={ids.error} message={error} /> : null;
 
   if (field.type === "dropdown" && field.display === "buttons" && chips) {
     return (
-      <ChipRow field={field} legend={label} options={chips.options} selected={chips.selected} onSelect={chips.onSelect} error={error} describedBy={described} errorId={ids.error}>
+      <ChipRow field={field} legend={label} options={chips.options} selected={chips.selected} onSelect={chips.onSelect} error={error} describedBy={described}>
         {help}
         {line}
       </ChipRow>

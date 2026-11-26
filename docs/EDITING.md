@@ -457,7 +457,7 @@ Commit the result, open a pull request and merge it.
 
 ### What uploads cost
 
-These figures come from the design spec (`docs/superpowers/specs/2026-11-25-uploads-and-photos-design.md`).
+These figures come from the design spec (`huston-logic/site-template: docs/superpowers/specs/2026-11-25-uploads-and-photos-design.md`).
 
 - **R2 storage** is shared by all sites on the Cloudflare account. Each month the account gets 10 GB-months of storage, 1 million writes and 10 million reads free. Deletes are free. Past that: $0.015 per GB-month of storage, $4.50 per million writes and $0.36 per million reads. No egress fees. Only converted files are kept (at most 450 KB each, plus a 30 KB preview), never originals, and each site's inbox is capped at 200 MB. A full site costs at most $0.003 a month past the free tier.
 - **Images** on the Free plan include 5,000 unique transformations a month per account, shared by all sites. Each photo takes 2 to 5 (the web file, the preview, and up to 3 retries for size), so that is about 1,000 to 2,500 photos a month before the limit. Past the limit the Free plan refuses (error 9422) and charges nothing. The paid plan is $0.50 per 1,000 beyond 5,000.

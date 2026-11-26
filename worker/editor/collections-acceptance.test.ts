@@ -4,7 +4,7 @@ import { blogFiles, seedSite } from "./test-support.ts";
 import { aiApp, JPEG, makeUploadsEditor, type Called, type UploadsEditor } from "./uploads-test-support.ts";
 
 /**
- * The acceptance sayings of the collections and brand run (spec: docs/superpowers/specs/2026-11-25-collections-and-brand-design.md),
+ * The acceptance sayings of the collections and brand run (spec: huston-logic/site-template: docs/superpowers/specs/2026-11-25-collections-and-brand-design.md),
  * each played as the owner's AI app calling the MCP endpoint on the fake GitHub, with a real upload store on fake R2. A test
  * checks the change list's words, and the files a publish commits; a refusal checks the plain-words reason.
  */

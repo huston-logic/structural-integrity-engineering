@@ -9,7 +9,7 @@ import { log, type ContactEnv, type Mode, type SaveStatus } from "./env.ts";
 import { downloadEmail, formNotificationEmail, formPipelineLead, formSheetRow } from "./messages.ts";
 
 /**
- * The other forms (docs/superpowers/specs/2026-11-25-forms-and-downloads-design.md, "The Worker"). `POST /api/forms/<id>`
+ * The other forms (huston-logic/site-template: docs/superpowers/specs/2026-11-25-forms-and-downloads-design.md, "The Worker"). `POST /api/forms/<id>`
  * runs the same handler as the contact form (worker/contact.ts) with the spec built here. Definitions come only from the
  * generated registry (or the list a test passes), always through `parseForm`, so a bundled file that fails the shared
  * check is refused (fail closed).

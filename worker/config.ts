@@ -84,7 +84,7 @@ export interface EditorConfig {
   uploads: UploadsConfig;
 }
 
-/** The spec's defaults (docs/superpowers/specs/2026-11-25-uploads-and-photos-design.md, "Settings"). */
+/** The spec's defaults (huston-logic/site-template: docs/superpowers/specs/2026-11-25-uploads-and-photos-design.md, "Settings"). */
 export const DEFAULT_UPLOADS: UploadsConfig = {
   enabled: false,
   bucket: null,

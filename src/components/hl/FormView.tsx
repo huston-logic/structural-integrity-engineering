@@ -14,7 +14,7 @@ type SendError = keyof typeof formWords.sendErrors;
 type Errors = Record<string, string>;
 
 /**
- * Any form but the contact form (docs/superpowers/specs/2026-11-25-forms-and-downloads-design.md, "The form block").
+ * Any form but the contact form (huston-logic/site-template: docs/superpowers/specs/2026-11-25-forms-and-downloads-design.md, "The form block").
  * It receives only what it draws: the public form (never the download link) and the site's email for the no-JavaScript
  * note. It validates with the Worker's own rules, gets a Turnstile token (action `form`, loaded on first focus) and
  * posts JSON to `/api/forms/<id>`. A real success replaces the panel with the thank-you message, in the panel's own
@@ -130,7 +130,7 @@ export function FormView({ id, form, noScriptEmail }: { id: string; form: Public
   return (
     <div ref={panelRef} className="rounded-panel bg-dusk-deep p-6 md:p-9">
       {done ? (
-        <div ref={thanksRef} tabIndex={-1} className="text-body text-snow">
+        <div ref={thanksRef} role="status" tabIndex={-1} className="text-body text-snow">
           <p>
             <Text>{form.thanks}</Text>
           </p>
@@ -175,7 +175,11 @@ export function FormView({ id, form, noScriptEmail }: { id: string; form: Public
           </div>
 
           <div role="status">
-            {sendError ? <p className="text-label text-error">{formWords.sendErrors[sendError]}</p> : null}
+            {sendError ? (
+              <p className="text-label text-error">{formWords.sendErrors[sendError]}</p>
+            ) : sending ? (
+              <p className="sr-only">{formWords.sending}</p>
+            ) : null}
           </div>
         </form>
       )}

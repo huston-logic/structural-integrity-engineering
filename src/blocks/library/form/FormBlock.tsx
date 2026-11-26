@@ -9,7 +9,7 @@ import type { formDefinition } from "./definition";
 
 /**
  * One form in a panel. The client component gets `viewProps` only, so a download form's link never reaches the browser:
- * it is mailed after the submission (docs/superpowers/specs/2026-11-25-forms-and-downloads-design.md, R9).
+ * it is mailed after the submission (huston-logic/site-template: docs/superpowers/specs/2026-11-25-forms-and-downloads-design.md, R9).
  */
 export function FormBlock({ content, variant, anchor, headingId }: BlockProps<ContentOf<typeof formDefinition.fields>>) {
   const definition = formById(content.form);
