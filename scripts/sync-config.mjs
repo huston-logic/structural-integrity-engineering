@@ -5,6 +5,7 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
+import { configProblems, secretsFor } from "./config-rules.mjs";
 
 const root = new URL("..", import.meta.url).pathname;
 const { siteConfig: c } = await import(pathToFileURL(join(root, "site.config.ts")).href);
@@ -15,18 +16,19 @@ const { embedOrigins } = await import(pathToFileURL(join(root, "src/blocks/embed
 const unique = (list) => [...new Set(list)];
 const kebab = (key) => key.replace(/([a-z0-9])([A-Z0-9])/g, "$1-$2").toLowerCase();
 
-// Secret names the contact Worker needs, by Sheet writer (docs/SECRETS.md). Names only, never values.
-const secretsByWriter = {
-  "apps-script": ["RESEND_API_KEY", "TURNSTILE_SECRET_KEY", "SHEET_WEBHOOK_URL", "SHEET_WEBHOOK_SECRET"],
-  "service-account": ["RESEND_API_KEY", "TURNSTILE_SECRET_KEY", "GOOGLE_SERVICE_ACCOUNT_KEY", "GOOGLE_SHEET_ID"],
-};
+// The checks on site.config.ts and the secret names (by destination, docs/SECRETS.md) live in config-rules.mjs.
+const problems = configProblems(c);
+if (problems.length > 0) {
+  console.error(`\nConfig check failed: site.config.ts has ${problems.length} problem(s)\n`);
+  for (const problem of problems) console.error(`  - ${problem}`);
+  console.error("");
+  process.exit(1);
+}
 
 function wrangler() {
-  const { limit, periodSeconds, namespaceIds } = c.contact.rateLimit;
-  const secrets = secretsByWriter[c.contact.sheetWriter];
-  if (!secrets) {
-    throw new Error(`site.config.ts contact.sheetWriter must be "apps-script" or "service-account", not ${JSON.stringify(c.contact.sheetWriter)}`);
-  }
+  const { limit, periodSeconds } = c.contact.rateLimit;
+  const namespaceIds = c.contact.rateLimitIds;
+  const secrets = secretsFor(c.contact);
   const rate = (id) =>
     `[{ "name": "CONTACT_RATE_LIMIT", "namespace_id": "${id}", "simple": { "limit": ${limit}, "period": ${periodSeconds} } }]`;
   return `{

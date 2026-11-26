@@ -54,7 +54,8 @@ const requiredKeys = [
   "domain.url", "domain.workerName", "domain.previewHostSuffix",
   "contact.siteEmail", "contact.fromName", "contact.replyFromName", "contact.schedulerUrl", "contact.bookingFallbackPath",
   "contact.linkedInUrl", "contact.turnstileSiteKey", "contact.sheetWriter", "contact.sheetTabs.production", "contact.sheetTabs.preview",
-  "contact.rateLimit.namespaceIds.production", "contact.rateLimit.namespaceIds.preview",
+  "contact.rateLimitIds.production", "contact.rateLimitIds.preview",
+  ...(config.contact.destination === "pipeline" ? ["contact.pipelineUrl"] : []),
   ...Object.keys(config.theme.colors).map((k) => `theme.colors.${k}`),
   // theme.fonts.body and theme.fonts.accent are optional (they fall back to the display font).
   "theme.fonts.display.family",

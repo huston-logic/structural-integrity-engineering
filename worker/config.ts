@@ -4,6 +4,9 @@ import { buildAutoReply, type AutoReply, type AutoReplyConfig } from "../src/con
 /** Which code appends the contact form's row to the Google Sheet. */
 export type SheetWriter = "apps-script" | "service-account";
 
+/** Where each submission is saved (`contact.destination` in site.config.ts). The default is the Sheet. */
+export type Destination = "sheet" | "pipeline";
+
 /**
  * The slice of site.config.ts the Worker reads. A structural type (not `typeof siteConfig`, whose values are literal
  * types), so the tests can build a Worker from a fixture instead of the real config.
@@ -16,6 +19,10 @@ export interface WorkerSiteConfig extends AutoReplyConfig {
     replyFromName: string;
     sheetWriter: SheetWriter;
     sheetTabs: { production: string; preview: string };
+    /** Optional so a config without it means "sheet". */
+    destination?: Destination;
+    /** The Pipeline app copy's https origin. Only read when destination is "pipeline". */
+    pipelineUrl?: string | null;
   };
 }
 
@@ -30,6 +37,9 @@ export interface WorkerConfig {
   previewHostSuffix: string;
   sheetWriter: SheetWriter;
   sheetTabs: { production: string; preview: string };
+  destination: Destination;
+  /** null when the destination is "sheet" or the owner has not set it. The Worker then saves nothing to the app. */
+  pipelineUrl: string | null;
   autoReply: AutoReply;
 }
 
@@ -44,6 +54,8 @@ export function buildWorkerConfig(config: WorkerSiteConfig): WorkerConfig {
     previewHostSuffix: domain.previewHostSuffix,
     sheetWriter: contact.sheetWriter,
     sheetTabs: contact.sheetTabs,
+    destination: contact.destination ?? "sheet",
+    pipelineUrl: contact.pipelineUrl ?? null,
     autoReply: buildAutoReply(config),
   };
 }

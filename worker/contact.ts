@@ -1,18 +1,20 @@
 import { honeypot } from "../src/content/contact-fields.ts";
-import { contactKeys, validateContact, type ContactInput } from "../src/lib/contact-validation.ts";
+import { contactKeys, validateContact, type ContactInput, type ContactSubmission } from "../src/lib/contact-validation.ts";
 import { appendRowViaAppsScript } from "./apps-script.ts";
 import { workerConfig, type WorkerConfig } from "./config.ts";
 import { sendEmail } from "./email.ts";
-import { log, resolveMode, type ContactEnv } from "./env.ts";
-import { autoReplyEmail, notificationEmail, sheetRow } from "./messages.ts";
+import { log, resolveMode, type ContactEnv, type Mode, type SaveStatus } from "./env.ts";
+import { autoReplyEmail, notificationEmail, pipelineMessage, sheetRow } from "./messages.ts";
+import { sendToPipeline } from "./pipeline.ts";
 import { appendRow } from "./sheets.ts";
 import { verifyTurnstile } from "./turnstile.ts";
 
 /**
  * The contact form Worker (docs/website-plan.md E6). wrangler.jsonc runs it only for /api/*; everything else is the
  * static export in ./out. POST /api/contact: same-origin JSON, rate limit, honeypot, the same validation as the form,
- * Turnstile, then the Sheet row, the email to the site owner and the automatic reply. It never reports success unless
- * the note reached the owner (the Sheet or the email) and never sends HTML except the fixed automatic-reply template.
+ * Turnstile, then the save (a Sheet row, or a lead in the client's Pipeline app copy: `contact.destination`), the email
+ * to the site owner and the automatic reply. It never reports success unless the note reached the owner (the Sheet, the
+ * app or the email) and never sends HTML except the fixed automatic-reply template.
  * Every client-specific value (names, email, booking link, Worker name, Sheet tabs, Sheet writer) comes from
  * site.config.ts through worker/config.ts; `createWorker` takes that config so the tests can pass a fixture.
  */
@@ -64,11 +66,31 @@ async function readBody(request: Request, limit: number): Promise<string | null>
   return new TextDecoder().decode(bytes);
 }
 
-/** The one place the Sheet writer is chosen (`contact.sheetWriter` in site.config.ts). Both return true only when the row was saved. */
+/** The Sheet writer is chosen here (`contact.sheetWriter` in site.config.ts). Both return true only when the row was saved. */
 function saveRow(config: WorkerConfig, env: ContactEnv, tab: string, row: string[]): Promise<boolean> {
   return config.sheetWriter === "apps-script"
     ? appendRowViaAppsScript(env.SHEET_WEBHOOK_URL, env.SHEET_WEBHOOK_SECRET, tab, row)
     : appendRow(env.GOOGLE_SERVICE_ACCOUNT_KEY, env.GOOGLE_SHEET_ID, tab, row);
+}
+
+/**
+ * THE one place a submission is saved, chosen by `contact.destination` in site.config.ts. Returns "saved" only when the
+ * contact is really in the destination; "skipped" when it was deliberately not sent (a preview never posts to the
+ * client's real app). The notification email follows this result and always goes out (see handleContact).
+ *
+ * THIRD DESTINATION GOES HERE. "Another tool the client names" is not built (docs/PROCESS.md rule 15). To add one:
+ * add its name to `Destination` in worker/config.ts and to `DESTINATIONS` and `secretsFor` in scripts/config-rules.mjs,
+ * add its label to `saveLine` in worker/messages.ts, write its sender next to worker/pipeline.ts (true only when saved,
+ * fixed log names), add a branch below, and add tests beside "the Pipeline app destination" in worker/contact.test.ts.
+ */
+async function saveSubmission(config: WorkerConfig, env: ContactEnv, mode: Mode, submission: ContactSubmission, receivedAt: string): Promise<SaveStatus> {
+  if (config.destination === "pipeline") {
+    if (mode !== "production") return "skipped";
+    const lead = { name: `${submission.firstName} ${submission.lastName}`, email: submission.email, message: pipelineMessage(submission) };
+    return (await sendToPipeline(config.pipelineUrl, env.INTAKE_SECRET, lead)) ? "saved" : "failed";
+  }
+  const tab = mode === "preview" ? config.sheetTabs.preview : config.sheetTabs.production;
+  return (await saveRow(config, env, tab, sheetRow(submission, mode, receivedAt))) ? "saved" : "failed";
 }
 
 async function handleContact(config: WorkerConfig, request: Request, env: ContactEnv, url: URL): Promise<Response> {
@@ -172,18 +194,18 @@ async function handleContact(config: WorkerConfig, request: Request, env: Contac
   const from = `${config.fromName} <${siteEmail}>`;
   const replyFrom = `${config.replyFromName} <${siteEmail}>`;
 
-  // The Sheet goes first so the email to the owner can say whether the row was saved.
+  // The destination goes first so the email to the owner can say whether the contact was saved. The email always sends.
+  // The visitor sees success only if the contact reached the client somewhere: the destination or the email.
   const id = crypto.randomUUID();
-  const tab = mode === "preview" ? config.sheetTabs.preview : config.sheetTabs.production;
-  const sheetSaved = await saveRow(config, env, tab, sheetRow(submission, mode, receivedAt));
-  const notification = notificationEmail(submission, mode, receivedAt, sheetSaved);
+  const status = await saveSubmission(config, env, mode, submission, receivedAt);
+  const notification = notificationEmail(config, submission, mode, receivedAt, status);
   const notified = await sendEmail(env.RESEND_API_KEY, { from, to: siteEmail, replyTo: submission.email, ...notification }, `${id}-notify`, "notify");
 
-  if (!sheetSaved && !notified) {
+  if (status !== "saved" && !notified) {
     log("capture_failed");
     return json(502, { ok: false, error: "failed" });
   }
-  if (!notified) log("notify_failed_sheet_saved");
+  if (!notified) log(config.destination === "pipeline" ? "notify_failed_pipeline_saved" : "notify_failed_sheet_saved");
 
   const reply = autoReplyEmail(config, submission, mode);
   const recipient = mode === "production" ? submission.email : siteEmail;

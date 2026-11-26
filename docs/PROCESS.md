@@ -1,6 +1,6 @@
 # Website process
 
-This file follows huston-logic/site-template docs/PROCESS.md as of 99e5378. Change the template first, then port.
+This file follows huston-logic/site-template docs/PROCESS.md as of 8c49fcd. Change the template first, then port.
 
 How sites are built from this template: the one home for the build rules. Each rule says what, why, who decided and
 what enforces it. `npm run check:process` fails if a rule has no "Why" or this file loses "Where facts live".
@@ -97,12 +97,40 @@ what enforces it. `npm run check:process` fails if a rule has no "Why" or this f
 - **Decided:** Grant, 2026-11-24
 - **Enforced by:** `lighthouserc.cjs`; the required `lighthouse` check.
 
+### 13. Hosting
+
+- **What:** Huston Logic hosts every client site in its own Cloudflare account, from a repo in the `huston-logic` GitHub org. The client's domain registration and mailboxes stay in the client's name, and their data stays theirs: the client keeps only the registrar and email logins. The domain's nameservers point at a zone in Huston Logic's Cloudflare account; Resend, Turnstile and uptime monitoring are Huston Logic's accounts too. On request Huston Logic offboards the client: code and hosting move to the client's own GitHub and Cloudflare, and Huston Logic's liability ends at handover. The steps are in `docs/OFFBOARDING.md` (not yet rehearsed). The hosting fee is a business fact and lives in the master doc, not here.
+- **Why:** Owners want it handled for them. Hosting costs Huston Logic about $25 a month in total (Cloudflare Workers Paid $5, Resend Pro $20) whatever the number of clients. One Cloudflare account also fits Cloudflare's rule that a GitHub account points to only one Cloudflare account.
+- **Decided:** Grant, 2026-11-24
+- **Enforced by:** `docs/LAUNCH-CHECKLIST.md` section A and `docs/pipeline/client-onboarding-checklist.md` (convention, no automatic check).
+
+### 14. Every site has its own rate-limit ids
+
+- **What:** Each site sets its own rate-limit namespace ids: the contact pair (`contact.rateLimitIds` in `site.config.ts`), plus one for the site editor (`editor.rateLimitId`), taken from the register in `docs/HOSTING.md`. New sites start at 2001. The register is updated in the same PR that gives a site its ids.
+- **Why:** Rate-limit bindings with the same `namespace_id` in one Cloudflare account share their counters, even across Workers (Cloudflare docs, "Rate Limiting" binding). Two sites on the same ids would count each other's visitors.
+- **Decided:** Grant, 2026-11-24
+- **Enforced by:** `npm run check:config` fails if the ids are missing or not numbers, if the two ids match, or if a configured site (a real `domain.workerName`) still uses the template's 1001 or 1002. The register itself is convention.
+
+### 15. Form contacts go to the client's own tool
+
+- **What:** A form contact goes into the client's Pipeline app copy if they use it (`contact.destination: "pipeline"`), otherwise into another tool they name, and into a Google Sheet (`"sheet"`, the default) only as the fallback. The notification email always goes to the client's inbox and says whether the app or the Sheet saved the contact. The visitor sees success only if the contact reached the client somewhere: the app, the Sheet or the notification email. "Another tool the client names" is not built. Its one place in the code is `saveSubmission` in `worker/contact.ts`, marked "THIRD DESTINATION GOES HERE": add the destination name to `site.config.ts`, `scripts/config-rules.mjs` (secret names) and that function, with tests.
+- **Why:** The owner works from their Pipeline app, so a contact should land where they already look. The Sheet stays as the fallback because it needs no other product.
+- **Decided:** Grant, 2026-11-24
+- **Enforced by:** `npm run check:config` (the destination, its URL and its secret names), the Worker tests (`npm run test:worker`), and `wrangler.jsonc`'s `secrets.required`, which follows the destination.
+
 ### 16. A new block passes the block gate
 
 - **What:** A block joins the library (or this site's own `src/site-blocks/`) only with: its registry entry (the definition: description, fields with their limits, variants, placement and motion); an example that passes the content check; a place in the showcase (`/blocks`, added automatically from the registry); passing `npm run check:design` (tokens and motion) and `npm run check:content`; and a design critique from screenshots of the showcase at 1440 and 390 pixels wide.
 - **Why:** A client builds pages from these blocks by chatting, and nobody reviews each client page. So every block must look designed on its own, at both widths, with any content inside its limits.
 - **Decided:** Grant, 2026-11-25
 - **Enforced by:** `npm run check:content` (registry, example, catalog), `npm run check:design` (tokens and motion), the `a11y` and `lighthouse` jobs (they cover the showcase), and the design critique (convention, no automatic check).
+
+### 17. The Lighthouse test server compresses like Cloudflare
+
+- **What:** `scripts/preview.mjs`, the server the `lighthouse` and `a11y` jobs audit, gzips html, css, js, json, txt, xml and svg files when the browser accepts gzip, as Cloudflare does on the live site. Images and fonts are sent as they are. Every Lighthouse threshold and assertion is unchanged.
+- **Why:** Uncompressed, a page led by a photo on a phone's first screen (a blog post with a lead photo, or a photo section right under a short hero) scored 77 to 79 and failed the required check although the live site is fast; with gzip it scored 90 and every other page 100 (`docs/proposals/lighthouse-compression.md`). The check should measure the site visitors get, not a slower test server. Gzip is a conservative stand-in for Cloudflare's brotli.
+- **Decided:** Grant, 2026-11-25
+- **Enforced by:** `scripts/preview.test.mjs` (text files come back gzipped when asked and plain when not; images and fonts never re-compressed); the required `lighthouse` check.
 
 ## What still stops for Grant
 

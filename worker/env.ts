@@ -9,8 +9,13 @@ export interface ContactEnv {
   /** Sheet writer "apps-script" only (the default): the web-app URL and the shared secret it checks. */
   SHEET_WEBHOOK_URL?: string;
   SHEET_WEBHOOK_SECRET?: string;
+  /** Destination "pipeline" only: the shared secret the Pipeline app copy checks in the X-Intake-Secret header. */
+  INTAKE_SECRET?: string;
   CONTACT_RATE_LIMIT?: RateLimit;
 }
+
+/** Whether the submission reached its destination. "skipped" means it was deliberately not sent (a preview never posts to the real app). */
+export type SaveStatus = "saved" | "failed" | "skipped";
 
 /**
  * - development: `wrangler dev` on localhost. No email, no Sheet: the Worker logs a summary instead.
