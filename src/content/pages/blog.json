@@ -1,0 +1,22 @@
+{
+  "path": "/blog",
+  "title": "[[Blog SEO title]]",
+  "description": "[[Blog SEO description]]",
+  "status": "archived",
+  "blocks": [
+    {
+      "type": "hero",
+      "content": {
+        "eyebrow": "[[Blog eyebrow]]",
+        "title": "[[Blog headline]]",
+        "intro": "[[Blog introduction]]"
+      }
+    },
+    {
+      "type": "post-index",
+      "content": {
+        "emptyText": "[[Blog empty text]]"
+      }
+    }
+  ]
+}

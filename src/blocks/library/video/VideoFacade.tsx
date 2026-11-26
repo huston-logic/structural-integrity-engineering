@@ -76,7 +76,7 @@ export function VideoFacade({ video, title, caption, poster, large = false }: Vi
           <span className="absolute inset-0 grid place-items-center">
             <span
               aria-hidden="true"
-              className={`grid ${large ? "size-16 md:size-24" : "size-16"} place-items-center rounded-pill bg-silver text-ink shadow-chip transition-transform group-hover:scale-110 group-focus-visible:scale-110`}
+              className={`grid ${large ? "size-16 md:size-24" : "size-16"} place-items-center rounded-pill bg-silver text-ink shadow-chip transition-transform motion-safe:group-hover:scale-110 motion-safe:group-focus-visible:scale-110`}
             >
               <svg viewBox="0 0 24 24" className={`${large ? "size-6 md:size-9" : "size-6"} translate-x-0.5`} fill="currentColor">
                 <path d="M8 5v14l11-7z" />

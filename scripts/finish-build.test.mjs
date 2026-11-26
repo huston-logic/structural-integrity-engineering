@@ -67,11 +67,44 @@ test("nothing is removed when neither variable is set, or when productionBranch 
 test("a CI build (GITHUB_SHA, no Workers Builds branch) keeps the showcase", () => {
   const outDir = fakeOut();
   const result = finishBuild({ outDir, env: { GITHUB_SHA: "ccc" }, productionBranch: "main" });
-  assert.deepEqual(result, { commit: "ccc", showcaseRemoved: false });
+  assert.deepEqual(result, { commit: "ccc", showcaseRemoved: false, drafts: true, blogRemoved: false });
   assert.equal(existsSync(join(outDir, "blocks", "index.txt")), true);
 });
 
 test("a production build still succeeds when the showcase files are already absent", () => {
   const outDir = mkdtempSync(join(tmpdir(), "finish-build-"));
   assert.equal(finishBuild({ outDir, env: { WORKERS_CI_BRANCH: "main" }, productionBranch: "main" }).showcaseRemoved, true);
+});
+
+test("the stamp says whether drafts were built: yes off production, no on a production build", () => {
+  const preview = fakeOut();
+  const result = finishBuild({ outDir: preview, env: { WORKERS_CI: "1", WORKERS_CI_BRANCH: "change/owner-abc12345" }, productionBranch: "main" });
+  assert.equal(result.drafts, true);
+  assert.equal(stamp(preview).drafts, true);
+  const production = fakeOut();
+  assert.equal(finishBuild({ outDir: production, env: { WORKERS_CI: "1", WORKERS_CI_BRANCH: "main" }, productionBranch: "main" }).drafts, false);
+  assert.equal(stamp(production).drafts, false);
+  const unnamed = fakeOut();
+  assert.equal(finishBuild({ outDir: unnamed, env: { WORKERS_CI: "1" }, productionBranch: "main" }).drafts, false);
+  assert.equal(stamp(unnamed).drafts, false);
+});
+
+test("the /blog files are removed when the blog page is not live, and kept when it is (D12)", () => {
+  const blogOut = () => {
+    const outDir = fakeOut();
+    writeFileSync(join(outDir, "blog.html"), "404 shell");
+    writeFileSync(join(outDir, "blog.txt"), "404 shell");
+    mkdirSync(join(outDir, "blog"));
+    writeFileSync(join(outDir, "blog", "feed.xml"), "<rss/>");
+    return outDir;
+  };
+  const archived = blogOut();
+  assert.equal(finishBuild({ outDir: archived, env: {}, productionBranch: "main", blogLive: false }).blogRemoved, true);
+  for (const name of ["blog.html", "blog.txt", "blog"]) assert.equal(existsSync(join(archived, name)), false, name);
+  assert.equal(existsSync(join(archived, "index.html")), true);
+  assert.equal(existsSync(join(archived, "blocks.html")), true, "the showcase is a separate rule");
+
+  const live = blogOut();
+  assert.equal(finishBuild({ outDir: live, env: {}, productionBranch: "main" }).blogRemoved, false);
+  for (const name of ["blog.html", "blog.txt", "blog"]) assert.equal(existsSync(join(live, name)), true, name);
 });

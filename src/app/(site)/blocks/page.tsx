@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { BlockView } from "@/blocks/BlockRenderer";
+import { collectionFor } from "@/collections/definitions";
 import { EnterObserver } from "@/blocks/EnterObserver";
 import { registry } from "@/blocks/definitions";
 import type { AnyBlockDefinition, BlockInstance } from "@/blocks/schema";
@@ -7,7 +8,7 @@ import { Container } from "@/components/hl/Container";
 import { FadingDivider } from "@/components/hl/FadingDivider";
 import { showcaseRoute } from "@/lib/routes";
 import { pageMetadata } from "@/lib/metadata";
-import { showcase } from "@/content/showcase";
+import { exampleBusiness, showcase } from "@/content/showcase";
 
 export const metadata: Metadata = pageMetadata({ title: showcase.title, description: showcase.description, path: showcaseRoute, noindex: true });
 
@@ -25,7 +26,7 @@ function exampleFor(def: AnyBlockDefinition, variantName: string, seen: Set<stri
   return { ...content, heading };
 }
 
-/** Every registered block in every variant, built from its own example content by the same wrapper pages use. */
+/** Every registered block in every variant, built from its own example content by the same wrapper pages use. A list block shows its kind's example items, so the page does not change when real items are added. */
 export default function ShowcasePage() {
   const seenHeadings = new Set<string>();
   return (
@@ -47,7 +48,7 @@ export default function ShowcasePage() {
                 </p>
                 <FadingDivider className="mt-2" />
               </Container>
-              <BlockView block={block} index={1} primary={false} />
+              <BlockView block={block} index={1} primary={false} items={def.collection === undefined ? [] : (collectionFor(def.collection)?.example ?? [])} business={exampleBusiness} />
             </div>
           );
         }),

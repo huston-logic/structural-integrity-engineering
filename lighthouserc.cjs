@@ -4,15 +4,15 @@
 // LHCI config files must be CommonJS. Node >= 22.18 loads the TypeScript route list natively; keep src/lib/routes.ts
 // free of imports and TypeScript-only syntax so this keeps working.
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const { indexableRoutes, showcaseRoute } = require("./src/lib/routes.ts");
+const { auditRoutes, showcaseRoute } = require("./src/lib/routes.ts");
 
 const origin = "http://localhost:4822";
 
 module.exports = {
   ci: {
     collect: {
-      // The indexable pages plus the block showcase (noindex, so it has its own assertions below). The 404 page returns an error status.
-      url: [...indexableRoutes, showcaseRoute].map((route) => origin + route),
+      // The audited pages (the pages, the newest post and blog page 2) plus the block showcase (noindex, so it has its own assertions below). The 404 page returns an error status.
+      url: [...auditRoutes, showcaseRoute].map((route) => origin + route),
       numberOfRuns: 3,
       startServerCommand: "npm run preview",
       // preview.mjs prints "Previewing ./out at ..."; the default pattern ("listen|ready") would never match.

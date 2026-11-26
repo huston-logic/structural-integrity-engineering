@@ -133,6 +133,10 @@
   /* mt-dot: the amber bullet sits 0.65em down. */
   --spacing-dot: 0.65em;
 
+  /* h-player-spotify, h-player-apple: the podcast players' exact heights (AUDIO_PLAYER_HEIGHT in src/blocks/embeds.ts). */
+  --spacing-player-spotify: 152px;
+  --spacing-player-apple: 175px;
+
   /* Names the library blocks (src/blocks/library) use, read as this site's roles (docs/SITE-DIFFERENCES.md, D4):
      ink is the darkest fill (night), ink-2 muted text (mist), green the accent (amber), silver and white light text and
      fills (snow), tint the quiet box behind a photo while it loads (dusk-deep). The one typeface answers to font-ui too. */

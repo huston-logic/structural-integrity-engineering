@@ -1,9 +1,25 @@
 // The content check: judges page files against the block registry and returns problems in plain words, each naming the
 // file, the block number and the field. Pure (no file access): the caller passes the pages and a small view of the repo.
 // Import-free apart from its siblings, so Node scripts and Next both load it.
-import { parseVideoUrl, videoProviders } from "./embeds.ts";
-import { BOOKING_LINK, FILE_LINK_RE, GENERIC_ALT_WORDS, IMAGE_FOCUS, IMAGE_SHAPES, MENU_PLACES, REQUIRED_LIVE, RESERVED_PATHS, THANKS_PATH, fileForPath, pathForFile } from "./schema.ts";
-import type { AnyBlockDefinition, Field, Fields } from "./schema.ts";
+import { COLLECTION_KINDS } from "../collections/schema.ts";
+import { audioProviders, parseAudioUrl, parseVideoUrl, videoProviders } from "./embeds.ts";
+import {
+  BODY_HEADING_LEVELS,
+  BODY_LIST_ITEMS_MAX,
+  BODY_LIST_STYLES,
+  BOOKING_LINK,
+  FILE_LINK_RE,
+  GENERIC_ALT_WORDS,
+  IMAGE_FOCUS,
+  IMAGE_SHAPES,
+  MENU_PLACES,
+  REQUIRED_LIVE,
+  RESERVED_PATHS,
+  THANKS_PATH,
+  fileForPath,
+  pathForFile,
+} from "./schema.ts";
+import type { AnyBlockDefinition, BodyField, Field, Fields } from "./schema.ts";
 
 export type Repo = { imageExists(src: string): boolean; fileExists(href: string): boolean };
 /** Every page in the set, by path, with the anchors a link may point to. */
@@ -211,6 +227,27 @@ function checkField(field: Field, value: unknown, label: string, where: string, 
       }
       return;
     }
+    case "audio": {
+      if (typeof value !== "string") return say("must be an episode address written as text.");
+      if (parseAudioUrl(value) === null) {
+        say(`"${value.slice(0, 80)}" is not an address this site can play. Use ${audioProviders.map((p) => `${p.name} (like ${p.example})`).join(" or ")}.`);
+      }
+      return;
+    }
+    case "date": {
+      if (typeof value !== "string" || !DATE_RE.test(value)) return say("must be a date written YYYY-MM-DD, like 2026-03-27.");
+      if (!isRealDate(value)) say(`"${value}" is not a real date.`);
+      return;
+    }
+    case "number": {
+      if (typeof value !== "number" || !Number.isInteger(value)) return say("must be a whole number.");
+      if (value < field.min) say(`is ${value}; it needs to be at least ${field.min}.`);
+      else if (value > field.max) say(`is ${value}; it takes at most ${field.max}.`);
+      return;
+    }
+    case "body":
+      checkBody(field, value, label, where, ctx, out);
+      return;
     case "boolean":
       if (typeof value !== "boolean") say("must be true or false.");
       return;
@@ -241,6 +278,126 @@ function checkField(field: Field, value: unknown, label: string, where: string, 
       checkObject(value, field.fields, label, "this group accepts", where, ctx, out);
       return;
   }
+}
+
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+/** True when a YYYY-MM-DD string is a day that exists (no February 30). */
+function isRealDate(text: string): boolean {
+  const date = new Date(`${text}T00:00:00Z`);
+  return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === text;
+}
+
+const bigNumber = (n: number) => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+
+const LINK_FIELDS: Fields = {
+  text: { kind: "text", label: "Link text", max: 200 },
+  href: { kind: "link", label: "Link" },
+};
+const PART_TYPES = ["heading", "paragraph", "list", "quote", "photo"] as const;
+const PART_FIELDS: Record<"heading" | "quote" | "photo", Fields> = {
+  heading: {
+    type: { kind: "choice", label: "Type", options: ["heading"] },
+    level: { kind: "number", label: "Level", min: BODY_HEADING_LEVELS[0], max: BODY_HEADING_LEVELS[1] },
+    text: { kind: "text", label: "Heading", max: 120 },
+  },
+  quote: {
+    type: { kind: "choice", label: "Type", options: ["quote"] },
+    text: { kind: "text", label: "Quote", max: 600 },
+    source: { kind: "text", label: "Source", max: 120, required: false },
+  },
+  photo: {
+    type: { kind: "choice", label: "Type", options: ["photo"] },
+    image: { kind: "image", label: "Photo", shape: "3:2" },
+    caption: { kind: "text", label: "Caption", max: 200, required: false },
+  },
+};
+const PARAGRAPH_MAX = 5000;
+const LIST_ITEM_MAX = 500;
+
+/** Checks text with links in it (a string, or a list of strings and link objects). */
+function checkInline(value: unknown, label: string, max: number, where: string, ctx: Context, out: string[]): void {
+  const say = (message: string): void => {
+    out.push(`${where}: ${label} ${message}`);
+  };
+  if (typeof value !== "string" && !Array.isArray(value)) return say("must be text, or a list of text and links.");
+  const pieces = typeof value === "string" ? [value] : value;
+  if (pieces.length === 0) return say("is empty; it needs some text.");
+  let length = 0;
+  let visible = false;
+  pieces.forEach((piece, index) => {
+    const here = `${label} piece ${index + 1}`;
+    if (typeof piece === "string") {
+      if (piece === "") return out.push(`${where}: ${here} is empty.`);
+      length += piece.length;
+      visible ||= piece.trim() !== "";
+      const bad = textProblem(piece);
+      if (bad) out.push(`${where}: ${here} ${bad}.`);
+      return;
+    }
+    const before = out.length;
+    checkObject(piece, LINK_FIELDS, here, "a link accepts", where, ctx, out);
+    if (out.length === before && isRecord(piece)) {
+      length += (piece["text"] as string).length;
+      visible = true;
+    }
+  });
+  if (!visible && pieces.every((p) => typeof p === "string")) say("is empty; it needs some text.");
+  if (length > max) say(`is ${bigNumber(length)} characters; this part takes at most ${bigNumber(max)}.`);
+}
+
+/** The characters a body part adds to the body's total (defensive: a malformed part counts what it has). */
+function partChars(part: Record<string, unknown>): number {
+  const len = (v: unknown): number => (typeof v === "string" ? v.length : 0);
+  const inline = (v: unknown): number =>
+    typeof v === "string" ? v.length : Array.isArray(v) ? v.reduce<number>((sum, p) => sum + (isRecord(p) ? len(p["text"]) : len(p)), 0) : 0;
+  const image = isRecord(part["image"]) ? len(part["image"]["alt"]) : 0;
+  const items = Array.isArray(part["items"]) ? part["items"].reduce<number>((sum, item) => sum + inline(item), 0) : 0;
+  return inline(part["text"]) + len(part["source"]) + len(part["caption"]) + image + items;
+}
+
+function checkBody(field: BodyField, value: unknown, label: string, where: string, ctx: Context, out: string[]): void {
+  const say = (message: string): void => {
+    out.push(`${where}: ${label} ${message}`);
+  };
+  if (!Array.isArray(value)) return say("must be a list of parts.");
+  if (value.length === 0) return say("is empty; a body needs at least one part.");
+  if (value.length > field.maxParts) say(`has ${count(value.length, "part", "parts")}; a body takes at most ${field.maxParts}.`);
+  let chars = 0;
+  value.forEach((part, index) => {
+    const here = `${label} part ${index + 1}`;
+    if (!isRecord(part)) return void out.push(`${where}: ${here} must be an object with a "type".`);
+    chars += partChars(part);
+    const type = part["type"];
+    if (typeof type !== "string" || !(PART_TYPES as readonly string[]).includes(type)) {
+      return void out.push(`${where}: ${here}: ${JSON.stringify(type)} is not a body part. Parts are: ${PART_TYPES.join(", ")}.`);
+    }
+    if (type === "heading" || type === "quote" || type === "photo") {
+      checkObject(part, PART_FIELDS[type], here, "this part accepts", where, ctx, out);
+      return;
+    }
+    const allowed = type === "paragraph" ? ["type", "text"] : ["type", "style", "items"];
+    for (const key of Object.keys(part)) if (!allowed.includes(key)) out.push(`${where}: ${here}, "${key}" is not a field this part accepts. It accepts: ${allowed.join(", ")}.`);
+    if (type === "paragraph") {
+      if (part["text"] === undefined) out.push(`${where}: ${here}, "text" is required.`);
+      else checkInline(part["text"], `${here}, "text"`, PARAGRAPH_MAX, where, ctx, out);
+      return;
+    }
+    if (!(BODY_LIST_STYLES as readonly unknown[]).includes(part["style"])) out.push(`${where}: ${here}, "style" must be one of: ${BODY_LIST_STYLES.join(", ")}.`);
+    const items = part["items"];
+    if (!Array.isArray(items)) return void out.push(`${where}: ${here}, "items" must be a list.`);
+    if (items.length < 1) out.push(`${where}: ${here}, "items" has 0 items; a list needs at least 1.`);
+    else if (items.length > BODY_LIST_ITEMS_MAX) out.push(`${where}: ${here}, "items" has ${items.length} items; a list takes at most ${BODY_LIST_ITEMS_MAX}.`);
+    items.forEach((item, i) => checkInline(item, `${here}, "items" item ${i + 1}`, LIST_ITEM_MAX, where, ctx, out));
+  });
+  if (chars > field.maxChars) say(`has ${bigNumber(chars)} characters in all; a body takes at most ${bigNumber(field.maxChars)}.`);
+}
+
+/** Checks the fields of one item (or any object) against a field schema. `where` names the place, such as the item's file. */
+export function validateFields(fields: Fields, value: unknown, where: string, ctx: Context): string[] {
+  const out: string[] = [];
+  checkObject(value, fields, "", "this item accepts", where, ctx, out);
+  return out;
 }
 
 /** Checks one block's content against its definition. `where` names the place, such as "services.json, block 3 (faq)". */
@@ -296,6 +453,11 @@ export function validateRegistry(registry: readonly AnyBlockDefinition[], repo: 
     if (signature !== undefined && (signature.keyframes.trim() === "" || signature.reason.trim() === "")) {
       out.push(`${name}: a signature animation needs the name of its keyframes and a reason.`);
     }
+    const onlyOn = def.placement.onlyOn;
+    if (onlyOn !== undefined && !PATH_RE.test(onlyOn)) out.push(`${name}: placement onlyOn "${onlyOn}" must be a page path like /blog.`);
+    if (def.collection !== undefined && !(COLLECTION_KINDS as readonly string[]).includes(def.collection)) {
+      out.push(`${name}: the collection "${def.collection}" is not one of ${COLLECTION_KINDS.join(", ")}.`);
+    }
     out.push(...shapeProblems(def.fields, name, ""));
     const problems = validateContent(def, def.example, `${name}, example`, { repo, pages: null });
     out.push(...problems.map((line) => `${line} (the example must pass its own schema)`));
@@ -315,6 +477,18 @@ function anchorsOf(page: Record<string, unknown>, defs: Map<string, AnyBlockDefi
     if (def?.fixedAnchor !== undefined) anchors.add(def.fixedAnchor);
   }
   return anchors;
+}
+
+/** Every readable page by path, with its status and anchors: what an internal link is judged against. */
+export function buildPageIndex(files: readonly PageFile[], registry: readonly AnyBlockDefinition[]): Map<string, { status: string; anchors: ReadonlySet<string> }> {
+  const defs = new Map<string, AnyBlockDefinition>();
+  for (const def of registry) if (!defs.has(def.type)) defs.set(def.type, def);
+  const index = new Map<string, { status: string; anchors: ReadonlySet<string> }>();
+  for (const { data, error } of files) {
+    if (error !== undefined || !isRecord(data) || typeof data["path"] !== "string" || data["path"] === "" || index.has(data["path"])) continue;
+    index.set(data["path"], { status: String(data["status"]), anchors: anchorsOf(data, defs) });
+  }
+  return index;
 }
 
 function checkString(data: Record<string, unknown>, key: string, min: number, max: number, file: string, out: string[]): void {
@@ -359,7 +533,7 @@ function checkMenu(menu: unknown, file: string, out: string[]): void {
   }
 }
 
-function checkBlocks(file: string, blocks: unknown, defs: Map<string, AnyBlockDefinition>, ctx: Context, out: string[]): void {
+function checkBlocks(file: string, path: string, blocks: unknown, defs: Map<string, AnyBlockDefinition>, ctx: Context, out: string[]): void {
   if (!Array.isArray(blocks)) {
     out.push(`${file}: "blocks" must be a list.`);
     return;
@@ -416,7 +590,8 @@ function checkBlocks(file: string, blocks: unknown, defs: Map<string, AnyBlockDe
   for (const { index, def } of known) {
     const n = index + 1;
     const where = `${file}, block ${n} (${def.type})`;
-    const { position, maxPerPage } = def.placement;
+    const { position, maxPerPage, onlyOn } = def.placement;
+    if (onlyOn !== undefined && path !== onlyOn) out.push(`${where}: "${def.type}" can only be used on the page ${onlyOn}; this page is ${path === "" ? "missing its path" : path}.`);
     if (index === 0 && position !== "first") out.push(`${where}: a page must open with ${firstTypes.length === 1 ? `a "${firstTypes[0]}" block` : `one of: ${firstTypes.join(", ")}`}; this page opens with "${def.type}".`);
     if (index > 0 && position === "first") out.push(`${where}: "${def.type}" opens a page, so it can only be block 1; it is block ${n}.`);
     if (position === "last" && index !== total - 1) out.push(`${where}: "${def.type}" closes a page, so it must be the last block; it is block ${n} of ${total}.`);
@@ -490,7 +665,7 @@ export function validatePages(
       const menu = data["menu"];
       if (status === "live" && isRecord(menu) && Array.isArray(menu["places"]) && menu["places"].includes("header")) headerLinks += 1;
     }
-    if (data["blocks"] !== undefined) checkBlocks(file, data["blocks"], defs, ctx, out);
+    if (data["blocks"] !== undefined) checkBlocks(file, path, data["blocks"], defs, ctx, out);
   }
 
   for (const { where, href } of extra.links ?? []) {

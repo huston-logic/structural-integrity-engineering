@@ -1,6 +1,7 @@
 // Block schema: what a block is, what fields it takes and how a page file is shaped. Import-free (plain Node and Next
 // both load it), so no aliases, enums or parameter properties. Content types are inferred from the field schema, so a
 // component's props and the content check can never disagree.
+import type { CollectionKind } from "../collections/schema.ts";
 
 export const MENU_PLACES = ["header", "footer", "legal"] as const;
 export type MenuPlace = (typeof MENU_PLACES)[number];
@@ -65,16 +66,56 @@ export type ListField = FieldBase & Optionality & {
   together?: readonly string[];
 };
 export type ObjectField = FieldBase & Optionality & { kind: "object"; fields: Fields };
+/** A calendar date written YYYY-MM-DD. */
+export type DateField = FieldBase & Optionality & { kind: "date" };
+/** A whole number from `min` to `max`. */
+export type NumberField = FieldBase & Optionality & { kind: "number"; min: number; max: number };
+/** A Spotify or Apple Podcasts episode address (the audio allowlist in embeds.ts). */
+export type AudioField = FieldBase & Optionality & { kind: "audio" };
+/** A post body: a list of parts (see BodyPart). */
+export type BodyField = FieldBase & Optionality & { kind: "body"; maxParts: 200; maxChars: 40000 };
 
-export type Field = TextField | LinkField | ActionField | ImageField | VideoField | BooleanField | ChoiceField | ListField | ObjectField;
+export type Field =
+  | TextField
+  | LinkField
+  | ActionField
+  | ImageField
+  | VideoField
+  | BooleanField
+  | ChoiceField
+  | ListField
+  | ObjectField
+  | DateField
+  | NumberField
+  | AudioField
+  | BodyField;
 export type Fields = { readonly [name: string]: Field };
+
+/** Text with links in it: a string, or a list of strings and link objects. Text allows only **bold** and [[placeholder]]. */
+export type Inline = string | (string | { text: string; href: string })[];
+
+export const BODY_HEADING_LEVELS = [2, 3] as const;
+export const BODY_LIST_STYLES = ["bullet", "number"] as const;
+export const BODY_LIST_ITEMS_MAX = 30;
+
+/** One part of a post body. */
+export type BodyPart =
+  | { type: "heading"; level: 2 | 3; text: string }
+  | { type: "paragraph"; text: Inline }
+  | { type: "list"; style: "bullet" | "number"; items: Inline[] }
+  | { type: "quote"; text: string; source?: string }
+  | { type: "photo"; image: { src: string; alt: string; focus?: ImageFocus }; caption?: string };
 
 type Simplify<T> = { [K in keyof T]: T[K] } & {};
 type RequiredKeys<F> = { [K in keyof F]: F[K] extends { required: false } ? never : K }[keyof F];
 type OptionalKeys<F> = { [K in keyof F]: F[K] extends { required: false } ? K : never }[keyof F];
 
-type ValueOf<T> = T extends { kind: "text" | "link" | "video" }
+type ValueOf<T> = T extends { kind: "text" | "link" | "video" | "date" | "audio" }
   ? string
+  : T extends { kind: "number" }
+    ? number
+    : T extends { kind: "body" }
+      ? BodyPart[]
   : T extends { kind: "action" }
     ? { label: string; href: string }
     : T extends { kind: "image" }
@@ -98,6 +139,8 @@ export type Placement = {
   /** "none": the block's own component carries its spacing (this site's bands; docs/SITE-DIFFERENCES.md, D4). */
   rhythm: "hero" | "section" | "compact" | "none";
   joinsHero?: boolean;
+  /** The one page path this block may be used on (for example the post index on /blog). */
+  onlyOn?: string;
 };
 
 export type Motion = ({ entrance: "default" } | { entrance: "none"; reason: string }) & {
@@ -119,6 +162,8 @@ export type BlockDefinition<F extends Fields = Fields> = {
   fixedAnchor?: string;
   /** Why the block needs client JavaScript; required when its folder holds a "use client" file. */
   interactive?: string;
+  /** The collection a list block reads its items from; the renderer resolves them. */
+  collection?: CollectionKind;
   example: ContentOf<F>;
 };
 
