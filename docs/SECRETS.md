@@ -68,8 +68,12 @@ this repo.
 | `SHEET_SECRET` | Yes | The shared secret. Must equal the Worker secret `SHEET_WEBHOOK_SECRET`. While it is unset the script refuses every request. |
 | `TAB_PRODUCTION` | No | Tab for live submissions. Defaults to `Submissions`, which is `contact.sheetTabs.production` in `site.config.ts`. |
 | `TAB_PREVIEW` | No | Tab for branch previews. Defaults to `Preview`, which is `contact.sheetTabs.preview` in `site.config.ts`. |
+| `TAB_FORMS` | No | Tab for live submissions of every other form (not the contact form). Defaults to `Forms`, which is `contact.sheetTabs.forms` in `site.config.ts`. |
+| `TAB_FORMS_PREVIEW` | No | Tab for branch previews of the other forms. Defaults to `Forms preview`, which is `contact.sheetTabs.formsPreview` in `site.config.ts`. |
 
 If you rename a tab in `site.config.ts`, set the matching property here and rename the tab in the Sheet.
+
+Forms add no new secret. The only new Script Properties are the two tab names above. The Apps Script must be updated (a new version of the same web app) before new forms' answers reach the Sheet.
 
 ## Public settings (not secrets)
 

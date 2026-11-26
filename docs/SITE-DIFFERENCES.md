@@ -198,3 +198,34 @@ links. `src/lib/thanks-links.ts` is kept as the template has it, and the templat
   `editor.pageColors` holds `ownerTheme(theme.colors)` (D8); `worker/editor/theme.test.ts` keeps the two equal.
 - **Re-apply on a port:** `directContact()` in the footer, contact hero and band, steps block and the contact blocks; `Logo.tsx`
   and `Footer.tsx` stay this site's; the Worker's auto-reply reads `contact.emailColors`, with no `schedulerUrl`.
+
+## D14. Forms: the contact form stays this site's own
+
+- **What:** the template's forms run (owner-built forms, the `form` block, `POST /api/forms/<id>`, the Forms Sheet tabs) is
+  ported, but this site's contact form was not rebuilt on it. `ContactForm.tsx`, `src/lib/contact-validation.ts`,
+  `src/content/contact.ts`, the contact page markup, `/api/contact`, its Sheet columns, its notification and its automatic
+  reply are the site's own and unchanged (field ids `cf-*`, six required fields from `contact-fields.ts`, `THANKS_PATH`).
+- **`src/content/forms/contact.json`** describes the same six fields (first-name, last-name, email, phone, location, scope: the
+  deck's labels, limits, error messages, "Send request" and the thank-you line). It is not rendered from: it lets the content
+  check, the form registry, the editor ("the contact form is Huston Logic's") and the change scope know the form exists, and
+  `src/forms/contact.test.ts` keeps it equal to `contact-fields.ts` and checks both validators fail the same fields. A form file
+  cannot say two things the contact form has: the autocomplete values (`given-name`, `family-name`, `tel`, `off`) and the phone
+  rule (this site's 7 to 15 digits and 40 characters; a form file's phone is 7 to 20 digits and 30 characters), so those stay in
+  `contact-fields.ts` and `contact-validation.ts`. `purpose` is set on first name (`name`) and city and state (`address`) so
+  the editor's privacy note knows this site already collects names and addresses. `src/forms/contact.ts` has `contactDefinition()`
+  and `CONTACT_BODY_BYTES` (16 KB); the template's `contactDefinitionFor(topic)` is gone (this site has no topic or partner variant).
+- **Worker:** `worker/contact.ts` uses the template's one handler (`handleSubmission` with a per-form spec); `contactSpec` builds
+  this site's six-field row, notification, Pipeline lead and reply, with no booking link (so `needsBooking` and `bookingUrl` are
+  gone from `worker/forms.ts`, and `worker/forms.test.ts` has no `schedulerUrl`). The contact tests are unchanged.
+- **`src/content/contact.ts` is wiring** in `scripts/change-scope-rules.mjs` (tier 3): it holds the contact form's error words, which
+  `contact.json` repeats.
+- **The form block is drawn on Dusk.** The template's light panel put `ink-2` (mist) and `rust` (error) on `white` (snow), at 1.4:1 and
+  1.5:1. `FormView.tsx` and `form/controls.tsx` use the contact form's own look instead (a `dusk-deep` panel, `night` fields with a
+  mist border and snow text, an amber button, error text in `error`; every pair is 7:1 or more), and `--text-chip: 16px` is in the
+  `hl.css` mapping block. `NoScriptNote` links to `CONTACT_PATH`.
+- **Test fixtures:** `worker/editor/forms-acceptance.test.ts` uses `CONTACT_PATH`, and expects no privacy note for a quote form
+  (this site's contact form already collects names, emails, phone numbers, addresses and messages); `worker/forms.test.ts` posts
+  this site's six contact fields to `/api/contact`.
+- **Re-apply on a port:** keep `ContactForm.tsx`, `contact-validation.ts`, `contact.ts`, `src/forms/contact.ts` (and its test) and
+  `contact.json` as they are; `contactSpec` in `worker/contact.ts`; the Dusk classes in the form view; the unchanged
+  contact tests in `worker/contact.test.ts`.
