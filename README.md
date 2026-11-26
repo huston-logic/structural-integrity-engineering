@@ -109,8 +109,8 @@ Scheduled runs only happen on the default branch, and GitHub disables schedules 
 | Setting | Where | Notes |
 |---|---|---|
 | Site URL | `NEXT_PUBLIC_SITE_URL` (see `.env.example`), default `https://structural-integrity-engineering.com` in `src/content/site.ts` | Used for canonical URLs, Open Graph, sitemap, robots and the homepage JSON-LD. Public value, not a secret. |
-| Contact email, scheduler URL, LinkedIn URL, Turnstile site key, sender names, Worker name, Sheet writer and tabs, rate limit | `site.config.ts` (`contact.*`, `domain.workerName`), re-exported by `src/content/providers.ts` and `site.ts` | `null` or `[[placeholder]]` renders a visible marker and fails `build:launch`. The Worker reads this file too (`worker/config.ts`). The Turnstile site key is public. Run `npm run sync:config` after editing; secrets are in [docs/SECRETS.md](docs/SECRETS.md). |
-| Content-Security-Policy | `public/_headers` | `https://challenges.cloudflare.com` is allowed in `script-src` and `frame-src` for Turnstile on the contact form, and `https://static.cloudflareinsights.com` (`script-src`) and `https://cloudflareinsights.com` (`connect-src`) for Cloudflare Web Analytics. The video blocks add `https://www.youtube-nocookie.com` and `https://player.vimeo.com` to `frame-src`, and `autoplay` for those two origins in `Permissions-Policy` (the list is `embedOrigins` in `src/blocks/embeds.ts`); a player loads only after a visitor presses play, and no live page uses a video yet. Nothing else is loaded from outside. `_headers` covers static files only; the Worker sets its own headers on `/api/*`. |
+| Contact email (for notifications), scheduler URL, Turnstile site key, sender names, Worker name, Sheet writer and tabs, rate limit | `site.config.ts` (`contact.*`, `domain.workerName`), re-exported by `src/content/providers.ts` and `site.ts` | `null` or `[[placeholder]]` renders a visible marker and fails `build:launch`. The Worker reads this file too (`worker/config.ts`). The Turnstile site key is public. Run `npm run sync:config` after editing; secrets are in [docs/SECRETS.md](docs/SECRETS.md). |
+| Content-Security-Policy | `public/_headers` | `https://challenges.cloudflare.com` is allowed in `script-src` and `frame-src` for Turnstile on the contact form, and `https://static.cloudflareinsights.com` (`script-src`) and `https://cloudflareinsights.com` (`connect-src`) for Cloudflare Web Analytics. The video and audio blocks add `https://www.youtube-nocookie.com`, `https://player.vimeo.com`, `https://open.spotify.com` and `https://embed.podcasts.apple.com` to `frame-src` (and to the `autoplay` permission) so a pressed play button can swap in the player; the list is `embedOrigins` in `src/blocks/embeds.ts`, `npm run sync:config` writes it into `_headers`, and nothing is requested from any of these sites before a visitor presses play. Nothing else is loaded from outside. `_headers` covers static files only; the Worker sets its own headers on `/api/*`. |
 | Worker settings | `wrangler.jsonc` (generated from `site.config.ts` by `npm run sync:config`) | Secret **names** only, never values. After changing it, run `npx wrangler types worker/worker-configuration.d.ts`. |
 | Framework step names, numbers, one-liners | `framework.steps` in `src/content/site.ts` | The only place "Scope it / Shape it / Ship it" is defined. Content strings use `{scope}`, `{shape}`, `{ship}`, `{steps}` tokens via `fw()` (`src/lib/framework.ts`). Rename a step here and every page follows. |
 
@@ -120,7 +120,7 @@ Animation is CSS only (no library), in `src/app/hl.css`, following `docs/STYLE-G
 
 ## Placeholders and launch gate
 
-Anything only Dylan can supply is written as `[[double brackets]]` in `src/content/*` and renders as a highlighted marker on the page. Provider-dependent values (`email`, `schedulerUrl`, `linkedInUrl`, `turnstileSiteKey`) stay `null` in `site.config.ts` until set. `schedulerUrl` and `linkedInUrl` may also be `"none"` (the owner has no booking link or LinkedIn page): pages leave the links out and the launch check passes.
+Anything only Dylan can supply is written as `[[double brackets]]` in `src/content/*` and renders as a highlighted marker on the page. Provider-dependent values (`email`, `schedulerUrl`, `turnstileSiteKey`) stay `null` in `site.config.ts` until set. `schedulerUrl` may also be `"none"` (the owner has no booking link): pages leave the link out and the launch check passes. The phone number, public email, address, hours and social links are in `src/content/business.json`; `check:placeholders` also scans it.
 
 ```bash
 npm run check:placeholders   # lists every unresolved item, exits 1 while any remain
@@ -321,7 +321,7 @@ If a production build itself fails, nothing is deployed and the old version stay
 ## Launch checklist
 
 - [ ] Domain, DNS and business email working; `NEXT_PUBLIC_SITE_URL` set to the final domain
-- [ ] `email`, `schedulerUrl`, `linkedInUrl`, `turnstileSiteKey` set in `site.config.ts` (`schedulerUrl` and `linkedInUrl` may be `"none"`)
+- [ ] `email`, `schedulerUrl`, `turnstileSiteKey` set in `site.config.ts` (`schedulerUrl` may be `"none"`); `src/content/business.json` holds no placeholder
 - [ ] `npm run check:placeholders` passes (photos, screenshots, titles, location, background wording, musician line, certifications, privacy date)
 - [ ] Contact form tested end to end on desktop and phone on the live domain: the notification email to the site address, the automatic reply (SPF, DKIM and DMARC all PASS in "Show original"), the Sheet row or Pipeline app lead; then delete the test row
 - [ ] Scheduler wired and its CSP origin added

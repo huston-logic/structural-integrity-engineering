@@ -130,7 +130,7 @@ Owner-only files are marked (owner).
 unchanged (PR 3 swaps in placeholders; PR 4 did it for the Worker's values). What is wired:
 
 - `src/content/site.ts`, `providers.ts` and `card.ts` read it (existing imports still work); `layout.tsx` and
-  `metadata.ts` build the default title and OG alt from the business name; `og.png/route.tsx` reads `theme.colors`
+  `metadata.ts` build the default title and OG alt from the business name; `og.png/route.tsx` reads the colors in `brand.json`
   and `brand.badge`.
 - `npm run sync:config` (`scripts/sync-config.mjs`) writes exactly four files: `wrangler.jsonc`, `public/_headers`,
   the `--hl-*` palette lines in `src/app/hl.css`, and `src/lib/fonts.ts`. With the Huston values the output is
@@ -144,7 +144,7 @@ unchanged (PR 3 swaps in placeholders; PR 4 did it for the Worker's values). Wha
   `brand.wordmark/full/headshot`, `prices.website`. `Marks.tsx`/`AboutTeaser.tsx` (PR 3) will take the brand files.
 - Read by the Worker since PR 4 (`worker/config.ts`): `business.name`, `owner.name/role`, `domain.url`, `workerName`,
   `previewHostSuffix`, `contact.siteEmail`, `fromName`, `replyFromName`, `schedulerUrl`, `sheetWriter`, `sheetTabs`, and
-  `business.tagline` plus `theme.colors` for the automatic reply's signature (`src/content/auto-reply.ts`). The rate
+  `business.tagline` plus `contact.emailColors` (a copy of the brand colors, kept in `site.config.ts`) for the automatic reply's signature (`src/content/auto-reply.ts`). The rate
   limit is generated into `wrangler.jsonc`. `contact.sheetWriter` (new in PR 4, default `"apps-script"`) picks the Sheet
   writer. `contact.destination` (`"sheet"` by default, or `"pipeline"`) with it picks the `secrets.required` names, and
   `contact.pipelineUrl` is read for `"pipeline"`; see `docs/SECRETS.md`.
@@ -152,6 +152,8 @@ unchanged (PR 3 swaps in placeholders; PR 4 did it for the Worker's values). Wha
   `site.config.ts`, so `build:launch` fails until they are filled in. The rate-limit ids (`contact.rateLimitIds`) are
   the template's `"1001"` and `"1002"` until a free pair is set; `npm run check:config` rejects those on a real site.
 - The four generated files carry no "generated" banner, because they had to stay byte-identical.
+
+Since the collections and brand run, `theme`, `brand.logo`, `owner.phone` and `contact.linkedInUrl` are no longer in `site.config.ts`. The palette, fonts and logo are in `src/content/brand.json`; the phone number, LinkedIn link and public business details are in `src/content/business.json`. The original proposal below is kept as it was written.
 
 The original proposal follows.
 
@@ -196,7 +198,7 @@ export const siteConfig = {
 | Consumer | How |
 | --- | --- |
 | Pages, `site.ts`, `providers.ts`, `card.ts` | Import `siteConfig` directly. `site.ts` and `providers.ts` become thin re-exports so existing imports keep working. |
-| Metadata, JSON-LD, OG image, sitemap, robots | Read through `site.ts` (name, url, oneLiner). `og.png/route.tsx` reads `theme.colors` and `brand.badge`. |
+| Metadata, JSON-LD, OG image, sitemap, robots | Read through `site.ts` (name, url, oneLiner). `og.png/route.tsx` reads the colors in `src/content/brand.json` and the name in `src/content/business.json`. |
 | Contact Worker | Imports `site.config.ts` with an explicit `.ts` extension (allowed because the file is import-free, like `providers.ts` today). Replaces the literals in `worker/contact.ts:21-26,163` and `worker/env.ts:23,29`. |
 | build:launch placeholder check | `scripts/check-placeholders.mjs` loads the config (Node 22 type stripping, or `site.config.mjs` if that is unavailable) and fails on any empty required value, replacing its regex over `providers.ts`. |
 | `public/_headers`, `wrangler.jsonc`, `src/app/hl.css` tokens, `src/lib/fonts.ts` | Cannot import TS. See the decision below. |

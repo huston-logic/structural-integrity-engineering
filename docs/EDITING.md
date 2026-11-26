@@ -21,7 +21,7 @@ For Huston Logic and for the site owner. The first half says what the editor doe
 5. **Publish.** The Worker creates a branch named `change/owner-<id>` and opens a pull request titled "change: <summary>". It turns on auto-merge with squash, which merges the change as one commit once the checks pass. If GitHub says the pull request can merge at once, the Worker merges it directly.
 6. **Checks.** The same required checks as any change run: `check`, `a11y`, `lighthouse` and `dependency-review`. CodeQL also runs. The change-scope check and the change report run too, but do not block yet (see Known limits).
 7. **Merge and deploy.** Merging into `main` deploys the site through Cloudflare Workers Builds.
-8. **Live.** Each build writes its commit to `/site-version.json`. When that file names the merge commit or a later one, the change is live.
+8. **Live.** Each build writes its commit to `/site-version.json`, along with `drafts`: `true` when the build includes draft items (any build that is not the production build), `false` for production. When that file names the merge commit or a later one, the change is live.
 
 To check, the owner asks "is it live yet?" The AI asks the Worker, which answers with one of these words:
 
@@ -32,6 +32,35 @@ To check, the owner asks "is it live yet?" The AI asks the Worker, which answers
 - `stopped`: the pull request was closed without merging.
 
 The first time a change is seen live, the Worker stores the time. Later answers say "live N minutes after your yes".
+
+## Collections, business details, brand and the notice
+
+Besides page text, the owner can ask for these by chat. Each one goes through the same steps as a page change: the list, the yes, the optional preview, then publish. Limits are the ones the site checks.
+
+> **On the Structural Integrity Engineering site the brand is not the owner's.** The colors, the fonts and the logo stay in
+> `site.config.ts` and the code, there is no `brand.json`, and every brand request (`set_brand_color`, `set_font`, a `set` on
+> the brand settings) is refused with one plain message: "On this site the colors, fonts and logo are set by Huston Logic, so
+> they cannot be changed here. Ask Huston Logic." The brand lines below describe the template (docs/SITE-DIFFERENCES.md, D11).
+
+- **Blog posts.** A post has a title (up to 90 characters), a summary (up to 170), a date, an optional updated date, an optional photo (3:2 shape) and a body. The body is paragraphs, headings, bullet or numbered lists, quotes and photos. A post has no tables and no embedded videos. A new post is saved as a draft unless the owner says to publish. Posts can be published, archived and restored. The address of a post is its slug (lowercase words joined by hyphens, 1 to 60 characters). A slug cannot change later. Each post is at `/blog/<slug>`, listed newest first on `/blog` (10 to a page), and in the feed at `/blog/feed.xml`.
+- **Post lists on a page.** The latest posts block shows the newest few, as cards or as a list. The post index block belongs on the blog page only.
+- **Videos.** A title (up to 90 characters), a YouTube or Vimeo address, an optional caption (up to 200) and a date. The video list block shows the newest. A video plays only after a visitor presses play.
+- **Podcast episodes.** A title, a Spotify or Apple Podcasts episode address, an optional summary (up to 300) and a date. The episode list block shows the newest. An episode plays only after a visitor presses play. The compact look has a link instead of a player.
+- **Testimonials.** A quote (up to 600 characters), the name of the person who said it (required), an optional role and business, and an order number. The AI app writes a testimonial only from a quote and a named source that you give in the chat. It never invents one.
+- **Team members.** A name, a role, an optional bio (up to 400 characters), an optional photo (4:5 shape) and an order number. The AI app needs a name and a role from you.
+- **Business details.** A name, a phone number, an email address, an address (up to four lines), opening hours for each day (or closed), an optional hours note and social links. Social links can be Instagram, Facebook, LinkedIn, YouTube, TikTok, X, Pinterest or Threads, up to eight in all. The header and footer show them. Hours read as, for example, "Monday to Thursday, 9 am to 5 pm", on a 12-hour clock. A placeholder phone number or email gets no link.
+- **Brand colors.** The owner can change two colors: the brand color (green in the template) and the accent color (rust in the template). The other companion colors are worked out from the brand color. The background and text colors stay as the design has them. See the brand guardrails below.
+- **Fonts.** The owner can choose a display font (headings), a body font and an accent font (italic only) from the list the site offers. Display: Outfit, Manrope, Sora, DM Sans, Plus Jakarta Sans, Fraunces. Body: Inter, Source Sans 3, Work Sans, Nunito Sans, Figtree, Lora. Accent: Newsreader, Fraunces, Lora, Playfair Display.
+- **Logo.** An image the owner uploads (JPEG, PNG, WebP or iPhone HEIC) can replace the business name in the header. It must be at least 160 pixels wide and 80 pixels tall, with a shape between 1:1 and 6:1. It shows 40 pixels tall in the header and 36 in the footer. An SVG logo is a build by Huston Logic (see Lane 3 in [EDITING-LANES.md](EDITING-LANES.md)).
+- **The site notice.** One short line (up to 120 characters) above the header on every page, with an optional link and an optional last day. The last day is included. The change list judges it in the site's time zone (`business.timeZone` in `site.config.ts`), and the change list says "Shows through <date>; it comes down at the first publish after that date." "Take it down" empties the notice. A notice has no close button.
+
+### Brand guardrails
+
+- The site checks 20 pairs of text or control colors and the backgrounds they sit on. Text needs a contrast of at least 4.5 to 1. Large text, icons, focus rings and control edges need at least 3 to 1. Every pair must pass after a brand change.
+- If a color would make text hard to read, the change is refused. The refusal names the pair that fails, its ratio, and the nearest shade that passes. The AI app offers that shade.
+- Fonts come only from the list above. Any other font is a build by Huston Logic.
+- A brand change (colors, fonts or logo) cannot be published until a preview has been made of that exact proposal. The AI app gives the preview link first, then asks for the yes.
+- Spacing, shape and motion are not settings. Huston Logic sets them.
 
 ## Uploads
 
@@ -68,11 +97,11 @@ Photos and PDFs can be sent to the site from the owner page. Uploads need the on
 - **Owners only.** Only the emails in `editor.ownerEmails` in `site.config.ts` can sign in or connect an AI app. Cloudflare Access (a sign-in gate that emails a one-time code) and the Worker both check this on every visit to `/owner`.
 - **Limited access to GitHub.** The site has its own GitHub App. A GitHub App is a small identity on GitHub with only the permissions it is given. This one is installed on the site's repository only. It can read and write contents, pull requests and issues. It cannot change workflows, settings, Actions or secrets. It is not a bypass actor in the "Protect main" ruleset, so the rules apply to it.
 - **Short-lived tokens.** The Worker holds the App's private key as a secret. Each time it needs GitHub, it asks for a token that lasts one hour and works on that one repository only.
-- **Page files, plus the owner's uploads.** The editor changes only the files in `src/content/pages/`, and adds the photos and PDFs the owner uploaded (`public/images/uploads/<id>.webp` and `public/files/<slug>-<id>.pdf`), only through a proposal the owner says yes to. It never deletes a page file. A page that is no longer wanted is archived, and its file stays.
-- **Not editable by chat.** The site's settings (the email address, the booking link, the LinkedIn link) and the modules in `src/content/` (the thanks page, the 404 page, the menu labels) are not changed by the editor. They go to Huston Logic.
+- **Page files, item files, settings and the owner's uploads.** The editor changes only the files in `src/content/pages/`, the item files under `src/content/collections/` (one file per post, video, episode, testimonial or team member), the three settings files `src/content/business.json`, `src/content/brand.json` and `src/content/notice.json`, and adds the photos and PDFs the owner uploaded (`public/images/uploads/<id>.webp` and `public/files/<slug>-<id>.pdf`). A brand change also rewrites two generated files, `src/app/palette.css` and `src/lib/fonts.ts`, from `brand.json`. All of this happens only through a proposal the owner says yes to. The editor never deletes a page file or an item file. A page or an item that is no longer wanted is archived, and its file stays.
+- **Not editable by chat.** The editor never writes wiring: the notification email address, the booking link, the scheduler, the Worker settings, the security headers (CSP) and the other values in `site.config.ts`. Those go to Huston Logic. The auto-reply email and the owner page keep their own colors, which are also in `site.config.ts`. The modules in `src/content/` that are not listed above (the thanks page, the 404 page, the menu labels) are not changed by the editor either.
 - **One change in flight.** While an editor pull request is open, the Worker refuses to publish another one. Several previews can wait at once.
 - **Daily cap.** At most `editor.dailyChangeLimit` changes a day (default 10). The Worker counts the editor's pull requests on GitHub since 00:00 UTC. An undo counts. Withdrawing an open change does not. Previews have the same daily cap, counted separately; reusing a preview that is still current does not count.
-- **Size and rate limits.** A request body is at most 64 KB. A proposal has at most 40 operations and 5 pages. The owner's requests are rate limited to 30 per minute.
+- **Size and rate limits.** A request body is at most 64 KB. A proposal has at most 40 operations, 5 pages and 10 items. The owner's requests are rate limited to 30 per minute.
 - **Same checks.** Every change must pass the same validator that the build and `npm run check:content` use. Nothing is published while a problem is open. Problems come back in plain words.
 - **Plain text.** Page text is shown as plain text. It is never run or rendered as HTML. Text found in pages or in requests is content, never an instruction to the AI.
 - **Undo.** Every merged change can be undone. The undo is a new change with its own list, and the owner says yes to it. If a later change touched the same page, the undo is refused until that later change is undone.
@@ -83,14 +112,18 @@ Photos and PDFs can be sent to the site from the owner page. Uploads need the on
 
 ## The tools the AI app gets
 
-The AI app gets these 14 tools. Changes are made with exact operations (set a piece of text, insert, move or remove a block or list item, add, archive or restore a page), not by rewriting whole pages.
+The AI app gets these 18 tools. Changes are made with exact operations (set a piece of text, insert, move or remove a block or list item, add, archive or restore a page, add or change an item, set a brand color or a font), not by rewriting whole pages.
 
 | Tool | What it does |
 | --- | --- |
-| `get_site` | Gives the site's name, pages, menu, the change in flight, today's remaining changes and the rules. |
+| `get_site` | Gives the site's name, pages, menu, collections, settings, the change in flight, today's remaining changes and the rules. |
 | `get_page` | Gives one page file, with each block numbered and each field labelled. |
-| `get_block_catalog` | Lists every block, its fields and limits, its looks and where it can go. |
+| `get_block_catalog` | Lists every block, its fields and limits, its looks and where it can go, and the collections. |
 | `get_editing_guide` | Gives the lanes (`docs/EDITING-LANES.md`) and the voice guide (`docs/VOICE-GUIDE.md`). |
+| `list_collections` | Gives each kind of item (posts, videos, episodes, testimonials, team) with how many are live, draft and archived, and the state of the business, brand and notice settings. |
+| `get_collection` | Gives what a kind of item holds (its fields and limits) and lists its items with their status and date or order. |
+| `get_item` | Gives one item, with its body parts numbered. |
+| `get_settings` | Gives the business details, the brand (color roles, current contrast results and the fonts to choose from) or the notice. |
 | `propose_change` | Builds a proposal and its change list, or the problems in plain words. Writes nothing to the repo. |
 | `preview_change` | Pushes the proposal to a preview branch, with no pull request, and gives the preview link. |
 | `publish_change` | Opens the change after the owner's yes. Refused if the site has moved, a change is open or the daily cap is reached. |
@@ -101,6 +134,20 @@ The AI app gets these 14 tools. Changes are made with exact operations (set a pi
 | `list_uploads` | Lists the owner's photos and PDFs, newest first, with id, name, size, dates and whether each is already on the site. |
 | `view_upload` | Shows a small preview picture of a photo, or the facts about a PDF. The AI looks at each photo before using it. |
 | `remove_upload` | Deletes an upload from the inbox. Only when the owner asks. Refused while a waiting proposal uses it. |
+
+### The operations
+
+`propose_change` takes a list of these. Nothing changes until the owner says yes.
+
+| Operation | What it does |
+| --- | --- |
+| `set`, `insert_item`, `remove_item` | Change one value, or add or remove one list item. Each takes exactly one target: a `page` (such as `/hours`), an `item` (such as `posts/new-inspection-service`), or `settings` (`business`, `brand` or `notice`). |
+| `add_item` | Adds a post, video, episode, testimonial or team member. Its status is `draft` or `live`. |
+| `set_item_status` | Sets an item to `draft`, `live` or `archived`. Nothing is deleted. |
+| `set_brand_color` | Sets the brand color or the accent color, and works out the companion colors from it. It is refused if text would become hard to read. |
+| `set_font` | Sets a display, body or accent font from the curated list. |
+
+On the `brand` settings, only `/logo` can be set with `set` (colors and fonts have their own operations). An item's `status` cannot be set with `set`; use `set_item_status`. A proposal touches at most 5 pages and 10 items. The page operations (`insert_block`, `move_block`, `remove_block`, `add_page`, `archive_page` and `restore_page`) are as before.
 
 ## The owner page
 
@@ -135,6 +182,7 @@ Lighthouse sets the pace. It checks 6 pages, three runs each.
 
 ## Known limits
 
+- **A post with a lead photo can fail the Lighthouse check today.** The check's test server sends files uncompressed, which Cloudflare never does, and that makes a page led by a photo on a phone's first screen score under 90 although the live site is fast. Until Grant decides [docs/proposals/lighthouse-compression.md](proposals/lighthouse-compression.md), such a change can stay stuck on `lighthouse`; the status says so. Posts without a lead photo (a photo inside the body is fine) and every other change are not affected. The same applies to a `photo-text` or `gallery` section placed right under a short hero.
 - **The AI app passes on the yes.** The Worker cannot prove that the owner said yes. A careless or misled AI could publish. The change is still content only, it passes every check, it shows on the owner page, it can be undone, and it counts against the daily cap. The AI is told never to publish without a yes to the exact list. A later setting could require the owner to press Publish on the owner page instead.
 - **Removing an owner takes a deploy.** The owner list ships with the Worker, so a removal takes effect at the next deploy, which is minutes. To cut access at once, also remove the person from the Access policy.
 - **Preview links are not confirmed yet.** The link is computed from the branch name. The tool reports a preview ready only when the link shows the change. If it cannot confirm the link, it says the preview is still building, or that the link could not be confirmed, and gives the link anyway. Grant checks the first one.
@@ -148,6 +196,16 @@ Lighthouse sets the pace. It checks 6 pages, three runs each.
 - **One photo size.** Each photo is one file at most 1600 pixels wide or tall. It can look a little soft on large retina screens. A second, larger size is a later build.
 - **An undo keeps the files.** Undoing a change puts the page back, but the photos and PDFs it added stay in the repository.
 - **The monthly photo allowance is shared.** It belongs to the Cloudflare account, so every site on that account uses the same allowance.
+- **Two places keep their own colors.** The automatic reply email (`contact.emailColors`) and the owner page (`editor.pageColors`) are set in `site.config.ts`. A brand change by chat does not change them. Huston Logic updates them.
+- **The social share image keeps its font.** The generated share image (OG image) always uses its bundled Outfit font, whatever display font the site uses. Its lettering can differ from the page headings.
+- **A rename does not reach everything.** Changing the business name in chat changes the header, the footer, the logo's text and the RSS feed's title. It does not change the page titles, and it does not change the signature of the automatic reply email. The owner changes page titles page by page.
+- **An expired notice stays up until the next publish.** The site checks the notice's last day when it builds. So an expired notice comes down only on the first build after a publish of anything.
+- **Drafts depend on Workers Builds naming its branch.** Production builds only through Workers Builds, so a build outside it counts as "not production" and includes drafts. `/site-version.json` shows `drafts: true` for such a build, and the build log says "Drafts included (not a production build)". Never deploy by hand.
+- **Brand changes need preview links.** A preview of a brand change needs the site's preview address set up (`workersSubdomain` in the editor block of `site.config.ts`). Without it the editor refuses a brand proposal up front, before anything is drafted, and says that Huston Logic can make the change.
+- **A list shows only live items.** A video list, episode list, testimonials or team block is left off the page until one item in it is live. The change list says so. The blog index shows its own empty text instead.
+- **Spotify may need a second press.** Browsers limit autoplay inside a frame from another site, so a Spotify episode may need a second press to start.
+- **Not in this version.** Tags or categories, post search, scheduled publishing, comments, authors other than the site, a notice with a close button, a 24-hour clock, owner-set background or text colors, and SVG logos by chat.
+- **Testimonials are not checked for truth.** The check can confirm the fields are there. It cannot confirm that the client said the quote. The AI app is told never to write one without the quote and the name from the owner.
 
 ## Set up the editor on one site
 
@@ -398,6 +456,86 @@ Open one pull request on a branch named feat/uploads. Its description starts wit
 every change to AGENTS.md, README.md, package.json and site.config.ts.
 
 Under Needs Grant in docs/STATUS.md, list the setup steps h to l in docs/EDITING.md, in order.
+
+Stop, queue the item and continue with the other work on any of these, as CLAUDE.md says: secrets or credentials, DNS,
+accounts or money, sending real email, deleting user data, lowering a threshold or a required check, or any owner-only
+path (.claude/hooks, .claude/agents, .claude/skills, .claude/settings*.json, .github/workflows). For an owner-only
+change, write the proposed file to the scratchpad and list it for Grant to copy in by hand.
+
+END OF BRIEF
+```
+
+## Add collections and brand settings to an existing client site
+
+Use this for a site that already runs the site editor and does not have collections yet. It adds blog posts, videos, podcast episodes, testimonials, team members, business details, brand settings and the site notice. It is a process run, so it works in one branch and one pull request, like the runs above. Keep it separate from any other change.
+
+```text
+This is an autonomous process run named "Collections and brand settings". Work from the collections and brand sections
+of docs/EDITING.md in the huston-logic/site-template repo (fetch it from GitHub; do not guess the steps). Read CLAUDE.md,
+AGENTS.md and docs/PROCESS.md in this repo first.
+
+This site must already have the site editor (see "Add the editor to an existing client site" above). If it does not,
+stop and say so.
+
+Port these from huston-logic/site-template, as they are:
+- the whole src/collections/, src/brand/ and src/settings/ folders, with their *.test.ts files
+- src/lib/build-target.ts, content-files.ts, collections.ts, settings.ts, drafts.ts, site-content.ts, blog.ts, feed.ts,
+  chrome-view.ts, and their tests; also src/lib/routes.ts, pages.ts, page-files.ts, metadata.ts, site-organization.ts and
+  organization-jsonld.ts
+- the new block folders under src/blocks/library/: latest-posts, post-index, video-list, episode-list, testimonials, team
+  and business-details (each with its definition, component, example and tests); src/blocks/list-format.ts and
+  src/blocks/audio-player.ts; the shared block rules in src/blocks/schema.ts, validate.ts and embeds.ts
+- the blog pages: the whole src/app/(site)/blog/ folder, and src/app/og.png/route.tsx
+- src/app/palette.css (generated: sync:config rewrites it, see below)
+- src/content/business.json, brand.json, notice.json, the whole src/content/collections/ folder (one example item per
+  kind), src/content/pages/blog.json, src/content/blog.ts and src/content/players.ts
+- worker/editor/ (the whole folder), worker/config.ts and worker/index.ts (each with one new line for the email and owner
+  page colors), and worker/contact.test.ts
+- the scripts this run changed: sync-config.mjs, config-rules.mjs, check-placeholders.mjs, make-example-photos.mjs,
+  finish-build.mjs, blocks-catalog.mjs, check-content.mjs, check-content.test.mjs, check-change-scope.mjs,
+  change-scope-rules.mjs, change-report.mjs, brand-files.test.mjs, and their tests. If the template's main changes a
+  script not on this list, port it too and list it in the pull request.
+- tests/a11y/ (the routes the accessibility check reads) and lighthouserc.cjs (the audited routes only; no threshold changes)
+- docs/EDITING.md, docs/EDITING-LANES.md, docs/CHANGE-SCOPE.md, docs/BLOCKS.md and docs/blocks.json (regenerate the last two
+  with npm run blocks:catalog)
+
+Merge, do not replace:
+- AGENTS.md, README.md and package.json: keep the client's own changes and add the template's.
+- site.config.ts: keep the client's values. Remove theme, brand.logo, owner.phone and contact.linkedInUrl. Move the
+  client's colors and fonts from theme into src/content/brand.json (the 13 colors, the three fonts and the logo if it has
+  one, which must be null or an upload). Move the client's public phone number, LinkedIn link, public email, address and
+  hours into src/content/business.json (LinkedIn becomes a social entry). The notification address (contact.siteEmail)
+  stays in site.config.ts. Add business.timeZone (the client's IANA zone, such as
+  "America/Chicago"; if the zone is not known, keep "UTC" and list it in the pull request), contact.emailColors and
+  editor.pageColors. Give both the same values as brand.json, because nothing keeps them in step.
+- A client font that is not on the curated list in src/brand/fonts.ts cannot go in brand.json. Stop on that item, and
+  list it in the pull request. Huston Logic adds fonts.
+- src/app/hl.css: take out the palette lines (the colors now come only from src/app/palette.css). Keep the client's own
+  tokens and motion.
+- src/blocks/definitions.ts, src/blocks/components.tsx, src/components/layout/ (Header, Footer, HeaderNav, Logo, Notice,
+  SiteChrome) and src/app/layout.tsx: keep the client's design, and add only the new blocks, the logo, business details and
+  the notice wiring.
+
+Then run npm run sync:config. It writes src/app/palette.css, src/lib/fonts.ts and public/_headers from brand.json and
+site.config.ts. Then run npm run check:config. Commit the generated files with the rest.
+
+Keep editor.enabled as it is. Do not set any value that needs an account. Do not change the editor's Access or GitHub
+settings.
+
+Do not invent a post, a testimonial, a quote, a team member, a statistic or a result. Keep the example items and
+src/content/pages/blog.json in place with their [[placeholders]], and list every placeholder in the pull request. Do not
+delete an example item; Grant decides which to remove.
+
+No new dependency is expected; if one seems needed, stop and list it.
+
+Run npm run check:fast on each commit and npm run check before the pull request. If either fails, stop and show the
+exact error.
+
+Open one pull request on a branch named feat/collections-and-brand. Its description starts with a "Needs your eyes" line
+that lists every change to AGENTS.md, README.md, package.json and site.config.ts.
+
+Under Needs Grant in docs/STATUS.md, list the placeholders left in place, the time zone if it was not given, and the
+fonts or settings Huston Logic must still add.
 
 Stop, queue the item and continue with the other work on any of these, as CLAUDE.md says: secrets or credentials, DNS,
 accounts or money, sending real email, deleting user data, lowering a threshold or a required check, or any owner-only

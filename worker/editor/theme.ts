@@ -1,6 +1,7 @@
 // This site's palette is Dusk (dusk, snow, night ...), not the template's (white, ink, green ...). The owner page is a
 // plain light page, so Dusk's light and dark colors are mapped onto the page's ten roles here, the one place
-// (docs/SITE-DIFFERENCES.md, D8). Import-free apart from a type.
+// (docs/SITE-DIFFERENCES.md, D8). The result is what site.config.ts `editor.pageColors` holds, which is what the Worker reads
+// (D13); theme.test.ts keeps the two equal. Import-free apart from a type.
 import type { ThemeColors } from "./owner-page.ts";
 
 /** The Dusk colors the owner page uses, as `siteConfig.theme.colors` holds them. */
