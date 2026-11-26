@@ -9,7 +9,7 @@ export function ContactHeroFormBlock({ content, primary }: BlockProps<ContentOf<
   return (
     <ContactHero title={content.title} intro={content.intro} headingLevel={primary ? "h1" : "h2"}>
       {/* On the showcase page a second form sits beside the library's, so the example names itself. */}
-      <ContactForm label={primary ? noteForm.formLabel : `${noteForm.formLabel} (${content.title})`} />
+      <ContactForm name={primary ? noteForm.formLabel : `${noteForm.formLabel} (${content.title})`} />
     </ContactHero>
   );
 }

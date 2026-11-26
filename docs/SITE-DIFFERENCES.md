@@ -53,7 +53,7 @@ the lines below are not). Both D1 and D2 are candidates to bring back to the tem
   (`max-w-intro`, `max-w-narrow`, `max-w-heading`) are set to sizes near the site's own scale. Nothing else in the
   library blocks was changed. `HeroContent` in `PageHero.tsx` is the site's hero text for the library hero block.
   On Dusk the library blocks read as plain dusk sections; none is used on a real page (they are in `/blocks` only).
-- **Two forms on the showcase.** `ContactForm` takes an optional `label`; the contact-page block passes its own name when it is not the page's first block, so `/blocks` (which also shows the library's contact-form block) has no duplicate landmark.
+- **Two forms on the showcase.** `ContactForm` takes an optional `name`; the contact-page block passes its own name when it is not the page's first block, so `/blocks` (which also shows the library's contact-form block) has no duplicate landmark.
 - **`@booking`:** `src/blocks/links.ts` falls back to `CONTACT_PATH` when the site has no booking link
   (`bookCallHref()` can be null here).
 - **Re-apply on a port:** the `none` entry in `rhythm.ts`, the `BlockView` wrapper, the `hl.css` mapping block, `links.ts`.

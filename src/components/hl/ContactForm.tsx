@@ -39,8 +39,8 @@ function ErrorLine({ id, message }: { id: string; message?: string }) {
  * in browser storage. Every failure keeps the visitor's answers. No `action`, and `method="post"`, so without JavaScript
  * nothing is sent.
  */
-/** `label` names the form for screen readers; the default is the deck's button label. Only the block showcase, which shows two forms, passes another. */
-export function ContactForm({ label = noteForm.formLabel }: { label?: string } = {}) {
+/** `name` names the form for screen readers; the default is the deck's button label. Only the block showcase, which shows two forms, passes another. */
+export function ContactForm({ name = noteForm.formLabel }: { name?: string } = {}) {
   const router = useRouter();
   const [values, setValues] = useState<Record<string, string>>({});
   const [errors, setErrors] = useState<Errors>({});
@@ -160,7 +160,7 @@ export function ContactForm({ label = noteForm.formLabel }: { label?: string } =
 
   return (
     <div className="rounded-panel bg-dusk-deep p-5 sm:p-6 md:p-9">
-      <form ref={formRef} method="post" noValidate aria-label={label} onSubmit={submit} onFocus={startTurnstile} className="space-y-6">
+      <form ref={formRef} method="post" noValidate aria-label={name} onSubmit={submit} onFocus={startTurnstile} className="space-y-6">
         <p className="text-label text-mist">{noteForm.requiredNote}</p>
         <div className="grid gap-6 sm:grid-cols-2">{contactFields.map(renderField)}</div>
 
