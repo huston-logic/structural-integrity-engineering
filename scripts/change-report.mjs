@@ -268,13 +268,18 @@ function buildBaseSite(base, head, log) {
   return { outDir: join(dir, "out"), cleanup };
 }
 
+// Software rendering: with the GPU, Chromium shades large scaled photos a little differently on every run (up to 47 of 255
+// in places), so two shots of one build disagree. In software two shots of one build are identical, which is what the
+// before and after comparison needs (docs/SITE-DIFFERENCES.md, D6).
+const BROWSER_ARGS = ["--disable-gpu", "--disable-gpu-rasterization", "--disable-partial-raster"];
+
 async function openBrowser() {
   const { chromium } = await import("@playwright/test");
   try {
-    return await chromium.launch();
+    return await chromium.launch({ args: BROWSER_ARGS });
   } catch {
     try {
-      return await chromium.launch({ channel: "chrome" });
+      return await chromium.launch({ channel: "chrome", args: BROWSER_ARGS });
     } catch {
       throw new Error("Could not open a browser. Install one with `npx playwright install chromium` (ask Grant first) or install Google Chrome.");
     }
@@ -300,6 +305,12 @@ async function takeScreenshots({ beforeDir, afterDir, pages, outDir, log }) {
             page[side] = false;
           } else {
             await tab.evaluate(() => document.fonts.ready);
+            // Photos below the fold load lazily: load and decode them all, so the shot does not depend on how far the page had got.
+            await tab.evaluate(async () => {
+              const images = [...document.images];
+              for (const image of images) image.loading = "eager";
+              await Promise.all(images.map((image) => image.decode().catch(() => undefined)));
+            });
             mkdirSync(join(outDir, page.slug), { recursive: true });
             await tab.screenshot({ path: join(outDir, page.slug, `${side}-${viewport.name}.png`), fullPage: true });
             log(`  ${side} ${viewport.name}: ${page.route}`);
