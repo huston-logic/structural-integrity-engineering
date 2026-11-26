@@ -10,7 +10,7 @@ export const homeHeroDefinition = defineBlock({
     title: { kind: "text", label: "Headline", max: 60, help: "The page's one main heading." },
     intro: { kind: "text", label: "Line under the headline", max: 200 },
     action: { kind: "action", label: "Button", labelMax: 30 },
-    photo: { kind: "image", label: "Photo", help: "The dusk house photo. The line drawing is drawn for this picture, so keep it." },
+    photo: { kind: "image", shape: "4:5", label: "Photo", help: "The dusk house photo. The line drawing is drawn for this picture, so keep it." },
     labels: {
       kind: "object",
       label: "Labels on the drawing",

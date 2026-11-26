@@ -1,5 +1,6 @@
 import { siteConfig } from "../site.config.ts";
 import { buildAutoReply, type AutoReply, type AutoReplyConfig } from "../src/content/auto-reply.ts";
+import type { UploadsConfig } from "./uploads/types.ts";
 
 /** Which code appends the contact form's row to the Google Sheet. */
 export type SheetWriter = "apps-script" | "service-account";
@@ -43,6 +44,8 @@ export interface EditorSiteConfig {
   workersSubdomain: string | null;
   dailyChangeLimit: number;
   ignoredChecks: string[];
+  /** Optional so an older fixture still compiles; missing means the spec defaults with `enabled` false. */
+  uploads?: UploadsConfig;
 }
 
 /** Everything the owner's chat tools need, resolved once. */
@@ -68,7 +71,20 @@ export interface EditorConfig {
   dailyChangeLimit: number;
   ignoredChecks: string[];
   productionBranch: string;
+  uploads: UploadsConfig;
 }
+
+/** The spec's defaults (docs/superpowers/specs/2026-11-25-uploads-and-photos-design.md, "Settings"). */
+export const DEFAULT_UPLOADS: UploadsConfig = {
+  enabled: false,
+  bucket: null,
+  maxPhotoBytes: 20_000_000,
+  maxPdfBytes: 10_000_000,
+  maxTotalBytes: 200_000_000,
+  maxPerDay: 50,
+  expireDays: 30,
+  types: ["jpeg", "png", "webp", "heic", "pdf"],
+};
 export interface WorkerConfig {
   businessName: string;
   /** From, notify To and Reply-To. null until the owner sets it: the Worker then refuses to send (worker/contact.ts). */
@@ -116,6 +132,7 @@ export function buildEditorConfig(config: WorkerSiteConfig): EditorConfig {
     dailyChangeLimit: editor?.dailyChangeLimit ?? 10,
     ignoredChecks: [...(editor?.ignoredChecks ?? [])],
     productionBranch: config.domain.productionBranch ?? "main",
+    uploads: { ...DEFAULT_UPLOADS, ...(editor?.uploads ?? {}), types: [...(editor?.uploads?.types ?? DEFAULT_UPLOADS.types)] },
   };
 }
 

@@ -107,6 +107,20 @@ export const siteConfig = {
     kv: { oauth: null as string | null, editor: null as string | null },
     /** Pull request checks that never count when judging whether a change is stuck. */
     ignoredChecks: ["change-report", "change-scope", "Workers Builds"] as string[],
+    /**
+     * The owner's upload inbox (photos and PDFs). Settings and their reasons: docs/superpowers/specs/2026-11-25-uploads-and-photos-design.md
+     * ("Settings"). Needs a private R2 bucket and the Images binding, so it stays off until that setup is done.
+     */
+    uploads: {
+      enabled: false,
+      bucket: null as string | null,
+      maxPhotoBytes: 20_000_000,
+      maxPdfBytes: 10_000_000,
+      maxTotalBytes: 200_000_000,
+      maxPerDay: 50,
+      expireDays: 30,
+      types: ["jpeg", "png", "webp", "heic", "pdf"] as ("jpeg" | "png" | "webp" | "heic" | "pdf")[],
+    },
   },
   theme: {
     // Option G, "Dusk" (docs/STYLE-GUIDE.md §2). Each key becomes `--hl-<key>` in src/app/hl.css and a Tailwind color

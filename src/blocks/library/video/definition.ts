@@ -9,7 +9,7 @@ export const videoDefinition = defineBlock({
     url: { kind: "video", label: "Video address", help: "A YouTube or Vimeo address." },
     title: { kind: "text", label: "Title", max: 80 },
     caption: { kind: "text", label: "Caption", max: 200, required: false },
-    poster: { kind: "image", label: "Cover picture", required: false, help: "Shown before play. Without one the video shows a plain dark panel." },
+    poster: { kind: "image", shape: "16:9", label: "Cover picture", required: false, help: "Shown before play. Without one the video shows a plain dark panel." },
   },
   variants: [
     { name: "wide", description: "As wide as the page column." },

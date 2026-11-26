@@ -36,6 +36,15 @@ export const GENERIC_ALT_WORDS = [
   "placeholder",
 ];
 
+/** The shapes an image slot can have (width:height). Each image field names one; the picture is cropped to it. */
+export const IMAGE_SHAPES = ["3:2", "4:3", "4:5", "1:1", "16:9"] as const;
+export type ImageShape = (typeof IMAGE_SHAPES)[number];
+/** Where a cropped picture keeps its focus. */
+export const IMAGE_FOCUS = ["center", "top", "bottom", "left", "right"] as const;
+export type ImageFocus = (typeof IMAGE_FOCUS)[number];
+/** A PDF a link may point to: /files/<lowercase words and digits joined by hyphens>.pdf */
+export const FILE_LINK_RE = /^\/files\/[a-z0-9]+(?:-[a-z0-9]+)*\.pdf$/;
+
 type FieldBase = { label: string; help?: string };
 /** A field is required unless it says `required: false`. */
 type Optionality = { required?: boolean };
@@ -43,11 +52,18 @@ type Optionality = { required?: boolean };
 export type TextField = FieldBase & Optionality & { kind: "text"; max: number; min?: number };
 export type LinkField = FieldBase & Optionality & { kind: "link" };
 export type ActionField = FieldBase & Optionality & { kind: "action"; labelMax: number };
-export type ImageField = FieldBase & Optionality & { kind: "image" };
+export type ImageField = FieldBase & Optionality & { kind: "image"; shape: ImageShape };
 export type VideoField = FieldBase & Optionality & { kind: "video" };
 export type BooleanField = FieldBase & Optionality & { kind: "boolean" };
 export type ChoiceField = FieldBase & Optionality & { kind: "choice"; options: readonly string[] };
-export type ListField = FieldBase & Optionality & { kind: "list"; of: Field; min: number; max: number };
+export type ListField = FieldBase & Optionality & {
+  kind: "list";
+  of: Field;
+  min: number;
+  max: number;
+  /** Optional fields of the list's items that every item gives or none does (for example a photo on every idea). */
+  together?: readonly string[];
+};
 export type ObjectField = FieldBase & Optionality & { kind: "object"; fields: Fields };
 
 export type Field = TextField | LinkField | ActionField | ImageField | VideoField | BooleanField | ChoiceField | ListField | ObjectField;
@@ -62,7 +78,7 @@ type ValueOf<T> = T extends { kind: "text" | "link" | "video" }
   : T extends { kind: "action" }
     ? { label: string; href: string }
     : T extends { kind: "image" }
-      ? { src: string; alt: string }
+      ? { src: string; alt: string; focus?: ImageFocus }
       : T extends { kind: "boolean" }
         ? boolean
         : T extends { kind: "choice"; options: infer O extends readonly string[] }

@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
-import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
-import { CONTACT_PATH, defineBlock, fileForPath, GENERIC_ALT_WORDS, THANKS_PATH } from "../src/blocks/schema.ts";
+import { CONTACT_PATH, defineBlock, fileForPath, GENERIC_ALT_WORDS, IMAGE_FOCUS, THANKS_PATH } from "../src/blocks/schema.ts";
 import { embedOrigins, embedUrl, parseVideoUrl, videoProviders, watchUrl } from "../src/blocks/embeds.ts";
 import { MENU_REFUSED, validateContent, validatePages, validateRegistry } from "../src/blocks/validate.ts";
 import { thanksPageLinks } from "../src/lib/thanks-links.ts";
@@ -66,7 +66,7 @@ const picture = defineBlock({
   type: "picture",
   title: "Picture",
   description: "One picture with a caption.",
-  fields: { image: { kind: "image", label: "Picture" }, link: { kind: "link", label: "Link", required: false } },
+  fields: { image: { kind: "image", label: "Picture", shape: "3:2" }, link: { kind: "link", label: "Link", required: false } },
   placement: { position: "any", maxPerPage: 3, rhythm: "section" },
   example: { image: { src: "/images/a.jpg", alt: "The shop front on a sunny morning" } },
 });
@@ -92,8 +92,27 @@ const spark = defineBlock({
   example: { heading: "Spark" },
 });
 
-const registry = [hero, faq, closing, form, picture, video, spark];
-const repo = { imageExists: (src) => src === "/images/a.jpg" };
+const ideas = defineBlock({
+  ...base,
+  type: "ideas",
+  title: "Ideas",
+  description: "A list of ideas, each with an optional photo.",
+  fields: {
+    items: {
+      kind: "list",
+      label: "Ideas",
+      min: 1,
+      max: 6,
+      together: ["image"],
+      of: { kind: "object", label: "Idea", fields: { title: { kind: "text", label: "Title", max: 40 }, image: { kind: "image", label: "Photo", shape: "4:3", required: false } } },
+    },
+  },
+  placement: { position: "any", maxPerPage: 2, rhythm: "section" },
+  example: { items: [{ title: "One" }] },
+});
+
+const registry = [hero, faq, closing, form, picture, video, spark, ideas];
+const repo = { imageExists: (src) => src === "/images/a.jpg", fileExists: (href) => href === "/files/price-sheet-k3x9q2mz.pdf" };
 
 const block = (type, content, extra = {}) => ({ type, content, ...extra });
 const heroBlock = () => block("hero", { title: "Welcome" });
@@ -509,7 +528,7 @@ test("registry problems: the real registry has none", async () => {
   assert.deepEqual(validateRegistry(registry), []);
   assert.deepEqual(
     libraryBlocks.map((def) => def.type),
-    ["hero", "highlights", "prose", "faq", "closing-cta", "contact-form", "steps", "legal-sections", "video", "video-grid"],
+    ["hero", "highlights", "prose", "faq", "closing-cta", "contact-form", "steps", "legal-sections", "video", "video-grid", "photo-text", "gallery"],
   );
 });
 
@@ -517,7 +536,9 @@ test("every library example validates", async () => {
   const { libraryBlocks } = await import("../src/blocks/definitions.ts");
   for (const def of libraryBlocks) {
     assert.equal(def.source, "library", def.type);
-    assert.deepEqual(validateContent(def, def.example, `${def.type} example`, { repo, pages: null }), [], def.type);
+    // The showcase photos are real files in public/images/examples/.
+    const libraryRepo = { ...repo, imageExists: (src) => repo.imageExists(src) || existsSync(new URL(`../public${src}`, import.meta.url)) };
+    assert.deepEqual(validateContent(def, def.example, `${def.type} example`, { repo: libraryRepo, pages: null }), [], def.type);
     assert.ok(def.description.length > 20 && def.variants.every((v) => v.description.length > 0), `${def.type} describes itself`);
     const text = JSON.stringify(def.example);
     assert.ok(!text.includes("[["), `${def.type} example has no placeholder`);
@@ -546,4 +567,50 @@ test("thanks links to live pages pass", () => {
   const services = { file: "services.json", data: page("/services", [heroBlock()]) };
   const problems = validatePages([home(), contact(), aboutWith([heroBlock()]), services], registry, repo, { links: thanksPageLinks(thanksData) });
   assert.deepEqual(problems, []);
+});
+
+test("registry: an image field needs a valid shape", () => {
+  const withShape = (shape) => ({ ...picture, fields: { image: { kind: "image", label: "Picture", ...(shape === undefined ? {} : { shape }) } } });
+  assert.deepEqual(validateRegistry([withShape("16:9")]), []);
+  assert.match(validateRegistry([withShape(undefined)])[0], /"image" needs a shape: 3:2, 4:3, 4:5, 1:1 or 16:9/);
+  assert.match(validateRegistry([withShape("2:1")])[0], /"image" needs a shape/);
+});
+
+test("image focus is optional and limited to the allowed words", () => {
+  const withImage = (image) => checkHome([heroBlock(), block("picture", { image })]);
+  for (const focus of IMAGE_FOCUS) assert.deepEqual(withImage({ src: "/images/a.jpg", alt: "A baker holding a loaf", focus }), []);
+  const bad = withImage({ src: "/images/a.jpg", alt: "A baker holding a loaf", focus: "middle" });
+  assert.equal(bad.length, 1);
+  assert.match(bad[0], /"focus" must be one of: center, top, bottom, left, right/);
+  assert.match(withImage({ src: "/images/a.jpg", alt: "A baker holding a loaf", focus: 3 })[0], /"focus" must be one of/);
+  assert.match(withImage({ src: "/images/a.jpg", alt: "A baker holding a loaf", extra: 1 })[0], /"extra" is not a field an image accepts/);
+});
+
+test("together: a list gives every item a photo or none", () => {
+  const photo = { src: "/images/a.jpg", alt: "A baker holding a loaf" };
+  const withItems = (items) => checkHome([heroBlock(), block("ideas", { items })]);
+  assert.deepEqual(withItems([{ title: "A" }, { title: "B" }]), []);
+  assert.deepEqual(withItems([{ title: "A", image: photo }, { title: "B", image: photo }]), []);
+  const mixed = withItems([{ title: "A", image: photo }, { title: "B" }]);
+  assert.equal(mixed.length, 1);
+  assert.match(mixed[0], /"items": give every idea a photo, or none\./);
+});
+
+test("file links: a PDF under /files/ that exists is allowed", () => {
+  const link = (href) => checkHome([heroBlock(), block("picture", { image: { src: "/images/a.jpg", alt: "The shop front" }, link: href })]);
+  assert.deepEqual(link("/files/price-sheet-k3x9q2mz.pdf"), []);
+  assert.match(link("/files/other-k3x9q2mz.pdf")[0], /is not a file in public\/files\/\. Upload it first\./);
+  assert.match(link("/files/Price Sheet.pdf")[0], /contains a space/);
+  assert.match(link("/files/Price_Sheet.pdf")[0], /\/files\/ link must look like \/files\/price-sheet-k3x9q2mz\.pdf/);
+  assert.match(link("/files/nested/a.pdf")[0], /\/files\/ link must look like/);
+  assert.match(link("/files/a.docx")[0], /\/files\/ link must look like/);
+});
+
+test("alt text equal to the upload's name is refused", () => {
+  const uploadNames = new Map([["/images/a.jpg", "IMG 4411 shop front"]]);
+  const run = (alt) => validatePages([home([heroBlock(), block("picture", { image: { src: "/images/a.jpg", alt } })]), contact()], registry, repo, { uploadNames });
+  assert.deepEqual(run("The shop front on a sunny morning"), []);
+  const problems = run("  img 4411 SHOP front ");
+  assert.equal(problems.length, 1);
+  assert.match(problems[0], /"image" The description is the file's name; describe what the photo shows\./);
 });

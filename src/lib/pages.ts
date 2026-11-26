@@ -1,6 +1,6 @@
 // The site's pages, read from src/content/pages/*.json and checked with the content check. Server only (it reads files).
 // An invalid page throws one error that lists every problem, so `next build` fails with plain words instead of a broken page.
-import { existsSync } from "node:fs";
+import { existsSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { registry } from "@/blocks/definitions";
 import type { MenuPlace, PageData } from "@/blocks/schema";
@@ -14,7 +14,10 @@ let cached: PageData[] | null = null;
 function load(): PageData[] {
   const root = process.cwd();
   const files = readPageFiles(root);
-  const problems = validatePages(files, registry, { imageExists: (src) => existsSync(join(root, "public", src)) });
+  const filesDir = join(root, "public", "files");
+  const pdfs = new Set(existsSync(filesDir) ? readdirSync(filesDir).filter((name) => name.endsWith(".pdf")) : []);
+  const repo = { imageExists: (src: string) => existsSync(join(root, "public", src)), fileExists: (href: string) => pdfs.has(href.replace(/^\/files\//, "")) };
+  const problems = validatePages(files, registry, repo);
   if (problems.length > 0) {
     throw new Error(`The page files have ${problems.length} problem${problems.length === 1 ? "" : "s"}:\n${problems.map((p) => `  - ${p}`).join("\n")}`);
   }

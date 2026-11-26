@@ -348,3 +348,39 @@ test("FakeGitHub: close, issues and the clean auto-merge answer", async () => {
   assert.deepEqual(await fake.openIssue({ title: "Owner request: x", body: "b", labels: ["owner-request"] }), { number: 1, url: "https://github.com/fake/fake/issues/1" });
   assert.equal(fake.issues[0].labels[0], "owner-request");
 });
+
+test("createCommit sends a binary file as a base64 blob first and puts its sha in the tree", async () => {
+  const { calls, fetcher } = mock({
+    ...TOKEN_ROUTE,
+    "GET /repos/acme/site/git/commits/c1": { json: { tree: { sha: "t1" } } },
+    "POST /repos/acme/site/git/blobs": { status: 201, json: { sha: "b1" } },
+    "POST /repos/acme/site/git/trees": { status: 201, json: { sha: "t2" } },
+    "POST /repos/acme/site/git/commits": { status: 201, json: { sha: "c2" } },
+  });
+  const gh = createGitHub({ ...BASE, privateKeyPem: PKCS8_PEM, fetch: fetcher });
+  const bytes = Uint8Array.from({ length: 300_000 }, (_, i) => i % 251);
+  await gh.createCommit({ baseCommit: "c1", files: [{ path: "a.json", content: "{}" }, { path: "public/images/uploads/x.webp", bytes }], message: "m" });
+  const order = calls.filter((c) => c.method === "POST" && /\/git\/(blobs|trees|commits)$/.test(c.url)).map((c) => c.url.split("/").pop());
+  assert.deepEqual(order, ["blobs", "trees", "commits"]);
+  const blob = calls.find((c) => c.url.endsWith("/git/blobs"))?.body as { content: string; encoding: string };
+  assert.equal(blob.encoding, "base64");
+  assert.deepEqual(new Uint8Array(Buffer.from(blob.content, "base64")), bytes, "a large file survives the chunked base64");
+  assert.deepEqual(calls.find((c) => c.url.endsWith("/git/trees"))?.body, {
+    base_tree: "t1",
+    tree: [
+      { path: "a.json", mode: "100644", type: "blob", content: "{}" },
+      { path: "public/images/uploads/x.webp", mode: "100644", type: "blob", sha: "b1" },
+    ],
+  });
+});
+
+test("a failed blob upload fails the commit without a tree", async () => {
+  const { calls, fetcher } = mock({
+    ...TOKEN_ROUTE,
+    "GET /repos/acme/site/git/commits/c1": { json: { tree: { sha: "t1" } } },
+    "POST /repos/acme/site/git/blobs": { status: 422, json: {} },
+  });
+  const gh = createGitHub({ ...BASE, privateKeyPem: PKCS8_PEM, fetch: fetcher });
+  await assert.rejects(gh.createCommit({ baseCommit: "c1", files: [{ path: "x.webp", bytes: Uint8Array.of(1) }], message: "m" }), /create blob failed/);
+  assert.ok(!calls.some((c) => c.url.endsWith("/git/trees")));
+});

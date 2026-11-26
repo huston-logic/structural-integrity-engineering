@@ -758,8 +758,10 @@ test("gatherChange reads every page file and the image list at the head commit w
     "show HEAD:src/content/pages/home.json": home,
     "show HEAD:src/content/pages/broken.json": "{",
     "ls-tree -r --name-only -z HEAD -- public/images/": "public/images/a.jpg\0public/images/team/b.png\0",
+    "ls-tree -r --name-only -z HEAD -- public/files/": "public/files/menu.pdf\0",
   };
   const change = gatherChange({ base: "origin/main", head: "HEAD", git: fakeGit(table) });
+  assert.deepEqual(change.headFiles, ["public/files/menu.pdf"]);
   assert.deepEqual(change.pages.map((p) => p.file), ["broken.json", "home.json"]);
   assert.match(change.pages[0].error, /^is not valid JSON/);
   assert.deepEqual(change.pages[1].data, JSON.parse(home));
@@ -939,6 +941,141 @@ test("real git: an image in a sub-folder is found by its full path, and a delete
   try {
     git(["checkout", "-q", "-b", "change/remove"]);
     rmSync(join(dir, "public/images/old.jpg"));
+    git(["add", "-A"]);
+    git(["-c", "user.email=t@example.com", "-c", "user.name=Test", "-c", "commit.gpgsign=false", "commit", "-q", "-m", "remove"]);
+    const out = [];
+    assert.equal(main({ argv: ["--base", "change/test", "--head", "HEAD"], env: {}, git, out: (t) => out.push(t) }), 0, out.join("\n"));
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+// ---- PDFs under public/files/ ---------------------------------------------------------------------------------
+
+const makePdf = (extra = "") =>
+  Buffer.from(`%PDF-1.4\n1 0 obj\n<< /Type /Catalog /Pages 2 0 R ${extra}>>\nendobj\n2 0 obj\n<< /Type /Pages /Kids [] /Count 0 >>\nendobj\ntrailer\n<< /Root 1 0 R >>\n%%EOF\n`, "latin1");
+const SHEET_LINK = 'export const sheet = { label: "Price sheet", href: "/files/price-sheet.pdf" };\n';
+
+test("a PDF is tier 1 by name: lowercase words joined by hyphens, one level, .pdf; anything else in public/files is tier 3", () => {
+  const pdf = (path, extra = {}) => file(path, "A", { pdfProblem: null, ...extra });
+  const refs = { "public/files/price-sheet.pdf": [{ path: "src/content/home.ts", content: SHEET_LINK }] };
+  const ok = evaluateChange({ files: [pdf("public/files/price-sheet.pdf")], fileRefs: refs }, rules);
+  assert.equal(ok.tier, 1);
+  assert.deepEqual(ok.fileProblems, []);
+  for (const path of ["public/files/Price-Sheet.pdf", "public/files/price_sheet.pdf", "public/files/price--sheet.pdf", "public/files/menu.docx", "public/files/sub/menu.pdf", "public/files/menu.pdf.exe", "public/files/.hidden", "public/files/notes.html"]) {
+    const result = run([pdf(path)]);
+    assert.equal(result.tier, 3, path);
+    assert.match(result.outside[0].reason, /only PDFs named in lowercase words joined by hyphens can go in public\/files\//, path);
+  }
+});
+
+test("deleting a PDF is tier 1 and is not checked; deleting an oddly named file in public/files is tier 3", () => {
+  assert.equal(run([file("public/files/old-menu.pdf", "D")]).tier, 1);
+  assert.deepEqual(run([file("public/files/old-menu.pdf", "D")]).fileProblems, []);
+  assert.equal(run([file("public/files/Old.exe", "D")]).tier, 3);
+});
+
+test("a PDF that fails its byte check or is not used fails in strict mode, with a message that names the fix", () => {
+  const path = "public/files/price-sheet.pdf";
+  const used = { [path]: [{ path: "src/content/home.ts", content: SHEET_LINK }] };
+  const bad = evaluateChange({ files: [file(path, "A", { pdfProblem: "it holds a script" })], fileRefs: used }, rules);
+  assert.equal(bad.fileProblems.length, 1);
+  assert.equal(decide(bad, "strict").ok, false);
+  assert.match(decide(bad, "strict").reasons.join(), /PDF rule broken/);
+  assert.equal(decide(bad, "report-only").ok, true);
+  const unused = evaluateChange({ files: [file(path, "A", { pdfProblem: null })] }, rules);
+  assert.match(unused.fileProblems[0].reason, /nothing in src\/ links to \/files\/price-sheet\.pdf/);
+  const partial = evaluateChange({ files: [file(path, "A", { pdfProblem: null })], fileRefs: { [path]: [{ path: "src/content/home.ts", content: 'const x = "/files/price-sheet.pdf.bak";\n' }] } }, rules);
+  assert.equal(partial.fileProblems.length, 1);
+  assert.match(formatReport(bad, { mode: "strict" }), /PDF problems \(blocking on client change branches\):\n {2}- public\/files\/price-sheet\.pdf: it holds a script/);
+});
+
+test("real git: a good PDF used in a content file passes", () => {
+  const { code, report } = inRepo(({ write }) => {
+    write("public/files/price-sheet.pdf", makePdf());
+    write("src/content/home.ts", SHEET_LINK);
+  });
+  assert.equal(code, 0, report);
+  assert.match(report, /Tier 1/);
+});
+
+test("real git: a good PDF used in a page file has no PDF problem", () => {
+  const page = pageData("/about", { menu: { label: "About", order: 20, places: ["header"] }, notes: "/files/price-sheet.pdf" });
+  const { report } = inRepo(({ write }) => {
+    write("public/files/price-sheet.pdf", makePdf());
+    write("src/content/pages/about.json", JSON.stringify(page, null, 2));
+  });
+  assert.doesNotMatch(report, /PDF problems/);
+  assert.doesNotMatch(report, /Tier 3/);
+});
+
+test("real git: a PDF nothing links to fails and says to add the link", () => {
+  const { code, report } = inRepo(({ write }) => write("public/files/price-sheet.pdf", makePdf()));
+  assert.equal(code, 1, report);
+  assert.match(report, /Tier 1/);
+  assert.match(report, /PDF problems/);
+  assert.match(report, /nothing in src\/ links to \/files\/price-sheet\.pdf/);
+});
+
+test("real git: a PDF with a script fails and says to save it again as a plain PDF, even when the name is disguised", () => {
+  for (const name of ["/JavaScript 5 0 R ", "/J#61vaScript 5 0 R "]) {
+    const { code, report } = inRepo(({ write }) => {
+      write("public/files/price-sheet.pdf", makePdf(name));
+      write("src/content/home.ts", SHEET_LINK);
+    });
+    assert.equal(code, 1, report);
+    assert.match(report, /save it again as a plain PDF \(Print, then Save as PDF\)/i);
+  }
+});
+
+test("real git: a name that only starts like an active one passes", () => {
+  const { code, report } = inRepo(({ write }) => {
+    write("public/files/price-sheet.pdf", makePdf("/JSFoo 1 "));
+    write("src/content/home.ts", SHEET_LINK);
+  });
+  assert.equal(code, 0, report);
+});
+
+test("real git: a PDF over 10 MB fails", () => {
+  const big = Buffer.concat([makePdf().subarray(0, 9), Buffer.alloc(10 * 1000 * 1000, 0x20), makePdf().subarray(9)]);
+  const { code, report } = inRepo(({ write }) => {
+    write("public/files/price-sheet.pdf", big);
+    write("src/content/home.ts", SHEET_LINK);
+  });
+  assert.equal(code, 1, report);
+  assert.match(report, /over the 10 MB limit/);
+});
+
+test("real git: bytes that are not a PDF under a .pdf name fail", () => {
+  for (const bytes of [Buffer.from("<html><script>alert(1)</script></html>"), jpg]) {
+    const { code, report } = inRepo(({ write }) => {
+      write("public/files/price-sheet.pdf", bytes);
+      write("src/content/home.ts", SHEET_LINK);
+    });
+    assert.equal(code, 1, report);
+    assert.match(report, /not really a PDF/);
+  }
+});
+
+test("real git: a wrongly named file in public/files is tier 3 with the plain reason", () => {
+  const { code, report } = inRepo(({ write }) => {
+    write("public/files/Price Sheet.pdf", makePdf());
+    write("public/files/menu.html", "<p>hi</p>");
+  });
+  assert.equal(code, 1, report);
+  assert.match(report, /Tier 3/);
+  assert.match(report, /only PDFs named in lowercase words joined by hyphens can go in public\/files\//);
+});
+
+test("real git: deleting a PDF passes", () => {
+  const { dir, git } = makeRepo(({ write }) => {
+    write("public/files/old-menu.pdf", makePdf());
+    write("src/content/home.ts", 'export const menu = "/files/old-menu.pdf";\n');
+  });
+  try {
+    git(["checkout", "-q", "-b", "change/remove-pdf"]);
+    rmSync(join(dir, "public/files/old-menu.pdf"));
+    writeFileSync(join(dir, "src/content/home.ts"), 'export const menu = "";\n');
     git(["add", "-A"]);
     git(["-c", "user.email=t@example.com", "-c", "user.name=Test", "-c", "commit.gpgsign=false", "commit", "-q", "-m", "remove"]);
     const out = [];

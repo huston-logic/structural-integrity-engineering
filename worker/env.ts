@@ -21,6 +21,9 @@ export interface EditorEnv extends ContactEnv {
   EDITOR_RATE_LIMIT?: RateLimit;
   ASSETS?: Fetcher;
   GITHUB_APP_PRIVATE_KEY?: string;
+  /** Present only when `editor.uploads.enabled` is true: the private inbox bucket and the Images binding. */
+  UPLOADS?: R2Bucket;
+  IMAGES?: ImagesBinding;
 }
 
 /** Whether the submission reached its destination. "skipped" means it was deliberately not sent (a preview never posts to the real app). */

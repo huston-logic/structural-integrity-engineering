@@ -135,12 +135,15 @@
 
   /* Names the library blocks (src/blocks/library) use, read as this site's roles (docs/SITE-DIFFERENCES.md, D4):
      ink is the darkest fill (night), ink-2 muted text (mist), green the accent (amber), silver and white light text and
-     fills (snow). The one typeface answers to font-ui too. */
+     fills (snow), tint the quiet box behind a photo while it loads (dusk-deep). The one typeface answers to font-ui too. */
   --color-ink: var(--hl-night);
   --color-ink-2: var(--hl-mist);
   --color-green: var(--hl-amber);
   --color-silver: var(--hl-snow);
   --color-white: var(--hl-snow);
+  --color-tint: var(--hl-dusk-deep);
+  --text-tag: 13px;
+  --text-tag--line-height: 1;
   --font-ui: var(--font-sans);
   --text-list: 17px;
   --text-list--line-height: 1.55;
@@ -155,6 +158,11 @@
   --container-intro: 60ch;
   --container-narrow: 48ch;
   --container-heading: 17em;
+
+  /* Photo shapes (width / height): aspect-photo-3-2, -4-3, -4-5. The square and 16:9 use Tailwind's own. */
+  --aspect-photo-3-2: 3 / 2;
+  --aspect-photo-4-3: 4 / 3;
+  --aspect-photo-4-5: 4 / 5;
 }
 
 @theme {

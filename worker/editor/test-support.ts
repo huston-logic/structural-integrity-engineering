@@ -1,4 +1,4 @@
-import type { EditorConfig } from "../config.ts";
+import { DEFAULT_UPLOADS, type EditorConfig } from "../config.ts";
 import { registry } from "../../src/blocks/definitions.ts";
 import { CONTACT_PATH, fileForPath } from "../../src/blocks/schema.ts";
 import { FakeGitHub } from "./fake-github.ts";
@@ -22,6 +22,7 @@ export const testEditorConfig = (overrides: Partial<EditorConfig> = {}): EditorC
   dailyChangeLimit: 10,
   ignoredChecks: ["change-report", "change-scope", "Workers Builds"],
   productionBranch: "main",
+  uploads: DEFAULT_UPLOADS,
   ...overrides,
 });
 

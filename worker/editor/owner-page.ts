@@ -1,11 +1,11 @@
-// The owner page and the sign-in consent page: pure functions, data in and an HTML string out. No scripts, no external
-// resources, no style attributes. Every interpolated value goes through escapeHtml.
+// The owner page and the sign-in consent page: pure functions, data in and an HTML string out. No inline scripts, no external
+// resources, no style attributes. The home page carries one same-origin script tag (the upload form's progress). Every interpolated value goes through escapeHtml.
 
 import { escapeHtml } from "../html.ts";
-import type { ChangeView, ProposalView } from "./views.ts";
+import type { ChangeView, ProposalView, UploadView } from "./views.ts";
 import { AGENCY_NAME } from "./words.ts";
 
-export type { ChangeView, ProposalView };
+export type { ChangeView, ProposalView, UploadView };
 
 export interface ThemeColors {
   white: string;
@@ -27,10 +27,33 @@ export interface PageBase {
   theme: ThemeColors;
 }
 
+/** One line of the result a plain (no JavaScript) upload post shows at the top of the uploads section. */
+export interface UploadLine {
+  name: string;
+  ok: boolean;
+  message: string;
+}
+
+export interface UploadsSection {
+  /** Newest first; null when the list could not be read; absent when uploads are not set up. */
+  items: UploadView[] | null;
+  notSetUp?: boolean;
+  limits: { photoBytes: number; pdfBytes: number; expireDays: number };
+  /** The current time, ISO, for "Removed in N days". */
+  now: string;
+  results?: UploadLine[];
+}
+
 export interface HomeData extends PageBase {
   /** null when the list could not be read. */
   proposals: ProposalView[] | null;
   changes: ChangeView[] | null;
+  /** Omitted: the page has no uploads section. */
+  uploads?: UploadsSection;
+}
+
+export interface RemoveData extends PageBase {
+  upload: UploadView;
 }
 
 export interface ConfirmData extends PageBase {
@@ -99,6 +122,40 @@ code{overflow-wrap:anywhere;background:${c("silver", "#f5f5f4")};border:1px soli
 .btn.primary{background:${c("green", "#1e4fa3")};border-color:${c("green", "#1e4fa3")};color:${white}}
 .btn.primary:hover{background:${c("greenDeep", "#173b7a")}}
 .host{font-size:1.25rem;font-weight:700;overflow-wrap:anywhere}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+.plain{list-style:none}
+.uploads{display:grid;grid-template-columns:repeat(auto-fill,minmax(9.5rem,1fr));gap:.75rem;margin:1.25rem 0 0;list-style:none}
+.uploads[hidden]{display:none}
+.up{margin:0;padding:.5rem;display:flex;flex-direction:column;gap:.25rem}
+.up h3{font-size:.9375rem;margin:.25rem 0 0;overflow-wrap:anywhere}
+.up .meta{font-size:.875rem}
+.up-actions{display:flex;flex-wrap:wrap;gap:.5rem;margin-top:auto;padding-top:.25rem}
+.up-actions .btn{min-height:44px;padding:.5rem .75rem;font-size:.9375rem;flex:1 1 auto}
+.up-actions details{flex:1 1 auto}
+.up-actions details[open]{flex-basis:100%}
+summary.btn{list-style:none;width:100%}
+summary.btn::-webkit-details-marker{display:none}
+.rename-form{display:flex;flex-direction:column;gap:.25rem;margin:.5rem 0 0}
+.rename-form label{font-size:.875rem;font-weight:600}
+.rename-form .btn{width:100%}
+.btn[aria-disabled=true]{opacity:.6;cursor:default}
+#upload-progress:focus{outline:none}
+.results h3,#upload-progress h3{font-size:1rem;margin:0 0 .5rem}
+.thumb{aspect-ratio:4/3;border-radius:6px;overflow:hidden;background:${c("silver", "#f5f5f4")};border:1px solid ${line}}
+.thumb img{display:block;width:100%;height:100%;object-fit:cover}
+.doc{display:flex;align-items:center;justify-content:center;font-weight:700;color:${ink2}}
+input[type=text],input[type=file]{font:inherit;color:${ink};min-height:44px;width:100%;padding:.5rem .625rem;border:1px solid ${ink2};border-radius:8px;background:${white}}
+input:focus-visible{outline:3px solid ${c("rust", "#9a3412")};outline-offset:2px}
+.upload-form{display:flex;flex-direction:column;gap:.5rem;margin:0 0 1rem}
+.upload-form label{font-weight:600}
+progress{width:100%;height:.75rem;accent-color:${c("green", "#1e4fa3")}}
+.progress-row{display:flex;flex-direction:column;gap:.25rem;margin:0 0 .75rem}
+.progress-name{font-weight:600;overflow-wrap:anywhere}
+.results{border:1px solid ${line};border-radius:8px;padding:.75rem;margin:0 0 1rem}
+.results li{margin:.25rem 0;overflow-wrap:anywhere}
+.files{display:flex;flex-wrap:wrap;gap:.75rem;list-style:none;margin:0 0 1rem}
+.files li{width:9rem}
+.files p{margin:.25rem 0 0;font-weight:600;font-size:.875rem;overflow-wrap:anywhere}
 .warn{border:2px solid ${c("rust", "#9a3412")};border-radius:8px;padding:.75rem;margin:1rem 0}
 `;
 }
@@ -211,6 +268,67 @@ ${action ? `<div class="actions">${action}</div>` : ""}
 </li>`;
 }
 
+const sizeLabel = (bytes: number): string =>
+  bytes < 1_000_000 ? `${Math.max(1, Math.round(bytes / 1000))} KB` : `${Math.round((bytes / 1_000_000) * 10) / 10} MB`;
+const megabytes = (bytes: number): string => String(Math.round((bytes / 1_000_000) * 10) / 10);
+const plural = (count: number, word: string): string => `${count} ${word}${count === 1 ? "" : "s"}`;
+
+function thumbnail(upload: { id: string; name: string; kind: "photo" | "pdf" }): string {
+  return upload.kind === "photo"
+    ? `<div class="thumb"><img src="/owner/uploads/${e(upload.id)}/preview" alt="" width="480" height="360" loading="lazy"></div>`
+    : `<div class="thumb doc"><span>PDF</span></div>`;
+}
+
+function uploadCard(upload: UploadView, nowMs: number): string {
+  const facts = [upload.kind === "photo" ? "Photo" : "PDF", sizeLabel(upload.bytes)];
+  if (upload.kind === "pdf" && upload.pages) facts.push(plural(upload.pages, "page"));
+  const days = Math.max(1, Math.ceil((Date.parse(upload.expiresAt) - nowMs) / 86_400_000));
+  facts.push(`Removed in ${plural(days, "day")}`);
+  return `<li class="card up">
+${thumbnail(upload)}
+<h3>${e(upload.name)}</h3>
+<p class="muted meta">${e(facts.join(" \u00B7 "))}</p>
+${upload.onSite ? `<p><span class="tag">On your site</span></p>` : ""}
+<div class="up-actions">
+<details class="rename">
+<summary class="btn">Rename<span class="sr"> ${e(upload.name)}</span></summary>
+<form class="rename-form" method="post" action="/owner/uploads/rename">
+<input type="hidden" name="id" value="${e(upload.id)}">
+<label for="rename-${e(upload.id)}">Name<span class="sr"> of ${e(upload.name)}</span></label>
+<input type="text" id="rename-${e(upload.id)}" name="name" value="${e(upload.name)}" maxlength="80" autocomplete="off">
+<button class="btn" type="submit" aria-label="Save name for ${e(upload.name)}">Save</button>
+</form>
+</details>
+<a class="btn" href="/owner/uploads/remove?upload=${encodeURIComponent(upload.id)}" aria-label="Remove: ${e(upload.name)}">Remove</a>
+</div>
+</li>`;
+}
+
+function uploadsSection(section: UploadsSection): string {
+  if (section.notSetUp) return `<h2>Your uploads</h2>\n<p>Uploads aren't set up on this site yet.</p>`;
+  const { limits } = section;
+  const nowMs = Date.parse(section.now);
+  const results = section.results && section.results.length > 0
+    ? `<div class="results" id="upload-results" tabindex="-1" role="${section.results.some((line) => !line.ok) ? "alert" : "status"}" aria-labelledby="upload-results-title"><h3 id="upload-results-title">Upload results</h3><ul class="plain" role="list">${section.results
+        .map((line) => `<li>${line.ok ? e(line.message ? line.message.replace(/^Added /, "Uploaded ") : `Uploaded \u201C${line.name}\u201D.`) : `\u201C${e(line.name)}\u201D was not uploaded. ${e(line.message)}`}</li>`)
+        .join("")}</ul></div>`
+    : "";
+  const items = section.items;
+  const empty = items === null || items.length === 0;
+  const list = items === null ? `<p>The uploads could not be loaded right now. Try again in a minute.</p>` : empty ? `<p id="upload-empty">Nothing uploaded yet.</p>` : "";
+  return `<h2>Your uploads</h2>
+${results}<form class="upload-form" id="upload-form" method="post" enctype="multipart/form-data" action="/owner/uploads">
+<label for="upload-files">Choose photos or PDFs</label>
+<input type="file" id="upload-files" name="file" multiple accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif,application/pdf" aria-describedby="upload-limits">
+<p class="muted" id="upload-limits">Photos up to ${e(megabytes(limits.photoBytes))} MB and PDFs up to ${e(megabytes(limits.pdfBytes))} MB. Unused uploads are removed after ${e(String(limits.expireDays))} days. A PDF keeps its document properties, such as the author's name.</p>
+<div><button class="btn primary" type="submit">Upload</button></div>
+</form>
+<div id="upload-progress" tabindex="-1"></div>
+<p class="muted" id="upload-status" aria-live="polite"></p>
+${list}
+<ul class="uploads" id="upload-grid" role="list"${empty ? " hidden" : ""}>${items ? items.map((u) => uploadCard(u, nowMs)).join("\n") : ""}</ul>`;
+}
+
 export function renderOwnerHome(data: HomeData): string {
   const waiting =
     data.proposals === null
@@ -227,6 +345,7 @@ export function renderOwnerHome(data: HomeData): string {
   const body = `<h1>Your site</h1>
 <h2>Waiting for your yes</h2>
 ${waiting}
+${data.uploads ? uploadsSection(data.uploads) : ""}
 <h2>Recent changes</h2>
 ${recent}
 <h2>Connect your AI app</h2>
@@ -235,14 +354,35 @@ ${recent}
 <p>Other AI apps that support connectors with sign-in work the same way.</p>
 <h2>What you can change</h2>
 <p>Ask your AI app: \u201CWhat can I change on my site?\u201D It will tell you what you can change by chatting, and what needs ${e(AGENCY_NAME)}.</p>`;
-  return wrap(data, "Owner page", body);
+  const script = data.uploads && !data.uploads.notSetUp ? `\n<script src="/owner/uploads.js" defer></script>` : "";
+  return wrap(data, "Owner page", body + script);
+}
+
+function confirmFiles(proposal: ProposalView): string {
+  if (proposal.uploads.length === 0) return "";
+  const tiles = proposal.uploads
+    .map((u) => `<li>${thumbnail(u)}<p>${e(u.name)}</p></li>`)
+    .join("");
+  return `<h2>Photos and files in this change</h2>\n<ul class="files" role="list">${tiles}</ul>\n`;
+}
+
+export function renderRemoveConfirm(data: RemoveData): string {
+  const u = data.upload;
+  const body = `<h1>Remove \u201C${e(u.name)}\u201D?</h1>
+<p>This can't be undone. Pages that already show it keep it.</p>
+<ul class="files" role="list"><li>${thumbnail(u)}<p>${e(u.name)}</p></li></ul>
+<div class="actions">
+${postForm("/owner/uploads/remove", { upload: u.id }, "Remove", true)}
+<a class="btn" href="/owner">Keep it</a>
+</div>`;
+  return wrap(data, "Remove this upload?", body);
 }
 
 export function renderConfirm(data: ConfirmData): string {
   const p = data.proposal;
   const body = `<h1>Publish this change?</h1>
 <p>${e(p.summary)}</p>
-<h2>Changes in this proposal</h2>
+${confirmFiles(p)}<h2>Changes in this proposal</h2>
 <pre>${e(p.changeList)}</pre>
 <div class="actions">
 ${postForm("/owner/publish", { proposal: p.id }, "Publish", true)}

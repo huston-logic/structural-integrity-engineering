@@ -9,7 +9,7 @@ export const photoHeroDefinition = defineBlock({
   fields: {
     title: { kind: "text", label: "Headline", max: 60, help: "The page's one main heading." },
     intro: { kind: "text", label: "Line under the headline", max: 200 },
-    photo: { kind: "image", label: "Photo", help: "A new photo needs a line in src/content/photos.ts." },
+    photo: { kind: "image", shape: "3:2", label: "Photo", help: "A new photo needs a line in src/content/photos.ts." },
     drawing: { kind: "choice", label: "Line drawing", options: ["services"] },
   },
   variants: [{ name: "default", description: "Text and photo side by side from 1024 px wide, stacked on phones." }],

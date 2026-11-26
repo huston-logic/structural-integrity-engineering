@@ -5,12 +5,16 @@ import { BASE_HEADERS } from "../http.ts";
 import { readBody } from "../read-body.ts";
 import { ownerFromRequest } from "./access.ts";
 import { ownerKey } from "./owner-id.ts";
+import { postUploads, uploadsAsset, uploadsJson } from "./owner-uploads.ts";
 import {
   renderConfirm,
   renderConsent,
   renderMessage,
   renderOwnerHome,
+  renderRemoveConfirm,
   type PageBase,
+  type UploadLine,
+  type UploadsSection,
   type ThemeColors,
 } from "./owner-page.ts";
 import { isObject } from "./json.ts";
@@ -50,14 +54,18 @@ export interface OwnerContext {
   theme: ThemeColors;
   rateLimit?: RateLimit;
   fetch?: typeof fetch;
+  now?: () => Date;
 }
 
 const MAX_BODY = 8 * 1024;
 const PUBLISH_WORDS = "Approved on the owner page by the signed-in owner.";
 const BASE_CSP = "default-src 'none'; style-src 'unsafe-inline'; img-src 'self'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'";
 
-function pageHeaders(formAction?: string): Headers {
-  const csp = formAction ? BASE_CSP.replace("form-action 'self'", `form-action 'self' ${formAction}`) : BASE_CSP;
+/** Only the home page runs a script (the upload form's progress), from this site's own origin and talking only to it. */
+const HOME_CSP = BASE_CSP.replace("default-src 'none';", "default-src 'none'; script-src 'self'; connect-src 'self';");
+
+function pageHeaders(formAction?: string, csp = BASE_CSP): Headers {
+  csp = formAction ? csp.replace("form-action 'self'", `form-action 'self' ${formAction}`) : csp;
   return new Headers({
     ...BASE_HEADERS,
     "content-type": "text/html; charset=utf-8",
@@ -101,10 +109,17 @@ export async function handleOwner(request: Request, ctx: OwnerContext): Promise<
     "/owner": ["GET"],
     "/owner/publish": ["GET", "POST"],
     "/owner/discard": ["POST"],
+    "/owner/uploads": ["POST"],
+    "/owner/uploads/rename": ["POST"],
+    "/owner/uploads/remove": ["GET", "POST"],
     "/owner/undo": ["POST"],
     "/owner/connect": ["GET", "POST"],
   };
   const allowed = routes[path];
+  if (request.method === "GET" && (path === "/owner/uploads.js" || path.startsWith("/owner/uploads/"))) {
+    const asset = await uploadsAsset(path, editor);
+    if (asset) return asset;
+  }
   if (!allowed) return message("Page not found", "There is nothing at this address.", 404);
   const method = request.method === "HEAD" ? "GET" : request.method;
   if (!allowed.includes(method)) {
@@ -113,11 +128,36 @@ export async function handleOwner(request: Request, ctx: OwnerContext): Promise<
     return response;
   }
 
+  const now = ctx.now ?? (() => new Date());
+  const home = async (results?: UploadLine[], status = 200): Promise<Response> => {
+    const [waiting, recent, uploaded] = await Promise.all([editor.waiting(), editor.recent(), editor.uploads()]);
+    const limits = { photoBytes: config.uploads.maxPhotoBytes, pdfBytes: config.uploads.maxPdfBytes, expireDays: config.uploads.expireDays };
+    const uploads: UploadsSection = {
+      items: uploaded.isError ? null : uploaded.data,
+      limits,
+      now: now().toISOString(),
+      ...(uploaded.isError && uploaded.text.startsWith("Uploads aren't set up") ? { notSetUp: true } : {}),
+      ...(results ? { results } : {}),
+    };
+    return html(
+      renderOwnerHome({ ...base, proposals: waiting.isError ? null : waiting.data, changes: recent.isError ? null : recent.data, uploads }),
+      status,
+      pageHeaders(undefined, HOME_CSP),
+    );
+  };
+
   let form: URLSearchParams | null = null;
   if (method === "POST") {
     const refuse = (): Response => message("Not allowed", "That form didn't come from this page.", 403);
     const site = request.headers.get("Sec-Fetch-Site");
     if (request.headers.get("Origin") !== config.siteUrl || (site !== null && site !== "same-origin")) return refuse();
+    if (path === "/owner/uploads") {
+      if (!(request.headers.get("content-type") ?? "").toLowerCase().startsWith("multipart/form-data")) return refuse();
+      const post = await postUploads(request, editor, config.uploads);
+      if ((request.headers.get("accept") ?? "").includes("application/json")) return uploadsJson(post);
+      if (post.kind === "refused") return home([{ name: "Upload", ok: false, message: post.message }], post.status === 413 ? 413 : 400);
+      return home(post.results, post.ok ? 200 : 400);
+    }
     if (!(request.headers.get("content-type") ?? "").toLowerCase().startsWith("application/x-www-form-urlencoded")) return refuse();
     if (Number(request.headers.get("content-length") ?? 0) > MAX_BODY) return refuse();
     const raw = await readBody(request, MAX_BODY);
@@ -127,11 +167,24 @@ export async function handleOwner(request: Request, ctx: OwnerContext): Promise<
 
   const field = (name: string): string => form?.get(name) ?? "";
 
-  if (path === "/owner") {
-    const [waiting, recent] = await Promise.all([editor.waiting(), editor.recent()]);
-    return html(
-      renderOwnerHome({ ...base, proposals: waiting.isError ? null : waiting.data, changes: recent.isError ? null : recent.data }),
-    );
+  if (path === "/owner") return home();
+
+  if (path === "/owner/uploads/remove" && method === "GET") {
+    const id = url.searchParams.get("upload") ?? "";
+    const listed = await editor.uploads();
+    const upload = listed.isError ? undefined : listed.data.find((u) => u.id === id);
+    if (!upload) return message("Nothing to remove", "That upload isn't in your uploads any more. It may have been removed or have expired.", 404);
+    return html(renderRemoveConfirm({ ...base, upload }));
+  }
+
+  if (path === "/owner/uploads/remove") {
+    const result = await editor.removeUpload(field("upload"));
+    return message(result.isError ? "Could not remove" : "Removed", result.text, result.isError ? 400 : 200);
+  }
+
+  if (path === "/owner/uploads/rename") {
+    const result = await editor.renameUpload(field("id"), field("name"));
+    return message(result.isError ? "Could not rename" : "Renamed", result.text, result.isError ? 400 : 200);
   }
 
   if (path === "/owner/publish" && method === "GET") {

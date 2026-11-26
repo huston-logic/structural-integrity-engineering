@@ -39,7 +39,7 @@ interface Fake {
 function fakeEditor(): Fake {
   const state: Fake = {
     calls: [],
-    waiting: result("", [{ id: "p1", summary: "Update the hours", createdAt: "2026-01-01T12:00:00.000Z", changeList: "Page /about: hours change", previewLink: "https://preview.example.test" }]),
+    waiting: result("", [{ id: "p1", summary: "Update the hours", createdAt: "2026-01-01T12:00:00.000Z", changeList: "Page /about: hours change", previewLink: "https://preview.example.test", uploads: [] }]),
     recent: result("", [{ change: 12, title: "Update hours", state: "live", publishedAt: "2026-01-01T10:00:00.000Z", liveAt: "2026-01-01T10:05:00.000Z" }]),
     undo: result("Proposal p9: Withdraw", { proposal_id: "p9" }),
     editor: undefined as unknown as Editor,
@@ -48,6 +48,7 @@ function fakeEditor(): Fake {
   state.editor = {
     waiting: async () => (note("waiting"), state.waiting),
     recent: async () => (note("recent"), state.recent),
+    uploads: async () => (note("uploads"), result("Uploads aren't set up on this site yet.", [], true)),
     publish: async (id: string, words: string) => (note(`publish:${id}:${words}`), result("Change 13 was opened.", {})),
     discard: async (id: string) => (note(`discard:${id}`), result("Proposal discarded.", {})),
     undo: async (n: number) => (note(`undo:${n}`), state.undo),
@@ -130,13 +131,15 @@ test("the home page renders from data, with the exact security headers, and a GE
   assert.equal(response.headers.get("referrer-policy"), "no-referrer");
   assert.equal(
     response.headers.get("content-security-policy"),
-    "default-src 'none'; style-src 'unsafe-inline'; img-src 'self'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'",
+    "default-src 'none'; script-src 'self'; connect-src 'self'; style-src 'unsafe-inline'; img-src 'self'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'",
   );
   const page = await response.text();
+  assert.doesNotMatch(page, /<script/, "no script tag while uploads are not set up");
+  assert.match(page, /Uploads aren't set up on this site yet\./);
   assert.match(page, /Update the hours/);
   assert.match(page, /Change 12: Update hours/);
   assert.match(page, /owner@example\.test/);
-  assert.deepEqual(fake.calls.sort(), ["recent", "waiting"]);
+  assert.deepEqual(fake.calls.sort(), ["recent", "uploads", "waiting"]);
 });
 
 test("a chunked POST body over 8 KB with no Content-Length is refused without being read whole", async () => {
@@ -242,7 +245,7 @@ test("Publish passes the owner's approval wording; Discard discards", async () =
 
 test("text from the owner's own proposals is escaped", async () => {
   const fake = fakeEditor();
-  fake.waiting = result("", [{ id: "p1", summary: "<img src=x onerror=alert(1)>", createdAt: "2026-01-01T12:00:00.000Z", changeList: "<script>alert(2)</script>", previewLink: null }]);
+  fake.waiting = result("", [{ id: "p1", summary: "<img src=x onerror=alert(1)>", createdAt: "2026-01-01T12:00:00.000Z", changeList: "<script>alert(2)</script>", previewLink: null, uploads: [] }]);
   const ctx = context(fake.editor, fakeOAuth().oauth);
   for (const path of ["/owner", "/owner/publish?proposal=p1"]) {
     const page = await (await call(ctx, path)).text();

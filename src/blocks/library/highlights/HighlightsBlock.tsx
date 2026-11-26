@@ -1,5 +1,6 @@
 import { CellDividers } from "@/components/hl/CellDividers";
 import { Container } from "@/components/hl/Container";
+import { Photo } from "@/components/hl/Photo";
 import { Text } from "@/components/ui/Text";
 import type { BlockProps } from "@/blocks/types";
 import type { ContentOf } from "@/blocks/schema";
@@ -18,6 +19,14 @@ export function HighlightsBlock({ content, variant, anchor, headingId }: BlockPr
         <ul className={`mt-12 grid gap-x-12 gap-y-14 md:grid-cols-2 ${three ? "lg:grid-cols-3" : ""}`}>
           {content.items.map((item, index) => (
             <li key={index} className="relative">
+              {item.image ? (
+                <Photo
+                  image={item.image}
+                  shape="3:2"
+                  sizes={three ? "(min-width: 1320px) 380px, (min-width: 1024px) 30vw, (min-width: 768px) 45vw, 100vw" : "(min-width: 1320px) 600px, (min-width: 768px) 45vw, 100vw"}
+                  className="mb-5"
+                />
+              ) : null}
               <p className="font-ui text-item font-semibold">
                 <Text>{item.title}</Text>
               </p>

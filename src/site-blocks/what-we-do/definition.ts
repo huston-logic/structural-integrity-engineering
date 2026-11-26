@@ -27,7 +27,7 @@ export const whatWeDoDefinition = defineBlock({
       label: "Photos",
       min: 1,
       max: 2,
-      of: { kind: "image", label: "Photo", help: "A new photo needs a line in src/content/photos.ts." },
+      of: { kind: "image", shape: "3:2", label: "Photo", help: "A new photo needs a line in src/content/photos.ts." },
     },
   },
   variants: [{ name: "default", description: "The list on the left, the photos staying in view beside it from 1024 px wide." }],
