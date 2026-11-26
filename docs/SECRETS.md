@@ -32,6 +32,17 @@ After changing `destination` or `sheetWriter`, run `npm run sync:config` and com
 
 `INTAKE_SECRET` is also set on the Pipeline app copy, with the same value. The Worker never sends it to a browser.
 
+## Bindings (not secrets)
+
+A binding is a resource that Cloudflare attaches to the Worker by name. Nothing is typed in for a binding, so it is not a secret.
+The owner's uploads (docs/EDITING.md, "Uploads") add no secret. They add these two bindings, and `npm run sync:config` writes
+both into `wrangler.jsonc` only when `editor.enabled` and `editor.uploads.enabled` are both `true`.
+
+| Name | What it is | Needed by | Set by |
+| --- | --- | --- | --- |
+| `UPLOADS` | The site's private R2 bucket for the owner's upload inbox, named `<workerName>-uploads`. Not public, no custom domain. | `editor.uploads.enabled` | `npx wrangler r2 bucket create <workerName>-uploads`, then `npm run sync:config` (docs/EDITING.md, steps h and k) |
+| `IMAGES` | The Cloudflare Images binding. The Worker uses it to turn uploaded photos into WebP. It has no key. | `editor.uploads.enabled` | `npm run sync:config`. Images must be available on the account. |
+
 Run each command from the repo folder. It asks for the value with hidden input, so the value never appears on screen or in your
 shell history.
 
@@ -69,7 +80,7 @@ If you rename a tab in `site.config.ts`, set the matching property here and rena
 | `contact.rateLimitIds` | `{ production, preview }`, two whole numbers written as strings, unique per site in its Cloudflare account. Register them in `docs/HOSTING.md`. | `site.config.ts`, then `npm run sync:config` |
 | `contact.destination`, `contact.pipelineUrl` | Where a submission is saved: `"sheet"` (default) or `"pipeline"`. `pipelineUrl` is the Pipeline app copy's `https` address, needed for `"pipeline"`. | `site.config.ts` |
 
-The site editor's other settings are not secrets. The App ID, the installation id, the Access team name and AUD tag, the KV namespace ids and the rate-limit id live in the `editor` block of `site.config.ts`. Setup is in [docs/EDITING.md](EDITING.md).
+The site editor's other settings are not secrets. The App ID, the installation id, the Access team name and AUD tag, the KV namespace ids, the rate-limit id and the upload bucket name (`editor.uploads.bucket`) live in the `editor` block of `site.config.ts`. Setup is in [docs/EDITING.md](EDITING.md).
 
 `NEXT_PUBLIC_*` variables are readable by anyone who visits the site. Never put a secret in one.
 

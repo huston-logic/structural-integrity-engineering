@@ -16,7 +16,7 @@ The rules live in one file: [`scripts/change-scope-rules.mjs`](../scripts/change
 
 | Tier | What it is | What the check does |
 | --- | --- | --- |
-| **1** | Content: page files `src/content/pages/<name>.json` that pass the content check at the head commit, photos in `public/images/`, and plain-data content modules in `src/content/` (for example `contact.ts` and `nav.ts`, see below) | Passes. Content problems **block** on `change/` branches (see below) |
+| **1** | Content: page files `src/content/pages/<name>.json` that pass the content check at the head commit, photos in `public/images/`, PDFs in `public/files/` (see "PDF rules"), and plain-data content modules in `src/content/` (for example `contact.ts` and `nav.ts`, see below) | Passes. Content problems **block** on `change/` branches (see below) |
 | **3** | Everything else: `worker/`, `public/_headers`, `wrangler.jsonc`, `site.config.ts`, the wiring modules in `src/content/` (`site.ts`, `providers.ts`, `auto-reply.ts`, `contact-fields.ts`), `src/lib/` (including `routes.ts`), every file under `src/app/`, `src/blocks/` and `src/site-blocks/` (a block's design is code), `package.json` and the lockfile, `.github/`, `.claude/`, `src/components/`, deleting or renaming a page file, and any other file | Fails (exit code 1) and lists each file with a plain reason |
 
 (Tier 2, "ask first", is about a vague request and is handled by the agent, not by files, so the scope check does not know it.)
@@ -127,6 +127,31 @@ report lists each image with its alt text, so Grant can read it and judge whethe
 
 A purely decorative image (one that should have empty alt text) cannot pass this check on purpose: it stops for Grant,
 who decides how to mark it.
+
+## PDF rules (blocking on change branches)
+
+A price sheet or menu can be added as a PDF. It goes in `public/files/`, one level deep, named in lowercase words joined by
+hyphens and ending in `.pdf` (`price-sheet.pdf`, served as `/files/price-sheet.pdf`), and a page links to it. An added or
+changed file that matches that name is tier 1 and must pass, with the fix named in each message:
+
+- it starts with `%PDF-` and ends with `%%EOF` within its last 1,024 bytes (a renamed or cut-off file fails);
+- it is at most **10 MB** (10,000,000 bytes);
+- it holds none of the names `/JavaScript`, `/JS`, `/Launch`, `/EmbeddedFile`, `/EmbeddedFiles`, `/RichMedia`, `/XFA`, `/AA`,
+  `/SubmitForm`, `/ImportData`. Names are matched whole after `#xx` escapes are decoded, so `/J#61vaScript` counts and
+  `/JSFoo` does not match `/JS`. The fix is "save it again as a plain PDF (Print, then Save as PDF)". Names inside
+  compressed object streams are not seen; the headers below are the layer for that;
+- it is used: a string exactly equal to `/files/<name>.pdf` appears in a `.ts`, `.tsx` or page `.json` file under `src/`
+  (no alt text is needed). The check reads the head commit, so the PDF and the page that links it can arrive in one pull
+  request in any order.
+
+Anything else under `public/files/` (another file type, capital letters, spaces, a sub-folder) is tier 3: only PDFs named in
+lowercase words joined by hyphens can go in `public/files/`. Deleting a PDF is tier 1 and is not checked; if a page still
+links to it, the content check on the pages says so. PDF document properties (such as the author) are not removed.
+
+`public/_headers` always carries a generated `/files/*` block (`Content-Disposition: attachment`,
+`Content-Security-Policy: sandbox`, `X-Content-Type-Options: nosniff`), so a PDF downloads and never runs on the site's own
+origin. That file is tier 3 and is changed with `npm run sync:config`; the editor never touches it. The byte checks are in
+`scripts/pdf-check.mjs`, which the Worker's upload check mirrors.
 
 ## Leftover placeholders (blocking on change branches)
 

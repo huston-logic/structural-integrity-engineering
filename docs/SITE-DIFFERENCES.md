@@ -110,3 +110,17 @@ links. `src/lib/thanks-links.ts` is kept as the template has it, and the templat
   `src/content/contact.ts`, which imports `site.ts`; the Worker must never import `site.ts`.
 - The editor's test fixtures use `CONTACT_PATH` and `fileForPath` (D1, D2); `worker/editor/site-differences.test.ts` tests
   reading and proposing a change to a two-level page.
+
+## D10. Site-block images have a shape, and the photo blocks read Dusk
+
+- **What:** the template's image fields now name a crop shape (`shape: "3:2"` ...). The site blocks show fixed site photos
+  (sizes from `src/content/photos.ts`), not cropped ones, so each site block's image field names the shape its photos
+  already have (3:2 for the heroes, wide photos and What we do; 4:5 for the home hero, the service cards and the portrait).
+  The shape only feeds the catalog and the editor's "will be trimmed" note. A `focus` on a site block's photo is accepted
+  and ignored. An uploaded photo (`/images/uploads/...`) is not in `photos.ts`, so a site block cannot show one yet; the
+  library blocks (photo-text, gallery, highlights, video) can. Uploads are off on this site.
+- **Dusk:** `Photo` and the PDF link pill use `bg-tint` and `text-tag`. In the library block of `src/app/hl.css`,
+  `tint` is `dusk-deep` and `text-tag` is 13 px.
+- **Re-apply on a port:** the `shape` on each site block's image field; the two lines in `hl.css`; `CONTACT_PATH` and no
+  `menu` in the upload tests' fixtures (`uploads-acceptance.test.ts`, `owner-uploads.test.ts`); `pages.ts` and
+  `check-content.mjs` pass no thanks-page links (D5).

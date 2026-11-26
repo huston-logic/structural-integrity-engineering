@@ -23,6 +23,22 @@ still uses the template's 1001 and 1002. The site editor has its own id, `editor
 Grant's site was built before the register existed and uses 1001/1002. Once it runs in the same Cloudflare account as
 another site, move it to a new pair and update its row.
 
+## Upload storage and Images
+
+Only a site with `editor.uploads.enabled` true has these (setup in [docs/EDITING.md](EDITING.md), steps h to l).
+
+- **One private R2 bucket per site**, named `<workerName>-uploads` (`editor.uploads.bucket` in `site.config.ts`). Nothing
+  is shared between sites, so one site's bug cannot reach another's files. Create it with `npx wrangler r2 bucket create`.
+- **R2 is billed per Cloudflare account.** The free allowance is 10 GB-months of storage, 1 million writes and 10 million
+  reads a month, for all sites together. Past that: $0.015 per GB-month, $4.50 per million writes and $0.36 per million
+  reads. No egress fees. Each site's inbox is capped at 200 MB, so a full site costs at most $0.003 a month past the free tier.
+- **Images is shared by the account.** The Free plan includes 5,000 unique transformations a month for all sites together.
+  A photo takes 2 to 5, so that is about 1,000 to 2,500 photos a month. Past the limit the Free plan refuses and charges
+  nothing. The paid plan is $0.50 per 1,000 beyond 5,000.
+- **Workers**: uploads run on the existing Workers Paid plan ($5 a month in total). No change.
+
+The full cost note is in [docs/EDITING.md](EDITING.md), "What uploads cost".
+
 ## Offboarded sites
 
 When a client is moved out (`docs/OFFBOARDING.md`), add a row with the handover date. Huston Logic's liability ends on
