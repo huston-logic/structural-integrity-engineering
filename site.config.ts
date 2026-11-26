@@ -62,12 +62,23 @@ export const siteConfig = {
     sheetWriter: "apps-script" as "apps-script" | "service-account",
     /** The two tab names in the Sheet. Generic names; the Apps Script reads the same two names from its Script Properties. */
     sheetTabs: { production: "Submissions", preview: "Preview" },
+    /**
+     * Where each submission is saved. "sheet" (the default) is the Google Sheet above, the fallback. "pipeline" posts it
+     * server to server to the client's Pipeline app copy (`pipelineUrl` + "/intake", secret INTAKE_SECRET). The notification
+     * email goes to `siteEmail` either way. Which secrets are required follows this setting (`npm run sync:config`).
+     * Another tool the client names is not built; its one place in the code is `saveSubmission` in worker/contact.ts.
+     */
+    destination: "sheet" as "sheet" | "pipeline",
+    /** The Pipeline app copy's https origin, such as "https://pipeline.example.com" (no path). Needed when destination is "pipeline". */
+    pipelineUrl: null as string | null,
     rateLimit: {
       limit: 5,
       periodSeconds: 60,
-      // Integer strings unique per Cloudflare account.
-      namespaceIds: { production: "2201", preview: "2202" },
     },
+    // Two whole numbers written as strings, unique to this site in its Cloudflare account: bindings with the same id
+    // share counters, even across Workers. This site's pair is in docs/HOSTING.md. 1001 and 1002 are the template's own;
+    // `npm run check:config` rejects them on a real site.
+    rateLimitIds: { production: "2201", preview: "2202" },
   },
   theme: {
     // Option G, "Dusk" (docs/STYLE-GUIDE.md §2). Each key becomes `--hl-<key>` in src/app/hl.css and a Tailwind color

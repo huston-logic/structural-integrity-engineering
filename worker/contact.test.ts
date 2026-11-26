@@ -44,6 +44,8 @@ const ORIGIN = "https://example.test";
 const PREVIEW_HOST = "feat-x-example-site.acct.workers.dev";
 const WEBHOOK_URL = "https://script.google.com/macros/s/EXAMPLE_DEPLOYMENT_ID/exec";
 const WEBHOOK_SECRET = "webhook-test-secret";
+const PIPELINE_URL = "https://pipeline.example.test";
+const INTAKE_SECRET = "intake-test-secret";
 const VISITOR = { firstName: "Ada", lastName: "Lovelace", email: "ada@example.org", phone: "(907) 555-0100", location: "Colorado Springs, CO", scope: "Two-story addition with a new foundation." };
 
 let calls: Call[] = [];
@@ -64,6 +66,7 @@ function defaultResponders(): Record<string, () => Response> {
     token: () => jsonResponse({ access_token: "test-access-token", expires_in: 3600 }),
     sheets: () => jsonResponse({ updates: { updatedRows: 1 } }),
     webhook: () => jsonResponse({ ok: true }),
+    intake: () => jsonResponse({ ok: true }, 201),
     notify: () => jsonResponse({ id: "email-1" }),
     reply: () => jsonResponse({ id: "email-2" }),
   };
@@ -74,6 +77,7 @@ function route(url: string, init: RequestInit): string {
   if (url.startsWith("https://oauth2.googleapis.com/token")) return "token";
   if (url.startsWith("https://sheets.googleapis.com/")) return "sheets";
   if (url.startsWith("https://script.google.com/")) return "webhook";
+  if (url.startsWith(`${PIPELINE_URL}/`)) return "intake";
   if (url === "https://api.resend.com/emails") {
     return String((init.headers as Record<string, string>)["idempotency-key"]).endsWith("-notify") ? "notify" : "reply";
   }
@@ -94,6 +98,7 @@ function env(overrides: Partial<ContactEnv> = {}, allowed = true): ContactEnv {
     GOOGLE_SHEET_ID: "sheet-123",
     SHEET_WEBHOOK_URL: WEBHOOK_URL,
     SHEET_WEBHOOK_SECRET: WEBHOOK_SECRET,
+    INTAKE_SECRET,
     CONTACT_RATE_LIMIT: { limit: async () => ({ success: allowed }) },
     ...overrides,
   };
@@ -149,7 +154,7 @@ afterEach(() => {
   console.log = realLog;
   // No log line may ever hold what the visitor typed.
   for (const line of logs) {
-    for (const secret of [VISITOR.firstName, VISITOR.lastName, VISITOR.email, VISITOR.phone, VISITOR.location, VISITOR.scope, "203.0.113.9", "re_test", "turnstile-test-secret", WEBHOOK_SECRET, "EXAMPLE_DEPLOYMENT_ID", "script.google.com"]) {
+    for (const secret of [VISITOR.firstName, VISITOR.lastName, VISITOR.email, VISITOR.phone, VISITOR.location, VISITOR.scope, "203.0.113.9", "re_test", "turnstile-test-secret", WEBHOOK_SECRET, "EXAMPLE_DEPLOYMENT_ID", "script.google.com", INTAKE_SECRET, PIPELINE_URL, "pipeline.example.test"]) {
       assert.ok(!line.includes(secret), `log line leaked "${secret}": ${line}`);
     }
   }
@@ -690,5 +695,195 @@ describe("the Apps Script sheet writer", () => {
     assert.equal(response.status, 200);
     assert.equal(called("webhook").length + called("sheets").length, 0);
     assert.ok(String(called("notify")[0].json?.text).includes("Sheet: NOT saved"));
+  });
+});
+
+describe("the Pipeline app destination", () => {
+  const pipelineWorker = makeWorker({ destination: "pipeline", pipelineUrl: PIPELINE_URL });
+  const intake = (): Call => called("intake")[0];
+  const notifyText = (): string => String(called("notify")[0].json?.text);
+  const previewPost = () => post(valid, { origin: `https://${PREVIEW_HOST}`, url: `https://${PREVIEW_HOST}/api/contact` });
+
+  test("sends the lead server to server to <pipelineUrl>/intake with the secret in X-Intake-Secret, once, and no Sheet call", async () => {
+    const response = await pipelineWorker.fetch(post(valid), env());
+    assert.equal(response.status, 200);
+    assert.equal(called("intake").length, 1);
+    assert.equal(called("webhook").length + called("sheets").length + called("token").length, 0, "no Sheet call");
+    const call = intake();
+    assert.equal(call.url, `${PIPELINE_URL}/intake`);
+    assert.equal(call.init.method, "POST");
+    const headers = call.init.headers as Record<string, string>;
+    assert.equal(headers["content-type"], "application/json");
+    assert.equal(headers["x-intake-secret"], INTAKE_SECRET);
+    assert.equal(call.init.redirect, "manual", "a redirect is never followed, so it can never carry the secret to another host");
+    assert.ok(call.init.signal instanceof AbortSignal, "has a timeout signal");
+    assert.deepEqual(Object.keys(call.json ?? {}).sort(), ["email", "message", "name"], "this form has no business field, so none is sent");
+    assert.equal(call.json?.name, `${VISITOR.firstName} ${VISITOR.lastName}`);
+    assert.equal(call.json?.email, VISITOR.email);
+    const message = String(call.json?.message);
+    assert.ok(message.startsWith(VISITOR.scope), "the visitor's own words come first");
+    assert.ok(message.includes(`Phone: ${VISITOR.phone}`) && message.includes(`Project city and state: ${VISITOR.location}`), "the other answers are folded in");
+    assert.ok(notifyText().includes("Pipeline app: saved") && !notifyText().includes("Sheet:"));
+    assert.ok(!notifyText().includes(INTAKE_SECRET));
+  });
+
+  test("2xx (200 for a repeat, 201 for a new lead) means saved", async () => {
+    for (const status of [200, 201]) {
+      calls = [];
+      responders.intake = () => jsonResponse({ ok: true }, status);
+      const response = await pipelineWorker.fetch(post(valid), env());
+      assert.equal(response.status, 200);
+      assert.equal(called("intake").length, 1, `status ${status}`);
+      assert.ok(notifyText().includes("Pipeline app: saved"), `status ${status}`);
+    }
+  });
+
+  test("a 401 is not retried; the visitor still succeeds because the email went, and it says to add the lead by hand", async () => {
+    responders.intake = () => jsonResponse({ ok: false, error: "no" }, 401);
+    const response = await pipelineWorker.fetch(post(valid), env());
+    assert.equal(response.status, 200);
+    assert.equal(called("intake").length, 1);
+    assert.ok(notifyText().includes("Pipeline app: NOT saved - add this one by hand"));
+    assert.ok(logs.some((l) => l.includes('"event":"pipeline_failed"') && l.includes('"status":401')));
+  });
+
+  test("a 500 is retried once: one more try can save it, two failures cannot", async () => {
+    let first = true;
+    responders.intake = () => {
+      const response = first ? jsonResponse({}, 503) : jsonResponse({ ok: true }, 201);
+      first = false;
+      return response;
+    };
+    await pipelineWorker.fetch(post(valid), env());
+    assert.equal(called("intake").length, 2);
+    assert.ok(notifyText().includes("Pipeline app: saved"));
+
+    calls = [];
+    responders.intake = () => jsonResponse({}, 503);
+    await pipelineWorker.fetch(post(valid), env());
+    assert.equal(called("intake").length, 2, "never more than one retry");
+    assert.ok(notifyText().includes("Pipeline app: NOT saved"));
+  });
+
+  test("a redirect answer is a failure: not followed, not retried, and the note goes by email only", async () => {
+    responders.intake = () => new Response(null, { status: 302, headers: { location: "https://elsewhere.example.test/intake" } });
+    const response = await pipelineWorker.fetch(post(valid), env());
+    assert.equal(response.status, 200);
+    assert.equal(called("intake").length, 1);
+    assert.ok(logs.some((l) => l.includes('"event":"pipeline_failed"') && l.includes('"status":302')));
+    assert.ok(notifyText().includes("Pipeline app: NOT saved"));
+  });
+
+  test("an unreachable app is retried once, then the note goes by email only", async () => {
+    responders.intake = () => {
+      throw new Error("network down");
+    };
+    const response = await pipelineWorker.fetch(post(valid), env());
+    assert.equal(response.status, 200);
+    assert.equal(called("intake").length, 2);
+    assert.ok(logs.some((l) => l.includes('"event":"pipeline_unreachable"')));
+    assert.ok(notifyText().includes("Pipeline app: NOT saved"));
+  });
+
+  test("the app and the notification email both failing is a 502 and sends no reply", async () => {
+    responders.intake = () => jsonResponse({}, 500);
+    responders.notify = () => jsonResponse({}, 503);
+    const response = await pipelineWorker.fetch(post(valid), env());
+    assert.equal(response.status, 502);
+    assert.equal(called("reply").length, 0);
+  });
+
+  test("the app saved it but the email failed: the visitor still sees success", async () => {
+    responders.notify = () => jsonResponse({}, 503);
+    const response = await pipelineWorker.fetch(post(valid), env());
+    assert.equal(response.status, 200);
+    assert.ok(logs.some((l) => l.includes('"event":"notify_failed_pipeline_saved"')));
+  });
+
+  test("a missing secret, or a URL that is not a plain https origin, sends nothing to the app", async () => {
+    for (const [pipelineUrl, secret] of [
+      [PIPELINE_URL, undefined],
+      [PIPELINE_URL, ""],
+      [null, INTAKE_SECRET],
+      ["http://pipeline.example.test", INTAKE_SECRET],
+      [`${PIPELINE_URL}/intake`, INTAKE_SECRET],
+      [`${PIPELINE_URL}/`, INTAKE_SECRET],
+      ["not a url", INTAKE_SECRET],
+    ] as const) {
+      calls = [];
+      const response = await makeWorker({ destination: "pipeline", pipelineUrl }).fetch(post(valid), env({ INTAKE_SECRET: secret }));
+      assert.equal(response.status, 200, `${pipelineUrl} ${secret}`);
+      assert.equal(called("intake").length, 0, `${pipelineUrl} ${secret}`);
+      assert.ok(notifyText().includes("Pipeline app: NOT saved"), `${pipelineUrl} ${secret}`);
+    }
+    assert.equal(logs.filter((l) => l.includes('"event":"pipeline_config_missing"')).length, 7);
+  });
+
+  test("preview mode never posts to the client's real app; the email says so", async () => {
+    responders.siteverify = () => jsonResponse({ success: true, hostname: PREVIEW_HOST, action: "contact" });
+    const response = await pipelineWorker.fetch(previewPost(), env({ SITE_ENV: "preview" }));
+    assert.equal(response.status, 200);
+    assert.equal(called("intake").length, 0);
+    assert.ok(notifyText().includes("Pipeline app: not sent (preview)"));
+    assert.ok(String(called("notify")[0].json?.subject).startsWith("[Preview] New request from"));
+  });
+
+  test("preview mode with the email failing is a 502: nothing reached the client", async () => {
+    responders.siteverify = () => jsonResponse({ success: true, hostname: PREVIEW_HOST, action: "contact" });
+    responders.notify = () => jsonResponse({}, 503);
+    const response = await pipelineWorker.fetch(previewPost(), env({ SITE_ENV: "preview" }));
+    assert.equal(response.status, 502);
+  });
+
+  test("development mode sends nothing, the app included", async () => {
+    responders.siteverify = () => jsonResponse({ success: true, hostname: "example.com" });
+    const response = await pipelineWorker.fetch(post(valid, { origin: "http://localhost:8787", url: "http://localhost:8787/api/contact" }), env({ SITE_ENV: "development" }));
+    assert.equal(response.status, 200);
+    assert.deepEqual(calls.map((c) => route(c.url, c.init)), ["siteverify"]);
+  });
+
+  test("the scope plus the folded-in answers never passes the app's 5,000 characters, and the visitor's words stay first", async () => {
+    const long = "x".repeat(5000);
+    await pipelineWorker.fetch(post({ ...valid, scope: long }), env());
+    const message = String(intake().json?.message);
+    assert.ok(message.length <= 5000);
+    assert.ok(message.startsWith("x".repeat(4990)));
+    assert.ok(String(intake().init.body).length < 16 * 1024);
+  });
+
+  test("a short scope carries every answer: phone and project city and state", async () => {
+    await pipelineWorker.fetch(post(valid), env());
+    const message = String(intake().json?.message);
+    for (const line of [`Phone: ${VISITOR.phone}`, `Project city and state: ${VISITOR.location}`]) {
+      assert.ok(message.includes(line), line);
+    }
+  });
+
+  test("logs hold fixed event names and status codes only: never the URL, the secret or the lead", async () => {
+    responders.intake = () => jsonResponse({}, 500);
+    await pipelineWorker.fetch(post({ ...valid, location: "Acme Plumbing" }), env());
+    responders.intake = () => {
+      throw new Error(`failed for ${PIPELINE_URL} with ${INTAKE_SECRET}`);
+    };
+    await pipelineWorker.fetch(post(valid), env());
+    await pipelineWorker.fetch(post(valid), env({ INTAKE_SECRET: undefined }));
+    const pipelineLogs = logs.filter((l) => l.includes('"event":"pipeline_'));
+    assert.ok(pipelineLogs.length >= 5);
+    for (const line of pipelineLogs) {
+      assert.match(line, /^\{"event":"pipeline_(failed|unreachable|config_missing)"(,"(status|attempt)":\d+)*\}$/);
+    }
+    for (const line of logs) {
+      for (const secret of [PIPELINE_URL, INTAKE_SECRET, "Acme Plumbing", "network down"]) assert.ok(!line.includes(secret), `leaked ${secret}: ${line}`);
+    }
+  });
+
+  test("the default destination is the Sheet and never calls the app, even with the secret set", async () => {
+    for (const w of [worker, appsWorker, makeWorker({ destination: "sheet", pipelineUrl: PIPELINE_URL })]) {
+      calls = [];
+      const response = await w.fetch(post(valid), env());
+      assert.equal(response.status, 200);
+      assert.equal(called("intake").length, 0);
+      assert.ok(called("sheets").length + called("webhook").length === 1);
+    }
   });
 });
